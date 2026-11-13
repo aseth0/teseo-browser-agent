@@ -1,0 +1,20 @@
+{
+  "actions": [
+    {
+      "name": "Translate",
+      "where": [
+        "*://docs.example.com/*"
+      ],
+      "input": "selection",
+      "tool": "",
+      "args": {},
+      "outputs": [
+        {
+          "label": "Spanish"
+        }
+      ],
+      "prompt": "Translate into Spanish: {input}",
+      "thinking": "low"
+    }
+  ]
+}

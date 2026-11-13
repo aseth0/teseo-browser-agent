@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Engine test page</title>
+    <style>
+      #menu .sub { display: none; }
+      #menu:hover .sub { display: block; }
+    </style>
+  </head>
+  <body>
+    <h1>Engine test page</h1>
+    <form id="search" role="search"><label for="q">Search products</label> <input id="q" type="search" value="headphones" /></form>
+    <p><label for="a">First field</label> <input id="a" /> <label for="b">Second field</label> <input id="b" /></p>
+    <button id="buy">Buy now</button>
+    <button id="remove">Remove item</button>
+    <nav id="menu" aria-label="Account menu"><button type="button">Account</button><div class="sub"><a href="#orders">Your orders</a></div></nav>
+    <p id="status" role="status">Status: idle</p>
+    <script>
+      const status = (t) => (document.getElementById('status').textContent = 'Status: ' + t);
+      window.__trusted = [];
+      document.addEventListener('click', (e) => window.__trusted.push(e.isTrusted), true);
+      document.getElementById('buy').addEventListener('click', (e) => status(e.isTrusted ? 'bought (trusted)' : 'bought (untrusted)'));
+      document.getElementById('search').addEventListener('submit', (e) => {
+        e.preventDefault();
+        status('searched ' + document.getElementById('q').value);
+      });
+      document.getElementById('b').addEventListener('focus', () => status('second field focused'));
+      document.getElementById('remove').addEventListener('click', () => status(confirm('Remove it?') ? 'removed' : 'kept'));
+    </script>
+  </body>
+</html>

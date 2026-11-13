@@ -1,0 +1,176 @@
+# On a version tag (vX.Y.Z, which must be package.json's version):
+#   version → checks (checks.yml) → build and build-store, in parallel → publish → dist-branch
+# The two builds are separate jobs, each with its own dist/: the downloadable zip (everything) and the Chrome Web
+# Store's (wxt.config.ts STORE: no `key`, no debugger permission; uploaded to the store by hand). `publish` creates
+# the tag's GitHub release, its notes made by scripts/release-notes.mjs from .github/release-notes.md and the
+# version's section of CHANGELOG.md, and attaches both zips; `dist-branch` then puts the downloadable build,
+# unzipped, on the `dist` branch. Built without EXTERNAL_MODEL_API_KEY: no key is embedded.
+# Runs in whichever repository the tag is pushed to: this one for now, and the public one once
+# scripts/publish-public.sh puts a version there. Safe to re-run: an existing release gets its notes and zips
+# replaced, and the dist branch gets no new commit when the build is the same. The zips are kept 7 days as the
+# run's artifacts: after that, re-run the whole workflow, not `publish` or `dist-branch` alone.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Check the tag matches package.json's version
+        id: check
+        run: |
+          version=$(jq -r .version package.json)
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json's version (v$version)"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  checks:
+    needs: version
+    permissions:
+      contents: read
+    uses: ./.github/workflows/checks.yml
+
+  # The downloadable build: everything (`pnpm zip` → dist/teseo-browser-agent-X.Y.Z-chrome.zip).
+  build:
+    needs: checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm zip
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: chrome-zip
+          path: dist/*-chrome.zip
+          if-no-files-found: error
+          retention-days: 7
+
+  # The Chrome Web Store's build (`pnpm zip:store` → dist/teseo-browser-agent-X.Y.Z-chrome-store.zip).
+  build-store:
+    needs: checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm zip:store
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: chrome-store-zip
+          path: dist/*-chrome-store.zip
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: [version, build, build-store]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # Only Node for the notes' script, which needs no dependency.
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: chrome-zip
+          path: ${{ runner.temp }}/assets
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: chrome-store-zip
+          path: ${{ runner.temp }}/assets
+      # The notes fail here when CHANGELOG.md has no section for this version, or a zip is missing.
+      # Links and checksums of the repository this run releases in (package.json's names the public one, which a
+      # tag pushed here first does not have yet). Only here: the builds keep package.json's (wxt.config.ts).
+      - name: Write the release notes
+        env:
+          TESEO_REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          node scripts/release-notes.mjs "$VERSION" "$RUNNER_TEMP/assets" > "$RUNNER_TEMP/notes.md"
+          (cd "$RUNNER_TEMP/assets" && sha256sum ./*.zip)
+      - name: Create or update the release and attach the zips
+        run: |
+          # A new release gets its zips as it is created, so that its links never 404; a re-run replaces them.
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release edit "$GITHUB_REF_NAME" --title "Teseo $VERSION" --notes-file "$RUNNER_TEMP/notes.md"
+            gh release upload "$GITHUB_REF_NAME" "$RUNNER_TEMP"/assets/*.zip --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "$RUNNER_TEMP"/assets/*.zip --verify-tag --title "Teseo $VERSION" \
+              --notes-file "$RUNNER_TEMP/notes.md"
+          fi
+
+  # The downloadable build, unzipped: the dist branch holds only the extension's folder, one commit per version, so
+  # it can be downloaded or cloned and loaded unpacked as it is. After the release, so that it never holds a version
+  # without one.
+  dist-branch:
+    needs: publish
+    runs-on: ubuntu-latest
+    # One push to dist at a time across tags: two versions released close together wait here for each other
+    # instead of racing (GitHub keeps one waiting run per group: push tags one at a time, oldest first).
+    concurrency:
+      group: dist-branch
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: chrome-zip
+          path: ${{ runner.temp }}/zip
+      - name: Put it unzipped on the dist branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          out="$RUNNER_TEMP/dist"
+          url="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git ls-remote --exit-code --heads "$url" dist >/dev/null; then
+            git clone --quiet --depth 1 --branch dist "$url" "$out"
+          else
+            git init --quiet -b dist "$out"
+          fi
+          find "$out" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          unzip -q "$RUNNER_TEMP"/zip/*-chrome.zip -d "$out"
+          cd "$out"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git rev-parse -q --verify HEAD >/dev/null && git diff --cached --quiet; then
+            echo "The dist branch already holds this build."
+            exit 0
+          fi
+          git commit --quiet -m "Teseo $GITHUB_REF_NAME, ready to load unpacked"
+          git push --quiet "$url" HEAD:dist

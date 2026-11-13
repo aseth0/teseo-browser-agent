@@ -1,0 +1,29 @@
+{
+  "memory": [
+    {
+      "id": "m-1",
+      "title": "Language",
+      "text": "Answer in English.",
+      "pinned": true,
+      "enabled": true,
+      "domains": [],
+      "agents": [
+        "Browser"
+      ],
+      "createdAt": 1700000000000,
+      "updatedAt": 1700000000000
+    },
+    {
+      "id": "m-2",
+      "text": "Prices on shop.example.com are without tax.",
+      "pinned": false,
+      "enabled": false,
+      "domains": [
+        "shop.example.com"
+      ],
+      "agents": [],
+      "createdAt": 1700000000000,
+      "updatedAt": 1700000001000
+    }
+  ]
+}

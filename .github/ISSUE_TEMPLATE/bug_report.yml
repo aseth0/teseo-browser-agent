@@ -1,0 +1,72 @@
+name: Bug report
+description: Something in Teseo does not work as it should.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Before you paste logs or screenshots, remove anything personal or from a company**: API keys,
+        tokens, header values, sign-ins, real hosts and addresses, names, emails, file paths, and page
+        content you would not publish. Use `example.com` or `.test` hosts in what you show.
+
+        A security problem (a page making the agent act without your permission, a secret reaching a page
+        or the model…)? Do not open an issue: see [SECURITY.md](https://github.com/aseth0/teseo-browser-agent/blob/master/SECURITY.md).
+  - type: input
+    id: version
+    attributes:
+      label: Teseo version
+      description: Settings, or `version` in the extension's `manifest.json`.
+      placeholder: 0.66.0
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and version
+      placeholder: Chrome 140, Vivaldi 7.6, Edge 140…
+    validations:
+      required: true
+  - type: input
+    id: provider
+    attributes:
+      label: Provider and model
+      description: The kind of OpenAI-compatible server (a hosted API, a local server…) and the model. No URL, no key.
+      placeholder: a local OpenAI-compatible server, model-name-7b
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: On a public page or one of your own on an `example.com` / `.test` host, if the page matters.
+      placeholder: |
+        1. Open the side panel on …
+        2. Ask …
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Errors from the side panel's or the service worker's console, with personal and company data removed.
+      render: text
+  - type: checkboxes
+    id: clean
+    attributes:
+      label: Nothing personal
+      options:
+        - label: I removed personal data, keys, tokens and company information from this report, its logs and screenshots.
+          required: true

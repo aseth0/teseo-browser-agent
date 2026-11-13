@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Rail test page</title>
+    <style>
+      body { margin: 0; display: flex; font-family: sans-serif; }
+      nav { width: 72px; height: 100vh; overflow-y: auto; scroll-behavior: smooth; background: #222; flex: none; }
+      .item { position: relative; margin: 8px 12px; }
+      .item > span:last-child { position: absolute; left: -9999px; }
+      [role='treeitem'] { width: 48px; height: 48px; background: #58f; }
+      .tip { position: fixed; left: 80px; top: 8px; pointer-events: none; }
+      .muted > svg { opacity: 0.4; }
+    </style>
+  </head>
+  <body>
+    <!-- A chat app's side rail: each entry an icon drawn in an SVG, its HTML inside a masked foreignObject. -->
+    <nav aria-label="Spaces sidebar"><div role="tree" tabindex="0"><div role="group" aria-label="Spaces" id="spaces"></div></div></nav>
+    <main><h1 id="space">No space open</h1></main>
+    <script>
+      const names = Array.from({ length: 30 }, (_, i) => (i === 10 ? 'Ágora Space' : `Place ${i}`));
+      const spaces = document.getElementById('spaces');
+      names.forEach((name, i) => {
+        spaces.insertAdjacentHTML(
+          'beforeend',
+          `<div class="item"><span><div><div>
+            <svg width="48" height="48" viewBox="-4 -4 48 48">
+              <mask id="m${i}"><rect x="0" y="0" width="48" height="48" rx="16" fill="white" /></mask>
+              <foreignObject x="0" y="0" width="48" height="48" mask="url(#m${i})">
+                <div role="treeitem" aria-label="${name}" tabindex="-1" data-list-item-id="spaces___${i}" aria-selected="false"><img alt="" src="data:," width="48" height="48" /></div>
+              </foreignObject>
+            </svg>
+          </div></div></span><span><div><div><span>${name}</span></div></div></span></div>`,
+        );
+      });
+      // An archived entry, at the end, that opens nothing.
+      spaces.insertAdjacentHTML('beforeend', '<div class="item"><svg width="48" height="48"><foreignObject width="48" height="48"><div role="treeitem" aria-label="Archived Space" tabindex="-1"></div></foreignObject></svg></div>');
+      // An entry whose click only puts a class on what holds it: the look changes, through the style sheet.
+      spaces.insertAdjacentHTML('beforeend', '<div class="item"><svg width="48" height="48"><foreignObject width="48" height="48"><div role="treeitem" aria-label="Muted Space" tabindex="-1" data-mute></div></foreignObject></svg></div>');
+      document.addEventListener('click', (e) => e.target.closest('[data-mute]')?.closest('.item').classList.toggle('muted'));
+      // Every click the page gets: trusted or not, on what, and where the list was then (scenarios/devtools).
+      window.__clicks = [];
+      document.addEventListener('click', (e) => window.__clicks.push([e.isTrusted, e.target.tagName, document.querySelector('nav').scrollTop]), true);
+      // Hovering or focusing an entry shows its tooltip, in a layer of its own, and lights it up.
+      const shown = (e) => e.target.closest?.('[role=treeitem]');
+      const showTip = (e) => {
+        const item = shown(e);
+        if (!item || item.hasAttribute('aria-describedby')) return;
+        item.setAttribute('aria-describedby', 'tip');
+        item.classList.add('lit');
+        document.body.insertAdjacentHTML('beforeend', `<div class="tip"><div id="tip" role="tooltip">${item.getAttribute('aria-label')}</div></div>`);
+      };
+      const hideTip = (e) => {
+        const item = shown(e);
+        if (!item) return;
+        item.removeAttribute('aria-describedby');
+        item.classList.remove('lit');
+        document.querySelector('.tip')?.remove();
+      };
+      document.addEventListener('mouseover', showTip);
+      document.addEventListener('focusin', showTip);
+      document.addEventListener('mouseout', hideTip);
+      document.addEventListener('focusout', hideTip);
+      // As a framework does: one listener at the root, the entry found from the event's target.
+      const on = new URLSearchParams(location.search).get('on') || 'click';
+      document.addEventListener(on, (e) => {
+        const item = e.target.closest('[data-list-item-id]');
+        if (!item) return;
+        history.pushState({}, '', `/rail.html/spaces/${item.dataset.listItemId.split('___')[1]}`);
+        document.getElementById('space').textContent = `Open: ${item.getAttribute('aria-label')}`;
+      });
+    </script>
+  </body>
+</html>

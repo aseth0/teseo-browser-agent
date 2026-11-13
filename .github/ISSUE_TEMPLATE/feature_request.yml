@@ -1,0 +1,31 @@
+name: Feature request
+description: Something Teseo could do, or do better.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Leave out anything personal or from a company: describe the sites and data with `example.com` or
+        `.test` hosts and made-up content. Use cases already gathered are in
+        [docs/use-cases](https://github.com/aseth0/teseo-browser-agent/tree/master/docs/use-cases).
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you are trying to do
+      description: The task, and where Teseo falls short today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you propose
+      description: |
+        How it would work from the side panel or Settings. If it changes or adds a text sent to the model,
+        give its wording and where it goes.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Other ways to get there, or how you work around it now.

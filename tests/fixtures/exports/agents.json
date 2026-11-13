@@ -1,0 +1,21 @@
+{
+  "agents": [
+    {
+      "name": "tracker",
+      "icon": "🎫",
+      "description": "Works on the issue tracker.",
+      "instructions": "Keys look like INC-1.",
+      "tools": [
+        "browser.find"
+      ],
+      "skills": [],
+      "templates": [],
+      "sites": {
+        "tracker.example.com": "ask",
+        "wiki.example.com": "read-only"
+      },
+      "canAsk": false,
+      "canBeAsked": true
+    }
+  ]
+}

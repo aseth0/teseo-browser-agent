@@ -1,0 +1,16 @@
+node_modules
+dist
+.wxt
+*.log
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*~
+.idea/
+.vscode/
+
+# Design notes and plans from planning tools stay out of the repo
+docs/superpowers/

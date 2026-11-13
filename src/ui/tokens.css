@@ -1,0 +1,127 @@
+/* The theme's colors (Settings → Appearance sets data-theme and the accent): the side panel, the
+   options page and the page widget's card. */
+:root {
+  --bg: #ffffff;
+  --fg: #1d1d1f;
+  --muted: #6e6e73;
+  --border: #e3e3e6;
+  --surface: #f5f5f7;
+  --accent: #c2410c;
+  --on-accent: #ffffff; /* text on the accent (a chosen accent: look/palette works it out) */
+  --user: #fff1e8;
+  --danger: #b42318;
+  --tag: #9a3412;
+  --on-tag: #ffffff; /* text on --tag (a model text's "Only when" chip) */
+  /* Fonts (Settings → Appearance → Fonts sets them, look/fonts): text and code everywhere, or only in
+     the chat's messages (--font-msg, --font-msg-code, unset here) */
+  --font-ui: system-ui, -apple-system, sans-serif;
+  --font-code: ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* Markdown: emphasis, code and syntax colors */
+  --md-strong: #9a3412;
+  --md-em: #6d28d9;
+  --md-heading: #c2410c;
+  --md-code: #0e7490;
+  --md-code-bg: #e6f3f5;
+  --hl-keyword: #cf222e;
+  --hl-string: #0a3069;
+  --hl-number: #0550ae;
+  --hl-comment: #6e7781;
+  --hl-title: #8250df;
+  --hl-attr: #953800;
+  --hl-tag: #116329;
+  --hl-add: #116329;
+  --hl-add-bg: #dafbe1;
+  --hl-del: #82071e;
+  --hl-del-bg: #ffebe9;
+  /* Labels (Settings → Custom tools): the colors one may pick */
+  --label-gray: #57606a; --label-red: #c62828; --label-orange: #c2410c; --label-yellow: #8a6100; --label-green: #1a7f37;
+  --label-teal: #0e7490; --label-blue: #0550ae; --label-purple: #6d28d9; --label-pink: #be185d;
+  /* States: ready or connected, and busy (status dots, the page bar's access) */
+  --ok: #16a34a;
+  --warn: #f59e0b;
+  --on-warn: #1b1b1d; /* text and lines on --warn (the bubble waiting for you) */
+  /* Where the tokens come from, for text no Layers color marks (the chat's source bar), in the palette's
+     colors: the extension's text in grays, the tools', the model's answers, the tools' results */
+  --src-system: var(--c-system);
+  --src-tools: var(--c-tool);
+  --src-wrappers: color-mix(in srgb, var(--c-system) 45%, var(--bg));
+  --src-answers: var(--c-model);
+  --src-results: color-mix(in srgb, var(--c-tool) 50%, var(--bg));
+  /* What things are, one color each, across the whole UI (tool and step kinds, what comes from a page,
+     what goes to the model): from the web page, a tool, the model, you, what the extension knows and
+     adds, what changes things, the extension's fixed text. */
+  --c-page: #a16207;
+  --c-tool: #0e7490;
+  --c-model: #6d28d9;
+  --c-you: #1d4ed8;
+  --c-known: #15803d;
+  --c-write: #c2410c;
+  --c-system: #64748b;
+  /* The same in both themes: text sizes (the body's is --fs-md), the chat's space between items, a
+     popover's shadow, what stacks over what */
+  --fs-2xs: 10px;
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --fs-lg: 14px;
+  --fs-xl: 16px;
+  --fs-2xl: 18px;
+  --fs-3xl: 20px;
+  --fs-icon: 17px; /* an emoji or glyph as a button's icon (the widget's actions, the icon picker) */
+  --chat-gap: 8px;
+  /* The accent as text: the accent itself here (AA in both modes); a look's, mixed toward the text
+     color until it reads at AA (ui/palette lookVars). Links follow it, so a theme recolors them too. */
+  --accent-text: var(--accent);
+  --link: var(--accent-text);
+  /* A quiet chip in the accent (Layers' "New"): a tint of it, a softer border, and text
+     between it and the text color (readable on the tint in both themes, AA). */
+  --chip-accent-bg: color-mix(in srgb, var(--accent) 12%, transparent);
+  --chip-accent-border: color-mix(in srgb, var(--accent) 35%, transparent);
+  --chip-accent-fg: color-mix(in srgb, var(--accent-text) 75%, var(--fg));
+  --shadow-pop: 0 6px 24px rgb(0 0 0 / .18);
+  --shadow-float: 0 8px 32px rgb(0 0 0 / .25); /* a window over the page (the floating chat) */
+  --z-sticky: 2;
+  --z-pop: 10;
+  --z-overlay: 20;
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #1b1b1d;
+  --fg: #ececee;
+  --muted: #9a9aa0;
+  --border: #333338;
+  --surface: #242427;
+  --accent: #fb923c;
+  --on-accent: #1b1b1d;
+  --user: #3a2a1f;
+  --danger: #f97066;
+  --tag: #c2410c;
+  --md-strong: #fdba74;
+  --md-em: #c4b5fd;
+  --md-heading: #fb923c;
+  --md-code: #67e8f9;
+  --md-code-bg: #10333a;
+  --hl-keyword: #ff7b72;
+  --hl-string: #a5d6ff;
+  --hl-number: #79c0ff;
+  --hl-comment: #8b949e;
+  --hl-title: #d2a8ff;
+  --hl-attr: #ffa657;
+  --hl-tag: #7ee787;
+  --hl-add: #aff5b4;
+  --hl-add-bg: #033a16;
+  --hl-del: #ffdcd7;
+  --hl-del-bg: #67060c;
+  --label-gray: #9a9aa0; --label-red: #f87171; --label-orange: #fb923c; --label-yellow: #facc15; --label-green: #4ade80;
+  --label-teal: #2dd4bf; --label-blue: #60a5fa; --label-purple: #c4b5fd; --label-pink: #f9a8d4;
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --c-page: #facc15;
+  --c-tool: #2dd4bf;
+  --c-model: #c4b5fd;
+  --c-you: #60a5fa;
+  --c-known: #4ade80;
+  --c-write: #fb923c;
+  --c-system: #94a3b8;
+}

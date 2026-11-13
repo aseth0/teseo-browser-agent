@@ -1,0 +1,42 @@
+{
+  "customTools": [
+    {
+      "name": "forum.search",
+      "description": "Searches the forum.",
+      "base": "web.search",
+      "params": {
+        "query": {
+          "mode": "model",
+          "template": "{value} site:forum.example.com"
+        }
+      },
+      "labels": [
+        "forum"
+      ],
+      "group": "Research"
+    },
+    {
+      "name": "api.search",
+      "description": "Searches the API.",
+      "base": "http",
+      "params": {},
+      "inputs": [
+        {
+          "name": "q",
+          "type": "string",
+          "description": "Words"
+        }
+      ],
+      "http": {
+        "method": "GET",
+        "url": "https://api.example.com/s?q={q}",
+        "headers": [
+          {
+            "name": "X-Key",
+            "value": ""
+          }
+        ]
+      }
+    }
+  ]
+}

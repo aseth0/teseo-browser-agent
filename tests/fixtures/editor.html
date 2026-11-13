@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Editor test page</title>
+  </head>
+  <body>
+    <h1>Editor test page</h1>
+    <!-- As Slate: its text is a model, changed by beforeinput and drawn from there. An edit over nodes it did
+         not draw is lost, and Enter sends what the model holds, not the DOM. The range of an edit is the one
+         the event brings (real text), else the selection as taken in, a moment after the selection changed. -->
+    <div id="editor" role="textbox" aria-label="Message" contenteditable="true" style="min-height: 40px"></div>
+    <p id="model"></p>
+    <p id="status">Status: idle</p>
+    <script>
+      const editor = document.getElementById('editor');
+      let model = 'old draft';
+      const ignoring = location.search.includes('ignoring'); // takes no input at all
+      window.__presses = 0;
+      document.addEventListener('mousedown', (e) => (window.__presses += e.isTrusted ? 1 : 0));
+      const offsetOf = (node, offset) => {
+        const before = document.createRange();
+        before.selectNodeContents(editor);
+        before.setEnd(node, offset);
+        return before.toString().length;
+      };
+      const draw = (caret) => {
+        editor.innerHTML = '<p><span data-leaf></span></p>';
+        const leaf = editor.querySelector('[data-leaf]');
+        leaf.textContent = model;
+        document.getElementById('model').textContent = 'Model: ' + (model || '(empty)');
+        if (caret === undefined || !leaf.firstChild) return;
+        getSelection().collapse(leaf.firstChild, caret);
+      };
+      const offsetsOf = (range) => ({ start: offsetOf(range.startContainer, range.startOffset), end: offsetOf(range.endContainer, range.endOffset) });
+      let taken = { start: 0, end: 0 };
+      let taking;
+      document.addEventListener('selectionchange', () => {
+        taking ??= setTimeout(() => {
+          taking = undefined;
+          const selection = getSelection();
+          if (selection.rangeCount && editor.contains(selection.getRangeAt(0).commonAncestorContainer)) taken = offsetsOf(selection.getRangeAt(0));
+        }, 100);
+      });
+      editor.addEventListener('beforeinput', (e) => {
+        e.preventDefault();
+        if (ignoring || !editor.querySelector('[data-leaf]')) return;
+        const [brought] = e.getTargetRanges();
+        const inserting = e.inputType === 'insertText';
+        let { start, end } = inserting && brought ? offsetsOf(brought) : taken;
+        if (!inserting && start === end) start = Math.max(0, start - 1);
+        const text = inserting ? e.data : '';
+        model = model.slice(0, start) + text + model.slice(end);
+        taken = { start: start + text.length, end: start + text.length };
+        draw(taken.start);
+      });
+      editor.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        document.getElementById('status').textContent = 'Status: sent ' + model;
+      });
+      draw();
+    </script>
+  </body>
+</html>

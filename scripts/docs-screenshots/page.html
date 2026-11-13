@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Trailhead 2 Tent · Example Outfitters</title>
+  <meta name="description" content="A light two-person tent for three seasons." />
+  <link rel="icon" href="/favicon.svg" />
+  <style>
+    :root { --ink: #1f2a24; --muted: #5b6b62; --line: #e3e8e4; --brand: #2f6f4e; --bg: #f7f8f6; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; color: var(--ink); background: var(--bg); }
+    header { display: flex; align-items: center; gap: 28px; padding: 14px 40px; background: #fff; border-bottom: 1px solid var(--line); }
+    header .logo { font-weight: 700; font-size: 18px; color: var(--brand); text-decoration: none; }
+    header nav a { color: var(--ink); text-decoration: none; margin-right: 18px; }
+    header form { margin-left: auto; display: flex; gap: 6px; }
+    header input { padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; width: 180px; }
+    button { font: inherit; cursor: pointer; }
+    header button { padding: 7px 12px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+    main { max-width: 1080px; margin: 32px auto; padding: 0 40px; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 44px; }
+    .photo { aspect-ratio: 4 / 3; border-radius: 12px; background: linear-gradient(160deg, #cfe3d6, #8fb9a0 55%, #4f7d63); display: grid; place-items: end start; padding: 18px; color: #fff; font-weight: 600; }
+    .crumbs { color: var(--muted); font-size: 13px; }
+    h1 { margin: 6px 0 4px; font-size: 30px; }
+    .rating { color: var(--muted); }
+    .price { font-size: 26px; font-weight: 700; margin: 14px 0; }
+    label { display: block; margin: 14px 0 4px; font-weight: 600; }
+    select { padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; font: inherit; min-width: 200px; background: #fff; }
+    .buy { margin-top: 20px; padding: 12px 22px; border: 0; border-radius: 8px; background: var(--brand); color: #fff; font-weight: 600; }
+    .specs { margin-top: 24px; border-top: 1px solid var(--line); padding-top: 12px; }
+    .specs li { margin: 4px 0; }
+    section.reviews { grid-column: 1 / -1; }
+    .review { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; margin: 10px 0; }
+    .review h3 { margin: 0 0 4px; font-size: 16px; }
+    .review .who { color: var(--muted); font-size: 13px; }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="logo" href="/">Example Outfitters</a>
+    <nav><a href="/tents">Tents</a><a href="/packs">Packs</a><a href="/sale">Sale</a></nav>
+    <form role="search"><input type="search" aria-label="Search products" placeholder="Search products" /><button>Search</button></form>
+  </header>
+  <main>
+    <div class="photo" role="img" aria-label="The Trailhead 2 tent pitched in a meadow">Trailhead 2</div>
+    <div>
+      <div class="crumbs">Tents › Backpacking</div>
+      <h1>Trailhead 2 Tent</h1>
+      <div class="rating">★★★★☆ 4.6 · 128 reviews</div>
+      <div class="price">$249.00</div>
+      <p>A light, freestanding two-person tent for three seasons. Two doors, two vestibules and a full mesh inner keep it airy on warm nights.</p>
+      <label for="color">Color</label>
+      <select id="color"><option>Sand</option><option>Forest green</option><option>Slate blue</option></select>
+      <label for="size">Size</label>
+      <select id="size"><option>2 person</option><option>3 person (+$40)</option></select>
+      <div><button class="buy" id="add">Add to cart</button></div>
+      <ul class="specs">
+        <li>Packed weight: 1.6 kg</li>
+        <li>Floor area: 2.7 m²</li>
+        <li>Peak height: 105 cm</li>
+      </ul>
+    </div>
+    <section class="reviews" aria-label="Reviews">
+      <h2>Reviews</h2>
+      <article class="review"><h3>Stayed dry through a storm</h3><div class="who">Hiker from the coast · ★★★★★</div><p>Pitched it in strong wind and heavy rain; not a drop inside. Easy to set up alone.</p></article>
+      <article class="review"><h3>Great, but tight for two tall people</h3><div class="who">Weekend camper · ★★★★☆</div><p>Light and well made. At 1.90 m we touched both ends; the 3 person size would be better for us.</p></article>
+      <article class="review"><h3>Condensation on cold nights</h3><div class="who">Alpine trekker · ★★★☆☆</div><p>Below freezing the fly gets wet inside. Fine the rest of the year.</p></article>
+    </section>
+  </main>
+  <script>
+    document.getElementById('add').addEventListener('click', (e) => { e.target.textContent = 'Added ✓'; });
+  </script>
+</body>
+</html>

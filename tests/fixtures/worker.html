@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Worker test page</title>
+  </head>
+  <body>
+    <h1>Worker test page</h1>
+    <p id="status" role="status">Status: idle</p>
+    <script>
+      // A call made by a Web Worker: today's page-world recording does not see it.
+      window.runWorker = () =>
+        new Promise((resolve) => {
+          const worker = new Worker('/worker.js');
+          worker.onmessage = (e) => {
+            document.getElementById('status').textContent = 'Status: worker said ' + e.data.from;
+            resolve(e.data);
+          };
+        });
+      window.callApi = () => fetch('/api/customer').then((r) => r.json());
+    </script>
+  </body>
+</html>

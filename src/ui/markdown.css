@@ -1,0 +1,42 @@
+/* Model text as Markdown (ui/Markdown, and the page widget's card). */
+.markdown > :first-child { margin-top: 0; }
+.markdown > :last-child { margin-bottom: 0; }
+.markdown p, .markdown ul, .markdown ol, .markdown pre, .markdown table, .markdown blockquote { margin: 0 0 8px; }
+.markdown ul, .markdown ol { padding-left: 20px; }
+.markdown h1, .markdown h2, .markdown h3, .markdown h4 { margin: 10px 0 6px; font-size: var(--fs-lg); color: var(--md-heading); }
+.markdown strong { color: var(--md-strong); }
+.markdown em { color: var(--md-em); }
+.markdown del { color: var(--muted); }
+.markdown li::marker { color: var(--md-heading); }
+.markdown hr { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+.markdown code, .markdown pre { font-family: var(--font-msg-code, var(--font-code)); }
+.markdown code { font-size: var(--fs-sm); color: var(--md-code); background: var(--md-code-bg); padding: 1px 4px; border-radius: 4px; }
+.markdown pre { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px; overflow-x: auto; }
+.markdown pre code { color: var(--fg); background: none; padding: 0; }
+.markdown blockquote { border-left: 3px solid var(--md-heading); padding-left: 8px; color: var(--muted); }
+.markdown table { border-collapse: collapse; display: block; overflow-x: auto; }
+.markdown th, .markdown td { border: 1px solid var(--border); padding: 3px 6px; }
+.markdown th { background: var(--bg); }
+.markdown a { color: var(--link); }
+/* A heading that folds what is under it (markdown/sections): its button a triangle, so that a copied
+   selection has no trace of it. */
+.markdown > .fold-section:first-child > :first-child { margin-top: 0; }
+.markdown .fold-body > :last-child { margin-bottom: 0; }
+.markdown .fold-section.folded > .fold-body { display: none; }
+.markdown .fold-toggle { display: inline-flex; align-items: center; justify-content: center; width: 1.1em; height: 1.1em; margin: 0 3px 0 -2px; padding: 0; border: 0; border-radius: 3px; background: none; color: var(--muted); vertical-align: -0.05em; cursor: pointer; }
+.markdown .fold-toggle::before { content: ''; border-style: solid; border-width: 0.3em 0.3em 0; border-color: currentColor transparent transparent; transition: transform 0.1s; }
+.markdown .fold-toggle[aria-expanded="false"]::before { transform: rotate(-90deg); }
+.markdown .fold-toggle:hover { color: var(--fg); background: var(--surface); }
+.markdown .fold-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* Syntax colors in code blocks (highlight.js classes) */
+.hljs-keyword, .hljs-selector-tag, .hljs-doctag, .hljs-meta .hljs-keyword { color: var(--hl-keyword); }
+.hljs-string, .hljs-regexp, .hljs-meta .hljs-string { color: var(--hl-string); }
+.hljs-number, .hljs-literal, .hljs-built_in, .hljs-symbol, .hljs-variable.language_ { color: var(--hl-number); }
+.hljs-comment, .hljs-quote, .hljs-meta { color: var(--hl-comment); font-style: italic; }
+.hljs-title, .hljs-title.function_, .hljs-title.class_, .hljs-section { color: var(--hl-title); }
+.hljs-attr, .hljs-attribute, .hljs-property, .hljs-type, .hljs-params, .hljs-variable, .hljs-selector-class, .hljs-selector-id { color: var(--hl-attr); }
+.hljs-name, .hljs-tag, .hljs-bullet { color: var(--hl-tag); }
+.hljs-addition { color: var(--hl-add); background: var(--hl-add-bg); }
+.hljs-deletion { color: var(--hl-del); background: var(--hl-del-bg); }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: 700; }

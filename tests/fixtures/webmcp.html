@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>WebMCP Shop</title>
+  </head>
+  <body>
+    <h1>Cart: <span id="count">0</span> items</h1>
+    <script>
+      // Registers a WebMCP tool. Browsers without the API (or without the origin trial) get a
+      // minimal stand-in with the same shape as the spec's document.modelContext; like Chrome 154
+      // and earlier, its executeTool takes the input as JSON text.
+      if (!document.modelContext) {
+        const tools = [];
+        document.modelContext = {
+          registerTool: async (tool) => void tools.push(tool),
+          getTools: async () =>
+            tools.map(({ name, title, description, inputSchema }) => ({ name, title, description, inputSchema: JSON.stringify(inputSchema) })),
+          executeTool: async (tool, input) => {
+            if (typeof input !== 'string') throw new Error('Failed to parse input arguments');
+            return tools.find((t) => t.name === tool.name).execute(JSON.parse(input), { signal: new AbortController().signal });
+          },
+        };
+      }
+      document.modelContext.registerTool({
+        name: 'add_to_cart',
+        title: 'Add to cart',
+        description: 'Adds a product to the shopping cart.',
+        inputSchema: {
+          type: 'object',
+          properties: { product: { type: 'string' }, quantity: { type: 'number' } },
+          required: ['product'],
+        },
+        execute: async ({ product, quantity = 1 }) => {
+          const count = document.getElementById('count');
+          count.textContent = String(Number(count.textContent) + quantity);
+          return { added: product, quantity, cart: Number(count.textContent) };
+        },
+      });
+    </script>
+  </body>
+</html>

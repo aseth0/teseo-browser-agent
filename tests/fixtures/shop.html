@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Demo Shop · X1 Headphones</title>
+    <meta name="description" content="X1 wireless headphones with noise cancelling." />
+    <meta property="og:title" content="X1 Headphones" />
+    <meta property="og:image" content="https://shop.test/x1.jpg" />
+    <link rel="canonical" href="https://shop.test/p/x1" />
+    <script type="application/ld+json">
+      { "@context": "https://schema.org", "@type": "Product", "name": "X1 Headphones",
+        "offers": { "@type": "Offer", "price": "129.00", "priceCurrency": "EUR" } }
+    </script>
+    <script type="application/ld+json">{ broken </script>
+    <style>.hidden-css { display: none; }</style>
+  </head>
+  <body>
+    <header>
+      <nav aria-label="Main">
+        <a href="/">Home</a>
+        <a href="/deals">Deals</a>
+        <a href="javascript:void(0)">Menu</a>
+      </nav>
+      <form role="search">
+        <label for="q">Search products</label>
+        <input id="q" type="search" value="headphones" />
+        <button type="submit">Search</button>
+      </form>
+    </header>
+    <main>
+      <article>
+        <h1>X1 Headphones</h1>
+        <p>Active noise cancelling and 30 hours of battery life. Great for travelling and working in open spaces.</p>
+        <p>They come with a charging case, a USB-C cable and three ear tip sizes for a comfortable fit for hours.</p>
+        <p>Compatible with Bluetooth 5.3, multipoint and high-resolution codecs to listen at the best quality.</p>
+        <label>Color
+          <select name="color"><option>Black</option><option selected>White</option></select>
+        </label>
+        <label><input type="checkbox" checked /> Add extended warranty</label>
+        <input type="password" value="secret" placeholder="Code" />
+        <button id="buy">Buy now</button>
+        <p id="cart" role="status">Cart: empty</p>
+        <button class="hidden-css">Button hidden by CSS</button>
+        <button hidden>Button with hidden</button>
+        <div aria-hidden="true"><button>Button aria-hidden</button></div>
+        <div role="button" tabindex="0">Add to favorites</div>
+        <img src="x1.jpg" alt="Photo of the X1 headphones" />
+        <img src="decoration.png" alt="" />
+        <shadow-host></shadow-host>
+      </article>
+    </main>
+    <footer><a href="/contact">Contact</a></footer>
+    <script>console.log('must not appear');</script>
+    <script>
+      document.getElementById('buy').addEventListener('click', () => {
+        document.getElementById('cart').textContent = 'Cart: 1 item';
+      });
+      document.querySelector('form[role=search]').addEventListener('submit', (e) => {
+        e.preventDefault();
+        document.getElementById('cart').textContent = 'Searched: ' + document.getElementById('q').value;
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "templates": [
+    {
+      "name": "shop",
+      "description": "Products.",
+      "matches": [
+        "*://shop.example.com/*"
+      ],
+      "views": [
+        {
+          "name": "main",
+          "paths": [
+            "*"
+          ],
+          "replacePage": true,
+          "description": "The product.",
+          "body": "Product: {{ page | one: \"h1\" }}"
+        }
+      ],
+      "webRead": true
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "skills": [
+    {
+      "name": "review-pr",
+      "description": "Reviews a pull request.",
+      "matches": [],
+      "body": "1. Read the diff.\n2. List the risks.",
+      "references": [
+        {
+          "path": "references/checklist.md",
+          "content": "- tests\n- docs"
+        }
+      ]
+    },
+    {
+      "name": "shop-prices",
+      "description": "Compares prices.",
+      "matches": [
+        "*://shop.example.com/*"
+      ],
+      "body": "Price: {{selector:.price}}",
+      "references": []
+    }
+  ]
+}
