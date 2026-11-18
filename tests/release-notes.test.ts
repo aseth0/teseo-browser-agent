@@ -46,9 +46,8 @@ describe('release notes', () => {
 
   it('builds every link from the repository URL, at the version tag', () => {
     const notes = releaseNotes({ template, changelog, version: '1.2.0', repo, name: 'teseo-browser-agent' });
-    const { zip, storeZip } = assetNames('teseo-browser-agent', '1.2.0');
-    expect(notes).toContain(`${repo}/releases/download/v1.2.0/${zip}`);
-    expect(notes).toContain(`${repo}/releases/download/v1.2.0/${storeZip}`);
+    const { zip, storeZip, firefoxZip, firefoxSources } = assetNames('teseo-browser-agent', '1.2.0');
+    for (const file of [zip, storeZip, firefoxZip, firefoxSources]) expect(notes).toContain(`${repo}/releases/download/v1.2.0/${file}`);
     expect(notes).toContain(`${repo}/archive/refs/tags/v1.2.0.zip`);
     expect(notes).toContain(`${repo}/blob/v1.2.0/docs/guide/getting-started.md#the-downloadable-version`);
     expect(notes).toContain(`${repo}/blob/v1.2.0/docs/guide/getting-started.md#the-chrome-web-store-version`);
@@ -89,13 +88,20 @@ describe('release notes', () => {
   });
 
   it('names the zips as wxt.config.ts makes them', () => {
-    // wxt's default artifactTemplate for the downloadable zip; wxt.config.ts sets the store's.
-    const store = /artifactTemplate: '([^']+)'/.exec(readFileSync('wxt.config.ts', 'utf8'))?.[1];
+    // wxt's default artifactTemplate for the downloadable zip and Firefox's; wxt.config.ts sets the store's and
+    // Firefox's sources zip's (sourcesTemplate).
+    const config = readFileSync('wxt.config.ts', 'utf8');
+    const store = /artifactTemplate: '([^']+)'/.exec(config)?.[1];
+    const sources = /sourcesTemplate: '([^']+)'/.exec(config)?.[1];
     expect(store).toBe('{{name}}-{{version}}-{{browser}}-store.zip');
-    const fill = (t: string) => t.replace('{{name}}', 'teseo-browser-agent').replace('{{version}}', '1.2.0').replace('{{browser}}', 'chrome');
+    expect(sources).toBe('{{name}}-{{packageVersion}}-firefox-sources.zip');
+    const fill = (t: string, browser = 'chrome') =>
+      t.replace('{{name}}', 'teseo-browser-agent').replace(/\{\{(packageVersion|version)\}\}/, '1.2.0').replace('{{browser}}', browser);
     expect(assetNames('teseo-browser-agent', '1.2.0')).toEqual({
       zip: fill('{{name}}-{{version}}-{{browser}}.zip'),
       storeZip: fill(store ?? ''),
+      firefoxZip: fill('{{name}}-{{packageVersion}}-{{browser}}.zip', 'firefox'),
+      firefoxSources: fill(sources ?? ''),
     });
   });
 });
@@ -111,15 +117,21 @@ describe('release notes from the command line (main)', () => {
     expect(main(['v0.72.0'], {})).toContain(`${own}/releases/download/v0.72.0/`);
   });
 
-  it('refuses what is not a version, and a folder without both zips', () => {
+  it('refuses what is not a version, and a folder without all four zips', () => {
     expect(() => main(['Unreleased'], {})).toThrow('Usage');
     expect(() => main([], {})).toThrow('Usage');
     const dir = mkdtempSync(join(tmpdir(), 'release-notes-'));
-    const { zip, storeZip } = assetNames(pkg.name, '0.72.0');
+    const { zip, storeZip, firefoxZip, firefoxSources } = assetNames(pkg.name, '0.72.0');
     writeFileSync(join(dir, zip), 'zip');
     expect(() => main(['0.72.0', dir], {})).toThrow(`No ${storeZip} in ${dir}.`);
     writeFileSync(join(dir, storeZip), 'store');
+    expect(() => main(['0.72.0', dir], {})).toThrow(`No ${firefoxZip} in ${dir}.`);
+    writeFileSync(join(dir, firefoxZip), 'firefox');
+    expect(() => main(['0.72.0', dir], {})).toThrow(`No ${firefoxSources} in ${dir}.`);
+    writeFileSync(join(dir, firefoxSources), 'sources');
     const sha = (text: string) => createHash('sha256').update(text).digest('hex');
-    expect(main(['0.72.0', dir], {})).toContain(`${sha('zip')}  ${zip}\n${sha('store')}  ${storeZip}\n`);
+    expect(main(['0.72.0', dir], {})).toContain(
+      `${sha('zip')}  ${zip}\n${sha('store')}  ${storeZip}\n${sha('firefox')}  ${firefoxZip}\n${sha('sources')}  ${firefoxSources}\n`,
+    );
   });
 });

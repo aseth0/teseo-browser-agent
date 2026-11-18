@@ -1,8 +1,9 @@
 // What this version of Teseo leaves out, told the same way everywhere (core/build's features): the
 // mark beside its name, a section's page in its place (FeaturePage), a note in a tab (FeatureNote), a
 // greyed row whose mark opens the reason (FeatureRow), and Settings → About's summary (BuildSummary).
-// Two texts, by the reason: the browser has no API for it (to the docs' page about it), or the Chrome
-// Web Store's build leaves it out (to the releases, whose download has it). Nothing in the chat.
+// Three texts, by the reason: the browser has no API for it, or Firefox's build leaves it out (each to the
+// docs' page about it, which says why), or the Chrome Web Store's build leaves it out (to the releases, whose
+// download has it). Nothing in the chat.
 import { useId, useState, type ReactNode } from 'react';
 import { missingFeatures, type Feature, type FeatureId, feature as featureOf } from '../core/build';
 import { links } from '../core/links';
@@ -13,10 +14,10 @@ import { MARK, NOTICE, plainText } from './feature-texts';
 
 const out = { target: '_blank', rel: 'noreferrer' } as const;
 
-// The reason (ui/feature-texts), its link in it: the releases for the store's, the docs page for the browser's.
+// The reason (ui/feature-texts), its link in it: the releases for the store's, the docs page for the others.
 export function NoticeText({ feature }: { feature: Feature }) {
   const store = feature.reason === 'store';
-  const { before, link, after } = NOTICE[store ? 'store' : 'browser'];
+  const { before, link, after } = NOTICE[feature.reason ?? 'browser'];
   return <>{before}<a href={store ? links().releases : links().docs(feature.docs)} {...out}>{link}</a>{after}</>;
 }
 

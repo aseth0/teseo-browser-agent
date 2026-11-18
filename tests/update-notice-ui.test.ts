@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // The "new version available" notice in the popup and Settings → About (ui/useUpdateNotice): only the
-// downloadable release build asks GitHub, once per browser session, and only from the popup.
+// downloadable release build asks GitHub (not Firefox's, for now), once per browser session, and only from the popup.
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 const { fakeEvent } = await import('./fakes/browser');
 const local: Record<string, unknown> = {};
@@ -21,10 +21,11 @@ const storage = { local: area('local', local), session: area('session', session)
 vi.mock('wxt/browser', () => ({ browser: { storage, runtime: { getManifest: () => ({ version: '0.75.3' }) } } }));
 const fetchMock = vi.fn(async (_url: string, _init: RequestInit) => new Response(JSON.stringify({ tag_name: 'v0.76.0', body: 'not shown' }), { status: 200 }));
 
-async function load(build: 'download' | 'store' | 'dev') {
+async function load(build: 'download' | 'store' | 'dev' | 'firefox') {
   vi.resetModules();
   vi.stubGlobal('__RELEASE_BUILD__', build !== 'dev');
   vi.stubGlobal('__STORE__', build === 'store');
+  vi.stubGlobal('__FIREFOX__', build === 'firefox'); // a release build of Firefox's
   vi.stubGlobal('fetch', fetchMock);
   const { useUpdateNotice } = await import('../src/ui/useUpdateNotice');
   const { UpdateLine } = await import('../src/entrypoints/popup/UpdateLine');
@@ -92,8 +93,8 @@ describe('the update notice', () => {
     expect((await ui.about(off)).querySelector('.update-notice')).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
   });
-  it('the store build and a dev build make no request, read nothing and show no switch', async () => {
-    for (const build of ['store', 'dev'] as const) {
+  it("the store build, a dev build and Firefox's release build make no request, read nothing and show no switch", async () => {
+    for (const build of ['store', 'dev', 'firefox'] as const) {
       local.updateNotice = { latest: '0.76.0' };
       const ui = await load(build);
       expect((await ui.popup()).innerHTML).toBe('');

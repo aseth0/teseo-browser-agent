@@ -50,7 +50,8 @@ that one.
 keys or other secrets. In the other browser, import it there and pick what comes in; then add the providers' keys.
 
 **Does it work in Firefox, Edge or Brave?**
-Firefox: only as a trial build, without the DevTools engine, Speak, a tab's audio, the floating chat or a panel for each tab
+Firefox: only as a trial build, without the DevTools engine, Speak, a tab's audio, the floating chat, a panel for each
+tab or the sources of custom tools, and never in private windows
 ([what each version has](settings.md#what-each-version-has)). It is built and tested for Chrome and used in Vivaldi;
 other Chromium browsers with side panels may work but are not tested.
 

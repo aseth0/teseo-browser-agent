@@ -8,11 +8,12 @@ import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs';
 import { chromium } from 'playwright-core';
-import { actionPart, HELLO, LIVE, PORT, SCENARIOS, T, turnEnded } from './lib.mjs';
+import { granting, HELLO, LIVE, PORT, SCENARIOS, T, turnEnded } from './lib.mjs';
+import { seedArgs, seedStorage } from './seed.mjs';
 import { server } from './mock/server.mjs';
 import { resetMock } from './mock/state.mjs';
 import { ALL } from './scenarios/index.mjs';
-import { ACTIONS, AFTER, AGENT_PROFILES, APPEARANCE, BEFORE, BETWEEN, CARD, CHAT_VIEW, CHAT_WINDOW, CHECK, COMPACTION, CONVERSATIONS, CUSTOM_TOOLS, DISABLED_TOOLS, EXPECT, LIMITS, MEMORY, MESSAGES, MID_TURN, MODEL_OF, PAGE_ACTIONS, PAGES, REJECT, RUN, SITE_POLICIES, SKILLS, SPEAK, TEMPLATES, TURNS, VOICE, WEB_SEARCH, WORD_BLACKLIST } from './scenarios/tables.mjs';
+import { ACTIONS, AFTER, BEFORE, BETWEEN, CARD, CHECK, DISABLED_TOOLS, EXPECT, MESSAGES, MID_TURN, MODEL_OF, PAGES, REJECT, RUN, TURNS } from './scenarios/tables.mjs';
 
 // A live search reads the search engine's site, which only a click in a permission prompt allows: a
 // copy of the build that may read every site stands in for it.
@@ -20,15 +21,6 @@ import { ACTIONS, AFTER, AGENT_PROFILES, APPEARANCE, BEFORE, BETWEEN, CARD, CHAT
 // chat or Settings): a copy of the build that may read it stands in for that click. [::1] stays
 // ungranted, for the scenarios that need a site without access.
 const EXT = granting(path.resolve('dist/chrome-mv3'), ['http://localhost/*', 'http://127.0.0.1/*', ...(LIVE ? ['<all_urls>'] : [])]);
-function granting(dir, origins) {
-  const copy = fs.mkdtempSync(path.join(os.tmpdir(), 'ba-e2e-ext-'));
-  fs.cpSync(dir, copy, { recursive: true });
-  const file = path.join(copy, 'manifest.json');
-  const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
-  manifest.host_permissions = [...(manifest.host_permissions ?? []), ...origins];
-  fs.writeFileSync(file, JSON.stringify(manifest));
-  return copy;
-}
 // Expected UI text per scenario (default: the greeting) and number of prompts sent.
 
 // Chrome discards <link rel="modulepreload"> in extension pages with a warning (Vivaldi shows
@@ -85,85 +77,15 @@ try {
     // Blank while the storage is seeded: a chat the scenario before left floating on it would come back
     // with the page, and save the settings it still holds over the seed.
     await shop.goto('about:blank');
-    await sw.evaluate(async ({ actionParts, compaction, appearance, chatWindow, SITE_POLICIES, scenario, port, model, disabledTools, userSkills, userTemplates, chatView, limits, conversations, webSearch, customTools, pageActions, agents, memory, wordBlacklist, voice, speak }) => {
+    await sw.evaluate(async () => {
       // The browser's own side panel, opened by a scenario before (the widget's "open the chat",
       // a met watch): not one of the test's pages, so closed here, disabled and enabled again. Left
       // open, it would answer the seed below with the settings it still holds and save them over it.
       await chrome.sidePanel.setOptions({ enabled: false });
       await chrome.sidePanel.setOptions({ enabled: true });
       for (let i = 0; i < 50 && (await chrome.runtime.getContexts({ contextTypes: ['SIDE_PANEL'] })).length; i++) await new Promise((r) => setTimeout(r, 20));
-      await chrome.storage.session.clear(); // a chat floating on the shop, a handoff
-      const granted = new Set(chrome.runtime.getManifest().host_permissions);
-      const added = (await chrome.permissions.getAll()).origins?.filter((o) => !granted.has(o)) ?? [];
-      if (added.length) await chrome.permissions.remove({ origins: added });
-      const providerURL = `http://localhost:${port}/v1`;
-      // What the extension keeps apart from storage.local, as it keeps it (storage/secrets): seeded there,
-      // with every move out of storage.local done, so the worker, whatever it reads meanwhile, never
-      // takes the seed for what an earlier version left (a page's, once the moves are done).
-      // As tools/custom/store's secretsBoundTo: what a custom tool's secrets are kept for.
-      const sorted = (v) => (Array.isArray(v) ? v.map(sorted) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, sorted(v[k])])) : v);
-      const boundTo = (c) => JSON.stringify(sorted([c.base, c.params, c.inputs ?? [], c.http && { method: c.http.method, url: c.http.url, body: c.http.body, extract: c.http.extract, headers: (c.http.headers ?? []).map((h) => h.name) }, c.script ?? '', c.uses ?? []]));
-      const ACCESS = ['sites', 'onlyItsSites', 'tools', 'canAsk', 'canBeAsked', 'enabled'];
-      const kept = {
-        sitePolicies: { browser: SITE_POLICIES[scenario] ?? {} }, // the browser agent's under "browser" (policy/store)
-        settings: { providers: { env: { baseURL: providerURL, apiKey: 'x' } } },
-        agentAccess: Object.fromEntries(agents.map((a) => [a.id, Object.fromEntries(ACCESS.map((f) => [f, a[f]]))])),
-        customToolSecrets: Object.fromEntries(customTools.map((c) => [c.id, { enabled: c.enabled, ...(c.http && { headers: c.http.headers, session: c.http.session, readOnly: c.http.readOnly }), boundTo: boundTo(c) }])),
-        widgetActions: actionParts, // widget/store, as lib's actionPart
-        ...(wordBlacklist && { wordBlacklist: wordBlacklist.entries }), // word-blacklist/store
-        moved: Object.fromEntries(['mcpAuth', 'sitePolicies', 'actionLog', 'settingsSecrets', 'agentAccess', 'customToolSecrets', 'customToolSourceSecrets', 'widgetActions', 'mcpProviderIds'].map((id) => [id, true])),
-      };
-      // Under the extension's own lock for its secrets (storage/secrets updateSecret, 'secrets'), and
-      // before storage.local is cleared: the worker answers that clear by settling the settings'
-      // secrets (a read, then a write), and a write of what it read before the seed would undo it.
-      await navigator.locks.request('secrets', () => new Promise((resolve, reject) => {
-        const open = indexedDB.open('browser-agent', 1);
-        open.onupgradeneeded = () => open.result.createObjectStore('secrets');
-        open.onerror = () => reject(open.error);
-        open.onsuccess = () => {
-          const tx = open.result.transaction('secrets', 'readwrite');
-          const secrets = tx.objectStore('secrets');
-          secrets.clear();
-          for (const [name, value] of Object.entries(kept)) secrets.put(value, name);
-          tx.oncomplete = () => (open.result.close(), resolve());
-          tx.onerror = () => reject(tx.error);
-        };
-      }));
-      // In storage.local, without them.
-      await chrome.storage.local.clear();
-      const openTool = ({ http, ...c }) => ({ ...c, enabled: false, ...(http && { http: { method: http.method, url: http.url, body: http.body, extract: http.extract, ...(http.headers && { headers: http.headers.map((h) => ({ name: h.name, value: '' })) }) } }) });
-      const openAgent = (a) => Object.fromEntries(Object.entries(a).filter(([k]) => !ACCESS.includes(k)));
-      await chrome.storage.local.set({
-        convIndex: conversations.map(({ history: _h, ...meta }) => meta), // none to go on with, except the scenario's
-        ...Object.fromEntries(conversations.map((c) => [`conv:${c.id}`, c])),
-        skills: { user: userSkills, disabledBuiltins: [] },
-        templates: { user: userTemplates, disabledBuiltins: [] },
-        customTools: { user: customTools.map(openTool), disabledBuiltins: [] },
-        pageActions: { user: pageActions, disabledBuiltins: [] },
-        agents: { user: agents.map(openAgent), disabledBuiltins: [] },
-        memory: { user: memory, disabledBuiltins: [] },
-        pageWidgetPlaces: {},
-        ...(wordBlacklist && { wordBlacklist: wordBlacklist.config }),
-        settings: {
-          mentions: { forceTool: model === 'inline-mentions' },
-          history: { resume: model === 'history' ? 'recent' : 'never', autoAttach: { enabled: model === 'history-auto' } },
-          webSearch,
-          providers: [{ id: 'env', name: 'Mock', baseURL: providerURL, apiKey: '', defaultModel: model }],
-          activeProviderId: 'env',
-          systemPrompt: 'test',
-          disabledTools,
-          chatView,
-          limits,
-          pageWidget: { everywhere: false }, // the bubble only where actions match, unless a scenario says otherwise
-          chatWindow,
-          appearance,
-          compaction,
-          voice,
-          speak,
-          devtoolsTools: model.startsWith('engine-') || scenario.startsWith('rec-'), // Settings → Chromium DevTools: the DevTools engine (scenarios/devtools)
-        },
-      });
-    }, { actionParts: Object.fromEntries((PAGE_ACTIONS[scenario] ?? []).map((a) => [a.id, actionPart(a)])), compaction: COMPACTION[scenario], appearance: APPEARANCE[scenario], chatWindow: CHAT_WINDOW[scenario], SITE_POLICIES, scenario, port: PORT, model, disabledTools: DISABLED_TOOLS[scenario] ?? [], userSkills: SKILLS[scenario] ?? [], userTemplates: TEMPLATES[scenario] ?? [], chatView: CHAT_VIEW[scenario] ?? { steps: 'inline' }, limits: LIMITS[scenario] ?? {}, conversations: CONVERSATIONS[scenario] ?? [], webSearch: WEB_SEARCH[scenario] ?? {}, customTools: CUSTOM_TOOLS[scenario] ?? [], pageActions: PAGE_ACTIONS[scenario] ?? [], agents: AGENT_PROFILES[scenario] ?? [], memory: MEMORY[scenario] ?? [], wordBlacklist: WORD_BLACKLIST[scenario], voice: VOICE[scenario], speak: SPEAK[scenario] });
+    });
+    await sw.evaluate(seedStorage, seedArgs(scenario, model));
     await shop.goto(`http://localhost:${PORT}${PAGES[scenario] ?? '/shop.html'}`); // fresh page state (and refs) for every scenario
 
     const page = await ctx.newPage();

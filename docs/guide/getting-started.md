@@ -5,7 +5,8 @@ This page takes you from nothing to your first conversation about a web page.
 ## 1. Install the extension
 
 Teseo runs in Chrome or another Chromium browser with side panels (Vivaldi, Edge, Brave…). Firefox is not
-supported (a trial build lacks some features). Each [release](https://github.com/aseth0/teseo-browser-agent/releases)
+supported (a trial build, `teseo-browser-agent-X.Y.Z-firefox.zip` in each release, lacks some features and never
+checks for a new version). Each [release](https://github.com/aseth0/teseo-browser-agent/releases)
 offers three versions; **Settings → About** shows what yours has
 ([what each version has](settings.md#what-each-version-has)).
 

@@ -6,7 +6,8 @@ import type { Settings } from '../src/storage/settings';
 
 // What a build leaves out (core/build) and how the UI tells it (ui/FeatureNotice), in each of the three
 // builds: the downloadable Chrome one (everything), the Chrome Web Store's (__STORE__, no debugger
-// permission) and Firefox's (no debugger, offscreen, tts, tabCapture nor sidePanel; __FIREFOX__: no floating chat).
+// permission) and Firefox's (no debugger, offscreen, tts, tabCapture nor sidePanel; __FIREFOX__: no floating chat,
+// and no sources of custom tools, by its choice).
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const REPO = 'https://github.com/example/teseo';
@@ -56,6 +57,7 @@ afterEach(() => {
 // The two sentences, as the user reads them (ui/feature-texts builds them from their parts).
 const BROWSER_TEXT = 'This feature is not available in your browser. See the documentation.';
 const STORE_TEXT = 'This feature is in the downloadable version of Teseo.';
+const FIREFOX_TEXT = 'The Firefox version of Teseo leaves this feature out. See the documentation.';
 
 const linkOf = (box: Element) => box.querySelector('a[target="_blank"]')?.getAttribute('href');
 
@@ -73,10 +75,10 @@ describe('the features of each build', () => {
     expect(reasons(build)).toEqual({ devtools: 'store', speak: 'here', systemVoice: 'here', tabAudio: 'here', floatingChat: 'here', customToolSources: 'store' });
   });
 
-  it("Firefox's lacks what it has no API for", async () => {
+  it("Firefox's lacks what it has no API for, and leaves out the sources of custom tools by its choice", async () => {
     const { build } = await load('firefox');
-    expect(reasons(build)).toEqual({ devtools: 'browser', speak: 'browser', systemVoice: 'browser', tabAudio: 'browser', floatingChat: 'browser', customToolSources: 'here' });
-    expect([build.speakAvailable(), build.tabAudioAvailable(), build.debuggerAvailable(), build.floatingChatAvailable()]).toEqual([false, false, false, false]);
+    expect(reasons(build)).toEqual({ devtools: 'browser', speak: 'browser', systemVoice: 'browser', tabAudio: 'browser', floatingChat: 'browser', customToolSources: 'firefox' });
+    expect([build.speakAvailable(), build.tabAudioAvailable(), build.debuggerAvailable(), build.floatingChatAvailable(), build.customToolSourcesAvailable()]).toEqual([false, false, false, false, false]);
   });
 
   // No API tells it apart (an extension's own pages have them all in both browsers; only a page's frame of
@@ -103,6 +105,21 @@ describe("the store's switch for custom tool sources", () => {
     expect(build.STORE_LEAVES_OUT).toContain('customToolSources');
     expect(build.customToolSourcesAvailable()).toBe(false);
     expect(build.feature('customToolSources')).toMatchObject({ available: false, reason: 'store' });
+  });
+  it("leaves them out of Firefox's build, with a reason of its own", async () => {
+    const { build } = await load('firefox');
+    expect(build.FIREFOX_LEAVES_OUT).toEqual(['customToolSources']);
+    expect(build.feature('customToolSources')).toMatchObject({ available: false, reason: 'firefox' });
+    // Only Firefox's: the same list in a Chromium build leaves nothing out.
+    expect(build.featureIn('customToolSources', { store: false, leavesOut: [], browser: CHROMIUM, firefoxLeavesOut: build.FIREFOX_LEAVES_OUT })).toMatchObject({ available: true });
+  });
+  it("Firefox's build reads no source: no request", async () => {
+    await load('firefox');
+    const fetch = vi.fn();
+    vi.stubGlobal('fetch', fetch);
+    const { readSource } = await import('../src/tools/custom/sources');
+    await expect(readSource({ url: 'https://example.com/tools.json' })).rejects.toThrow('not in this version of Teseo');
+    expect(fetch).not.toHaveBeenCalled();
   });
   it('and in every other build', async () => {
     const { build } = await load('chrome');
@@ -180,6 +197,18 @@ describe('the notice', () => {
     expect(linkOf(box)).toBe(`${REPO}/blob/master/docs/guide/speak.md`);
   });
 
+  it("(A) Firefox's own text, to the docs page of the feature, which says why", async () => {
+    const { notice, texts, build } = await load('firefox');
+    const box = await render(createElement(notice.FeatureNote, { id: 'customToolSources' }));
+    expect(box.textContent).toContain(FIREFOX_TEXT);
+    expect(box.textContent).not.toContain('Chrome Web Store');
+    expect(box.textContent).not.toContain('not available in your browser');
+    expect(linkOf(box)).toBe(`${REPO}/blob/master/docs/guide/custom-tools.md#sources-tools-shared-by-a-team`);
+    const f = build.feature('customToolSources');
+    expect(texts.plainText(f)).toBe(FIREFOX_TEXT);
+    expect(texts.unlinkedText(f)).toBe('The Firefox version of Teseo leaves this feature out.');
+  });
+
   it('(B) a greyed row: no control, its mark opens why inside the row, nothing floating', async () => {
     const { notice, texts } = await load('firefox');
     const box = await render(createElement('ul', null, createElement(notice.FeatureRow, { id: 'tabAudio', name: "Tab's audio" })));
@@ -204,7 +233,7 @@ describe('the notice', () => {
     expect(box.textContent).toBe('This version has every feature.');
     ({ notice } = await load('firefox'));
     box = await render(createElement(notice.BuildSummary));
-    expect([...box.querySelectorAll('li strong')].map((s) => s.textContent)).toEqual(['Chromium DevTools engine', 'Speak', 'System voice', "A tab's audio", 'Floating chat']);
+    expect([...box.querySelectorAll('li strong')].map((s) => s.textContent)).toEqual(['Chromium DevTools engine', 'Speak', 'System voice', "A tab's audio", 'Floating chat', 'Custom tool sources']);
     expect(box.querySelector('a[href="#export-import"]')).not.toBeNull();
   });
 });

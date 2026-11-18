@@ -2,6 +2,7 @@
 // previews): never focused, muted, in the agent's window, and kept together in a folded tab group
 // (Settings → Web search), which the browser removes once its last tab is closed.
 import { browser } from 'wxt/browser';
+import { lastFocusedNormalWindow } from '../browser/last-focused';
 import { serialized } from '../storage/serial';
 import type { TabGroupSettings, WebSearchSettings } from '../storage/settings-types';
 
@@ -24,7 +25,7 @@ async function agentWindow(agentTab?: number): Promise<number | undefined> {
   const tab = agentTab === undefined ? undefined : await browser.tabs.get(agentTab).catch(() => undefined);
   const own = tab && (await browser.windows.get(tab.windowId).catch(() => undefined));
   if (own?.type === 'normal') return own.id;
-  const last = await browser.windows.getLastFocused({ windowTypes: ['normal'] }).catch(() => undefined);
+  const last = await lastFocusedNormalWindow();
   return last?.id;
 }
 

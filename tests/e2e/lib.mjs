@@ -1,5 +1,7 @@
 // What the e2e's parts share: the mock server's port, how long to wait, and small helpers.
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 
 // The command line: [scenario,scenario…] [--port N]. Runs side by side need ports of their own.
 const argv = process.argv.slice(2);
@@ -84,3 +86,14 @@ export const RAIL = fs.readFileSync('tests/fixtures/rail.html', 'utf8');
 export const WORKER_BRIEF = { context: 'Start at one.', constraints: 'Click nothing.', done: 'You said three.', report: 'The numbers, one per line.' };
 export const BRIEF_ANSWER = '\n\nEnd your answer with two short lines:\nDid: what you did.\nNot done or not verified: what you could not do or check, or "nothing".';
 export const HELLO = 'Hello, I am the mock.';
+// A copy of a build (made for this run: the caller removes it) that may read the given sites, as if the user
+// had allowed them: the e2e's test server is on localhost, which the manifest does not grant.
+export function granting(dir, origins) {
+  const copy = fs.mkdtempSync(path.join(os.tmpdir(), 'ba-e2e-ext-'));
+  fs.cpSync(dir, copy, { recursive: true });
+  const file = path.join(copy, 'manifest.json');
+  const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
+  manifest.host_permissions = [...(manifest.host_permissions ?? []), ...origins];
+  fs.writeFileSync(file, JSON.stringify(manifest));
+  return copy;
+}

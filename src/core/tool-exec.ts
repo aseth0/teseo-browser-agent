@@ -26,6 +26,8 @@ export async function execute(opts: LoopOptions, tools: ToolRegistry, name: stri
     // One this build lacks (LoopTools.lacking): said so, not that it is unknown.
     const lacks = opts.tools.lacking?.(name);
     if (lacks) {
+      // No tool belongs to a feature Firefox's build leaves out by choice (core/build FIREFOX_LEAVES_OUT: only
+      // the sources of custom tools, not a tool): one that does would need a text of its own here.
       const id = lacks.reason === 'store' ? 'result.tool_not_in_store_build' : 'result.tool_not_in_browser';
       return done({ content: text(id, { name, feature: lacks.name }), isError: true }, 'not in this version');
     }

@@ -564,14 +564,17 @@ permission, no `key`) is the natural starting point for "publish"; the names and
    and deletes); ✅ compaction (earlier turns trimmed, then summarized, kept on the history); ✅ web search (`web.search` / `web.read` / `web.show_user` in background tabs, results
    read with site templates); ✅ custom tools without code (derived from a tool, own parameters, HTTP
    requests; made by the user or, reviewed, by the model). ✅ log export (Settings → Logs). Firefox build:
-   a trial (`wxt build -b firefox --mv3`, `wxt.config.ts`), without the side panel, the offscreen document,
-   the DevTools engine, a tab's audio or Speak. What a build lacks is one registry (`core/build`: each
-   feature, whether it is here, the reason, `browser` or `store`, its line and docs page; the store's
-   choices in `STORE_LEAVES_OUT`: the DevTools engine and the sources of custom tools), told by one component (`ui/FeatureNotice`: a section's page, a greyed
+   a trial (`pnpm zip:firefox`, its manifest from `core/firefox-manifest`: Mozilla's data categories, never in
+   private windows), without the side panel, the offscreen document, the DevTools engine, a tab's audio or Speak;
+   a headless smoke run checks it (`pnpm e2e:firefox`, `tests/e2e/firefox-smoke.mjs`: Playwright's Firefox driven
+   over WebDriver BiDi). What a build lacks is one registry (`core/build`: each feature, whether it is here, the reason, `browser`,
+   `store` or `firefox`, its line and docs page; the store's choices in `STORE_LEAVES_OUT`: the DevTools engine and
+   the sources of custom tools; Firefox's in `FIREFOX_LEAVES_OUT`: the sources of custom tools), told by one component (`ui/FeatureNotice`: a section's page, a greyed
    row whose mark opens why, Settings → About's summary). Every link out of the extension comes from
    `core/links`: the repository set at build time (`package.json`, or `TESEO_REPO_URL`), releases at
    `/releases/latest`, the docs at the version's tag in a release's build and the default branch otherwise.
-   The downloadable release build (a release's, not the store's, of a GitHub repository) checks for a newer
+   The downloadable release build (a release's, not the store's nor Firefox's, of a GitHub repository; Firefox's
+   only once `FIREFOX_CHECKS_FOR_UPDATES` is flipped, should it be self-distributed) checks for a newer
    version (`core/update-check`, wired by `ui/useUpdateNotice`): the toolbar popup, once per browser session
    (`updateChecked` in storage.session) and after it renders, fetches `api.github.com/repos/<slug>/releases/latest`
    without credentials and keeps only its `tag_name`, validated as a version (`updateNotice` in storage.local:

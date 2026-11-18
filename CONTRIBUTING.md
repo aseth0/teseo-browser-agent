@@ -35,6 +35,31 @@ release's build (made from its `vX.Y.Z` tag in that same repository: a tag pushe
 to the default branch in any other. A test fails when a
 link in the docs points to another repository.
 
+**Firefox's build (a trial).** `pnpm zip:firefox` (`wxt zip -b firefox --mv3`) builds `dist/firefox-mv3` with its
+own manifest (`src/core/firefox-manifest.ts`) and makes two zips: the add-on,
+`dist/teseo-browser-agent-X.Y.Z-firefox.zip` (unsigned: Firefox loads it only as a temporary add-on, from
+`about:debugging`), and the sources addons.mozilla.org asks for when code is bundled,
+`dist/teseo-browser-agent-X.Y.Z-firefox-sources.zip`. The sources zip holds the files git tracks, the tests left
+out, and nothing else: no `dist/`, no `node_modules/`, nothing ignored or untracked. To rebuild the add-on from it,
+with the Node major version in `.nvmrc` and the pnpm version in `package.json`'s `packageManager`, and without
+`EXTERNAL_MODEL_API_KEY`:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm zip:firefox    # → dist/firefox-mv3 and dist/teseo-browser-agent-X.Y.Z-firefox.zip
+```
+
+That gives the same files as a release's only built as the release was (its links point at its tag: see above), so
+for the release of `vX.Y.Z` set what GitHub Actions sets:
+
+```bash
+GITHUB_REF_TYPE=tag GITHUB_REF_NAME=vX.Y.Z GITHUB_REPOSITORY=aseth0/teseo-browser-agent pnpm zip:firefox
+```
+
+Mozilla's linter, `pnpm dlx web-ext lint --source-dir dist/firefox-mv3`, finds no errors in it; its warnings
+(`innerHTML`, `Function`, a dynamic `import()`) are all in bundled libraries: Readability, React, pdf.js, micromark,
+highlight.js and zod.
+
 ## Testing
 
 ```bash
@@ -55,6 +80,22 @@ CHROMIUM_PATH=/path/to/chromium node tests/e2e/sidepanel.e2e.mjs [scenario,…]
 
 Build without `EXTERNAL_MODEL_API_KEY` for it: the e2e refuses such a build. `E2E_LIVE=1 … web-live` searches the
 web for real. The maintainers run it before each release.
+
+**Firefox.** `pnpm e2e:firefox` builds Firefox's version and runs a smoke test of it in a headless Firefox, against
+the same mock server: it installs, the chat answers (in a tab and in the sidebar) and reads a page, a script tool
+runs, Settings and the popup render, and what Firefox's version lacks or leaves out says so; any error the extension logs
+fails it (it lets a page go quiet before closing it, so Firefox's notes about a closed page's pending work do not). It uses
+Playwright's Firefox build, downloaded once, and a new profile each run (never your Firefox's):
+
+```bash
+pnpm exec playwright-core install firefox
+pnpm e2e:firefox    # or: node tests/e2e/firefox-smoke.mjs [check,…] [--port N]
+```
+
+`FIREFOX_PATH` points it at another Firefox (Nightly or Developer Edition); `E2E_DEBUG=1` also prints the errors it
+expects and Firefox's own output on a failure. Build without `EXTERNAL_MODEL_API_KEY` here too. It does not cover
+permission prompts, keyboard shortcuts, OAuth sign-ins for MCP servers or real input in the sidebar: those still
+need a person in Firefox.
 
 **Documentation screenshots.** The pictures in `docs/images/` are made from the build with a scripted model, a demo
 store and a few demo sites, all served locally under `example.com` names. It runs headless; build without
@@ -100,12 +141,12 @@ The tag runs `release.yml`, one job after another:
 |---|---|
 | `version` | Stops at once unless the tag is `v` + `package.json`'s version |
 | `checks` | Typecheck, lint, tests and security checks (`checks.yml`; the development repository runs it on every push too) |
-| `build` · `build-store` | In parallel, each in its own runner: `pnpm zip` (the downloadable zip, everything) and `pnpm zip:store` (the Chrome Web Store's: no manifest `key`, no `debugger` permission, so no DevTools engine) |
-| `publish` | Creates the GitHub release `Teseo X.Y.Z` with the notes (the page above, plus both zips' SHA-256) and attaches both zips |
+| `build` · `build-store` · `build-firefox` | In parallel, each in its own runner: `pnpm zip` (the downloadable zip, everything), `pnpm zip:store` (the Chrome Web Store's: no manifest `key`, no `debugger` permission, so no DevTools engine) and `pnpm zip:firefox` (Firefox's trial build, unsigned, and its sources zip for addons.mozilla.org: [Firefox's build](#building-from-source)) |
+| `publish` | Creates the GitHub release `Teseo X.Y.Z` with the notes (the page above, plus the four zips' SHA-256) and attaches the four zips |
 | `dist-branch` | Puts the downloadable build, unzipped, on the `dist` branch, one commit per version |
 
 Re-running it on the same tag replaces the release's notes and zips and adds no commit to `dist` when the build is the
-same. The store's zip is uploaded to the Chrome Web Store by hand.
+same. The store's zip is uploaded to the Chrome Web Store by hand; nothing is sent to addons.mozilla.org.
 
 ## Where to extend
 

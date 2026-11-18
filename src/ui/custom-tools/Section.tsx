@@ -111,7 +111,7 @@ export function CustomToolsSection() {
         { id: 'texts', label: 'Limits and texts', render: () => <SectionTop page="custom-tools" /> },
       ]} />
       {/* Mounted in every tab: its sources sync once as this section opens. */}
-      {/* A build that leaves sources out (core/build STORE_LEAVES_OUT) says why instead. */}
+      {/* A build that leaves sources out (core/build STORE_LEAVES_OUT, FIREFOX_LEAVES_OUT) says why instead. */}
       <div hidden={tab !== 'sources'}>{customToolSourcesAvailable() ? <CustomToolSources customs={customs} catalog={catalog} /> : <FeatureNote id="customToolSources" />}</div>
     </section>
   );

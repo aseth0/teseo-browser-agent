@@ -160,8 +160,9 @@ while the tool's site and method are unchanged. A file can never turn on your br
 read-only: only you can. **Remove** drops the source and keeps its tools as yours.
 
 The Chrome Web Store version has no sources: the store does not let an extension keep code in sync with a file
-on a server, and a tool can carry a script. There, share tools with **Export** and **Import** instead, a file or a
-URL you import once and review ([what each version has](settings.md#what-each-version-has)).
+on a server, and a tool can carry a script. Nor does the Firefox build, a trial: Mozilla's add-on policies want an
+add-on that loads no code from elsewhere to run. There, share tools with **Export** and **Import** instead, a file or
+a URL you import once and review ([what each version has](settings.md#what-each-version-has)).
 
 ## Letting the model make them
 

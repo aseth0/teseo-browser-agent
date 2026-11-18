@@ -1,4 +1,5 @@
 import { browser } from 'wxt/browser';
+import { lastFocusedNormalWindow } from '../browser/last-focused';
 
 // "The page" (the side panel's, and the toolbar button popup's) is the active tab of the last focused
 // *normal* browser window. Asking for the panel's own window is unreliable (Vivaldi shows the panel as
@@ -6,7 +7,7 @@ import { browser } from 'wxt/browser';
 // tab (e.g. in tests) do we fall back to the most recently visited web tab of that window.
 export async function activeTab() {
   const own = browser.runtime.getURL('/');
-  const win = await browser.windows.getLastFocused({ populate: true, windowTypes: ['normal'] }).catch(() => undefined);
+  const win = await lastFocusedNormalWindow({ populate: true });
   const tabs = win?.tabs ?? [];
   const active = tabs.find((t) => t.active);
   if (!active?.url?.startsWith(own)) return active;

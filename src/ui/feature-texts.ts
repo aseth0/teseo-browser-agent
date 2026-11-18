@@ -9,6 +9,7 @@ export const MARK = 'unavailable';
 export const NOTICE: Record<MissingReason, { before: string; link: string; after: string }> = {
   browser: { before: 'This feature is not available in your browser. ', link: 'See the documentation.', after: '' },
   store: { before: 'This feature is in the ', link: 'downloadable version of Teseo', after: '.' },
+  firefox: { before: 'The Firefox version of Teseo leaves this feature out. ', link: 'See the documentation.', after: '' },
 };
 
 const partsOf = (f: Feature) => NOTICE[f.reason ?? 'browser'];
@@ -17,7 +18,7 @@ export const plainText = (f: Feature) => {
   const { before, link, after } = partsOf(f);
   return before + link + after;
 };
-// Without a link: the browser's reason drops "See the documentation.", a sentence of its own; the store's
+// Without a link: the browser's and Firefox's reasons drop "See the documentation.", a sentence of its own; the store's
 // keeps its words, the link being inside its sentence.
 export const unlinkedText = (f: Feature) => {
   const { before, link, after } = partsOf(f);

@@ -1,10 +1,10 @@
 // The "new version available" notice (core/update-check), wired to the browser: what was last found,
 // followed as it changes, and the check itself, which only the toolbar popup starts (`check`), once its
 // settings are read (they may turn it off) and after it has rendered. Where the build does not check
-// (a dev build, the Chrome Web Store's, a repository not on GitHub) nothing is read, stored or asked.
+// (a dev build, the Chrome Web Store's, Firefox's, a repository not on GitHub) nothing is read, stored or asked.
 import { useEffect } from 'react';
 import { browser } from 'wxt/browser';
-import { STORE_BUILD } from '../core/build';
+import { firefoxBuild, STORE_BUILD } from '../core/build';
 import { installedVersion, links, releaseBuild } from '../core/links';
 import { githubSlug } from '../core/repo-url';
 import {
@@ -16,7 +16,7 @@ import type { Settings } from '../storage/settings-types';
 import { useLive } from './useLive';
 
 const slug = () => githubSlug(links().repo);
-export const updateCheckHere = (): boolean => updateCheckAllowed({ release: releaseBuild(), store: STORE_BUILD, slug: slug() });
+export const updateCheckHere = (): boolean => updateCheckAllowed({ release: releaseBuild(), store: STORE_BUILD, firefox: firefoxBuild(), slug: slug() });
 
 const load = () => storageGet<UpdateState>('local', UPDATE_KEY);
 const save = (state: UpdateState) => browser.storage.local.set({ [UPDATE_KEY]: state });

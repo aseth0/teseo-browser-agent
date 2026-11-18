@@ -1,5 +1,5 @@
 // Which build this is, and what it and the browser it runs in can do: the features a build may lack,
-// each with why (the browser has no API for it, or the Chrome Web Store's build leaves it out), what it
+// each with why (the browser has no API for it, or the Chrome Web Store's or Firefox's build leaves it out), what it
 // does and the page of the docs about it. The UI tells the user the same way wherever one is missing
 // (ui/FeatureNotice): a section's page, a greyed row with its mark, and Settings → About's summary.
 // This is what each build can do; nothing here turns a feature on or off by itself.
@@ -12,7 +12,7 @@ export const STORE_BUILD = typeof __STORE__ !== 'undefined' && __STORE__;
 export const firefoxBuild = (): boolean => typeof __FIREFOX__ !== 'undefined' && __FIREFOX__;
 
 export type FeatureId = 'devtools' | 'speak' | 'systemVoice' | 'tabAudio' | 'floatingChat' | 'customToolSources';
-export type MissingReason = 'browser' | 'store';
+export type MissingReason = 'browser' | 'store' | 'firefox';
 
 export interface Feature {
   id: FeatureId;
@@ -28,6 +28,11 @@ export interface Feature {
 // tools, their scripts too, kept in sync with a file at a URL, which the store's rule against remotely
 // hosted code may count as such). A one-time import from a URL, which the user starts and reviews, stays.
 export const STORE_LEAVES_OUT: readonly FeatureId[] = ['devtools', 'customToolSources'];
+
+// What Firefox's build leaves out by choice, besides what Firefox has no API for: the sources of custom
+// tools, for Mozilla's add-on policies (an add-on is self-contained and loads no remote code to run; a
+// source keeps tools, their scripts too, in sync with a file at a URL). The one-time import from a URL stays.
+export const FIREFOX_LEAVES_OUT: readonly FeatureId[] = ['customToolSources'];
 
 type Api = Record<string, unknown> | undefined;
 const api = (): Api => browser;
@@ -73,7 +78,7 @@ const DEFS: Record<FeatureId, { name: string; about: string; docs: DocsPage; nee
     docs: 'docs/guide/chat-windows.md#floating-on-the-page',
     needs: (_b, firefox) => !firefox,
   },
-  // tools/custom/sources: a fetch, nothing a browser lacks; only the store's build leaves it out.
+  // tools/custom/sources: a fetch, nothing a browser lacks; the store's and Firefox's builds leave it out.
   customToolSources: {
     name: 'Custom tool sources',
     about: 'Keeps custom tools in sync with a file at a URL.',
@@ -85,16 +90,21 @@ const DEFS: Record<FeatureId, { name: string; about: string; docs: DocsPage; nee
 export const FEATURE_IDS = Object.keys(DEFS) as FeatureId[];
 
 // A feature in a build: `store` whether it is the store's, `leavesOut` what that one leaves out, `browser`
-// the browser's API, `firefox` whether it is Firefox's build. The store's choice is the reason first: its
-// manifest has no permission for it either.
-export function featureIn(id: FeatureId, build: { store: boolean; leavesOut: readonly FeatureId[]; browser: Api; firefox?: boolean }): Feature {
+// the browser's API, `firefox` whether it is Firefox's build (`firefoxLeavesOut` what that one leaves out by
+// choice: FIREFOX_LEAVES_OUT). A build's choice is the reason first: the store's manifest has no permission for
+// it either.
+export function featureIn(id: FeatureId, build: { store: boolean; leavesOut: readonly FeatureId[]; browser: Api; firefox?: boolean; firefoxLeavesOut?: readonly FeatureId[] }): Feature {
   const { needs, ...def } = DEFS[id];
-  const reason: MissingReason | undefined = build.store && build.leavesOut.includes(id) ? 'store' : !needs(build.browser, !!build.firefox) ? 'browser' : undefined;
+  const reason: MissingReason | undefined = build.store && build.leavesOut.includes(id)
+    ? 'store'
+    : build.firefox && (build.firefoxLeavesOut ?? FIREFOX_LEAVES_OUT).includes(id)
+      ? 'firefox'
+      : !needs(build.browser, !!build.firefox) ? 'browser' : undefined;
   return { id, ...def, available: !reason, ...(reason && { reason }) };
 }
 
 // The feature in this build and browser.
-export const feature = (id: FeatureId): Feature => featureIn(id, { store: STORE_BUILD, leavesOut: STORE_LEAVES_OUT, browser: api(), firefox: firefoxBuild() });
+export const feature = (id: FeatureId): Feature => featureIn(id, { store: STORE_BUILD, leavesOut: STORE_LEAVES_OUT, browser: api(), firefox: firefoxBuild(), firefoxLeavesOut: FIREFOX_LEAVES_OUT });
 export const features = (): Feature[] => FEATURE_IDS.map(feature);
 export const missingFeatures = (): Feature[] => features().filter((f) => !f.available);
 

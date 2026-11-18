@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  checkForUpdate, compareVersions, dismissedState, latestFromRelease, parseVersion, updateCheckAllowed, updateCheckOn, updateView,
+  checkForUpdate, compareVersions, FIREFOX_CHECKS_FOR_UPDATES, dismissedState, latestFromRelease, parseVersion, updateCheckAllowed, updateCheckOn, updateView,
   type UpdateCheckDeps, type UpdateState,
 } from '../src/core/update-check';
 
@@ -49,10 +49,15 @@ describe('versions', () => {
 
 describe('which builds check', () => {
   it('only a release build that is not the store build, of a GitHub repository', () => {
-    expect(updateCheckAllowed({ release: true, store: false, slug: SLUG })).toBe(true);
-    expect(updateCheckAllowed({ release: true, store: true, slug: SLUG })).toBe(false);
-    expect(updateCheckAllowed({ release: false, store: false, slug: SLUG })).toBe(false);
-    expect(updateCheckAllowed({ release: true, store: false, slug: undefined })).toBe(false);
+    expect(updateCheckAllowed({ release: true, store: false, firefox: false, slug: SLUG })).toBe(true);
+    expect(updateCheckAllowed({ release: true, store: true, firefox: false, slug: SLUG })).toBe(false);
+    expect(updateCheckAllowed({ release: false, store: false, firefox: false, slug: SLUG })).toBe(false);
+    expect(updateCheckAllowed({ release: true, store: false, firefox: false, slug: undefined })).toBe(false);
+  });
+  it("not Firefox's build, release or not, while FIREFOX_CHECKS_FOR_UPDATES is off", () => {
+    expect(FIREFOX_CHECKS_FOR_UPDATES).toBe(false);
+    expect(updateCheckAllowed({ release: true, store: false, firefox: true, slug: SLUG })).toBe(false);
+    expect(updateCheckAllowed({ release: false, store: false, firefox: true, slug: SLUG })).toBe(false);
   });
   it('the setting is on unless turned off', () => {
     expect(updateCheckOn(undefined)).toBe(true);
@@ -80,8 +85,8 @@ describe('the check', () => {
     expect(await checkForUpdate(d)).toBeUndefined();
     expect(d.fetch).toHaveBeenCalledTimes(1);
   });
-  it('the store build and a dev build make no request, nor with the setting off', async () => {
-    for (const build of [{ release: true, store: true }, { release: false, store: false }]) {
+  it("the store build, a dev build and Firefox's make no request, nor with the setting off", async () => {
+    for (const build of [{ release: true, store: true, firefox: false }, { release: false, store: false, firefox: false }, { release: true, store: false, firefox: true }]) {
       const { d } = deps({ allowed: updateCheckAllowed({ ...build, slug: SLUG }) });
       expect(await checkForUpdate(d)).toBeUndefined();
       expect(d.fetch).not.toHaveBeenCalled();

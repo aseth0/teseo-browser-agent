@@ -39,7 +39,7 @@ const sources = withSecretPart<CustomToolSource, SourcePart>(createCollection<Cu
 export const customToolSourceStore = movedFirst(sources, 'customToolSourceSecrets');
 
 // The source's JSON, read now (never from the cache).
-// Not in a build that leaves sources out (core/build STORE_LEAVES_OUT).
+// Not in a build that leaves sources out (core/build STORE_LEAVES_OUT, FIREFOX_LEAVES_OUT).
 export async function readSource(source: Pick<CustomToolSource, 'url' | 'headers' | 'session'>, signal?: AbortSignal): Promise<string> {
   if (!customToolSourcesAvailable()) throw new Error('Custom tool sources are not in this version of Teseo.');
   await requireAccess(source.url, 'read');

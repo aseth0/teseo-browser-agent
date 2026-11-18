@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { defineConfig } from 'wxt';
+import { firefoxManifest } from './src/core/firefox-manifest';
 import { isReleaseBuild, repoUrlOf } from './src/core/repo-url';
 
 // Provider preloaded from the environment of the shell that runs the build.
@@ -47,26 +48,21 @@ function buildSource(): string | undefined {
   }
 }
 
-// Firefox's build (`wxt build -b firefox --mv3`, a trial so far): an add-on id, the data it sends where
-// (Firefox asks the user at install), and without the Chromium-only permissions and fields.
-const FIREFOX_MISSING = ['sidePanel', 'offscreen', 'debugger', 'favicon', 'tabCapture', 'tts'];
-function firefoxManifest(manifest: Record<string, unknown>) {
-  manifest.permissions = (manifest.permissions as string[]).filter((p) => !FIREFOX_MISSING.includes(p));
-  delete manifest.key;
-  delete (manifest.commands as Record<string, unknown> | undefined)?.['audio-toggle']; // no tab audio there (core/build)
-  delete (manifest.commands as Record<string, unknown> | undefined)?.['speak-toggle']; // nor Speak
-  // No chat floating on a page there (core/build floatingChat): its key opens the chat full screen in a tab.
-  const float = (manifest.commands as Record<string, { description?: string }> | undefined)?.['float-chat'];
-  if (float) float.description = 'Open the chat full screen in a tab';
-  delete manifest.web_accessible_resources; // its only entry, the floating chat's page, is not built there
-  manifest.browser_specific_settings = {
-    gecko: {
-      id: 'teseo-browser-agent@aseth0',
-      strict_min_version: '140.0',
-      data_collection_permissions: { required: ['websiteContent', 'websiteActivity', 'browsingActivity', 'personalCommunications', 'searchTerms'] },
-    },
-  };
+// The sources zip that `wxt zip -b firefox` makes beside the add-on (`pnpm zip:firefox`), for
+// addons.mozilla.org's review of bundled code: only the files git tracks (never an ignored or untracked
+// one: no dist/, node_modules/, local notes or anything holding a key), less the tests. The dotfiles
+// among them too (.nvmrc, .npmrc: the build's Node and pnpm settings). Outside a git checkout (built from
+// that zip itself), WXT's default: every file but dotfiles, node_modules/ and dist/.
+function trackedSources(): string[] | undefined {
+  try {
+    const files = execFileSync('git', ['ls-files', '-z'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 16 * 1024 * 1024 }).split('\0').filter(Boolean);
+    // As glob patterns: a character that means something there, escaped.
+    return files.filter((f) => !f.startsWith('tests/')).map((f) => f.replace(/[()[\]{}*?!+@]/g, '\\$&'));
+  } catch {
+    return undefined; // not a git checkout
+  }
 }
+const TRACKED_SOURCES = trackedSources();
 
 export default defineConfig({
   srcDir: 'src',
@@ -95,8 +91,13 @@ export default defineConfig({
   },
   // `pnpm dev` never opens a browser: load dist/chrome-mv3-dev in yours once, and it updates live.
   webExt: { disabled: true },
-  // The store's zip beside the release's, not over it.
-  ...(STORE && { zip: { artifactTemplate: '{{name}}-{{version}}-{{browser}}-store.zip' } }),
+  zip: {
+    // The store's zip beside the release's, not over it.
+    ...(STORE && { artifactTemplate: '{{name}}-{{version}}-{{browser}}-store.zip' }),
+    // Firefox's sources (trackedSources above): teseo-browser-agent-X.Y.Z-firefox-sources.zip.
+    sourcesTemplate: '{{name}}-{{packageVersion}}-firefox-sources.zip',
+    ...(TRACKED_SOURCES && { includeSources: TRACKED_SOURCES, dotSources: true }),
+  },
   // __FIREFOX__: Firefox's build, for what no API tells apart (core/build).
   vite: (env) => ({
     define: { __FIREFOX__: JSON.stringify(env.browser === 'firefox'), __ENV_PROVIDER__: JSON.stringify(envProvider()), __ENV_API_KEY__: JSON.stringify(envApiKey()), __STORE__: JSON.stringify(STORE), __REPO_URL__: JSON.stringify(REPO_URL), __RELEASE_BUILD__: JSON.stringify(RELEASE_BUILD) },
@@ -158,7 +159,7 @@ export default defineConfig({
     // to load the frame under it.
     // Nothing else listed: the frame's own scripts, styles and pdf.js's worker and data (pdfjs/) load
     // from its own origin, which the browser does not check against this list.
-    // None in Firefox's build (firefoxManifest): no chat floating on a page there (core/build), nor its page.
+    // None in Firefox's build (core/firefox-manifest): no chat floating on a page there (core/build), nor its page.
     web_accessible_resources: [{ resources: ['floating.html'], matches: ['<all_urls>'], use_dynamic_url: false }],
     // Its popup (entrypoints/popup) says where the chat opens and takes screenshots into it; ⌥⇧A opens the
     // side panel (commands).

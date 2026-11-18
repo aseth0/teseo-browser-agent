@@ -127,22 +127,25 @@ The **Firefox** build, a trial, lacks what Firefox has no API for: the DevTools 
 system voice, and [a tab's audio](tab-audio.md). It has no [chat floating on the page](chat-windows.md#floating-on-the-page)
 either: Firefox gives an extension's page framed by a web page none of the APIs the chat needs, so what opens the
 chat from a page opens it full screen in a tab there. Its sidebar is also one for the window, as in Vivaldi: the chat
-cannot keep [a panel for each tab](chat-windows.md#the-side-panel).
+cannot keep [a panel for each tab](chat-windows.md#the-side-panel). It also leaves out, by choice, the
+[sources of custom tools](custom-tools.md#sources-tools-shared-by-a-team): Mozilla's add-on policies want an add-on
+that loads no code from elsewhere to run. And it never runs in private windows: Teseo keeps what it reads in its
+conversations, and nothing from a private window may be stored.
 
 Nothing is hidden: a section that is not in your version stays in the menu with an **unavailable** mark and says why,
 a control inside a working page shows greyed with the same mark (click it: why opens under it), a tool the version
 lacks shows greyed in **Settings → Tools** and is never offered (a model that calls it anyway is told it is not in this
 version), and **Settings → About** lists
-what your version leaves out. Where the browser lacks it, the notice links to the docs page about it; where it is the
-store's choice, to the downloadable version. Your settings move between versions with
+what your version leaves out. Where the browser lacks it, or the Firefox build leaves it out, the notice links to the
+docs page about it; where it is the store's choice, to the downloadable version. Your settings move between versions with
 [Export and import](#export-and-import).
 
 The downloadable version does not update itself, so it **checks for a new version**: the first time the toolbar
 popup opens after the browser starts, one request to GitHub for the latest release of its repository, with nothing
 of yours in it. A newer one shows in the popup, with a link to the releases, until you close it with × (a later
 release shows it again), and in **Settings → About** for as long as yours is older. **Check for a new version** in
-Settings → About turns it off: no request, no notice. The Chrome Web Store version (the store updates it) and a
-build from source never check.
+Settings → About turns it off: no request, no notice. The Chrome Web Store version (the store updates it), the
+Firefox trial build and a build from source never check.
 
 ## Backups
 

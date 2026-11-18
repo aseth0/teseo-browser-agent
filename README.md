@@ -53,7 +53,8 @@ something is shown to you first, unless you allowed it on that site.
 ## Install
 
 Teseo runs in Chrome and other Chromium browsers that support side panels (Vivaldi, Edge, Brave…). Firefox is not
-supported. Each [GitHub release](https://github.com/aseth0/teseo-browser-agent/releases) offers three versions:
+supported (each release carries a trial build, which lacks some features:
+[what each version has](docs/guide/settings.md#what-each-version-has)). Each [GitHub release](https://github.com/aseth0/teseo-browser-agent/releases) offers three versions:
 
 | Version | For | Leaves out |
 |---|---|---|

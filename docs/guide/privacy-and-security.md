@@ -16,7 +16,7 @@ Teseo has **no servers of its own, no telemetry and no analytics**. It sends req
 | The **APIs of your custom tools** | When those tools run |
 | The **sites** the model reads or acts on | With your permission, as you would visit them |
 | Your **search engine** | When the model searches, in a background tab |
-| **GitHub** (`api.github.com`), the downloadable version only | Once per browser session, the first time the toolbar popup opens: the latest release of Teseo's repository, to tell you when a newer version is out. It carries no cookies, credentials or data of yours; only the version number of the answer is kept. Turn it off in **Settings → About → Check for a new version**. The Chrome Web Store version and a build from source never ask |
+| **GitHub** (`api.github.com`), the downloadable version only | Once per browser session, the first time the toolbar popup opens: the latest release of Teseo's repository, to tell you when a newer version is out. It carries no cookies, credentials or data of yours; only the version number of the answer is kept. Turn it off in **Settings → About → Check for a new version**. The Chrome Web Store version, the Firefox trial build and a build from source never ask |
 
 Conversations, memory, settings and logs stay in the browser's storage. Nothing is synced to a cloud account.
 

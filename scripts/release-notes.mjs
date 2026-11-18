@@ -1,4 +1,4 @@
-// A release's notes: .github/release-notes.md filled with the version, its section of CHANGELOG.md, the two zips'
+// A release's notes: .github/release-notes.md filled with the version, its section of CHANGELOG.md, the four zips'
 // names and the repository's URL (src/core/repo-url.ts: package.json, or TESEO_REPO_URL), printed to stdout.
 // release.yml's publish job passes the folder with the zips, whose SHA-256 go in the notes; without it (a preview)
 // that section says they are computed when the release is published. No dependency: Node 22.18+ runs the .ts import.
@@ -11,9 +11,15 @@ import { repoUrlOf } from '../src/core/repo-url.ts';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 
-// The zips release.yml attaches (wxt.config.ts: wxt's default name, and the store's `-store` one).
+// The zips release.yml attaches (wxt.config.ts: wxt's default name, the store's `-store` one, Firefox's with wxt's
+// default name, and its sources zip's).
 export function assetNames(name, version) {
-  return { zip: `${name}-${version}-chrome.zip`, storeZip: `${name}-${version}-chrome-store.zip` };
+  return {
+    zip: `${name}-${version}-chrome.zip`,
+    storeZip: `${name}-${version}-chrome-store.zip`,
+    firefoxZip: `${name}-${version}-firefox.zip`,
+    firefoxSources: `${name}-${version}-firefox-sources.zip`,
+  };
 }
 
 // The body of `## <version>` in the changelog, up to the next `## ` heading; an error when there is none.

@@ -13,8 +13,10 @@ it handles, where that data goes, and what stays on your device. The technical d
 - Data leaves your browser only to the services **you set up** (your AI provider, MCP servers, your own tools)
   and the sites you ask it to read or act on.
 - The one exception is the downloadable version's **check for a new version**: one request to GitHub, carrying
-  none of your data, that you can turn off. The Chrome Web Store version never makes it.
+  none of your data, that you can turn off. The Chrome Web Store version and the Firefox trial build never make it.
 - Everything it keeps (settings, conversations, memory, logs) stays in your browser's local storage.
+- It applies to every version: the downloadable one and the Chrome Web Store one, for Chrome and other Chromium
+  browsers, and the Firefox trial build ([In Firefox](#in-firefox) says what differs there).
 
 ## What data it handles
 
@@ -56,8 +58,8 @@ the first time you open the toolbar popup after the browser starts, and at no ot
 cookies, credentials or data of yours; GitHub sees what any request shows it, such as your IP address and your
 browser's standard headers. Only the version number of the answer is kept and shown: the popup offers a link to the
 releases page, and Settings → About says your version is out of date. Turn it off in **Settings → About → Check
-for a new version**: no request is made then. The Chrome Web Store version, updated by the store, and a build from
-source never make this request.
+for a new version**: no request is made then. The Chrome Web Store version, updated by the store, the Firefox trial
+build and a build from source never make this request.
 
 ## What stays on your device
 
@@ -66,19 +68,32 @@ your browser profile. Nothing is synced to a cloud account. Credentials are kept
 but are not encrypted at rest: anyone with access to your browser profile can read them, as with the browser's own
 saved data.
 
-A web page can tell that Teseo is installed, as with most extensions: the chat it opens floating on a page is
-loaded from the extension's fixed address, which any page can try. That page is the only one a web page can load,
+In Chromium browsers, a web page can tell that Teseo is installed, as with most extensions: the chat it opens
+floating on a page is loaded from the extension's fixed address, which any page can try. That page is the only one a web page can load,
 and loaded by the page itself, framed or in a tab, it stays empty: the page can neither see nor use the chat, its
-conversations or its settings. Every other page and file of Teseo is out of its reach.
+conversations or its settings. Every other page and file of Teseo is out of its reach. The Firefox trial build has
+no floating chat, and no page of it can be loaded by a web page.
 
 ## Retention and deletion
 
 Data stays in your browser until you delete it. You can delete conversations, memory items and logs in the
 extension, or remove the extension, which deletes everything it stored.
 
+## In Firefox
+
+The Firefox trial build handles and sends the same data as above, with these differences:
+
+- **Your consent at install.** Firefox shows the kinds of data Teseo sends before you install it, in Mozilla's
+  categories: website content, website activity, browsing activity, personal communications, search terms,
+  authentication information (the keys and sign-ins above, each sent only to its own service), bookmarks (only once
+  you grant that optional permission) and personally identifying information (your voice, only when you dictate).
+- **Private windows.** It never runs in Firefox's private windows, so nothing from them is read, sent or stored.
+- **No check for a new version**, and no sources of custom tools: nothing is fetched from elsewhere to run.
+
 ## Limited use
 
-The use of information received from Google APIs and browser data adheres to the
+This section is about the versions for Chrome and other Chromium browsers. The use of information received from
+Google APIs and browser data adheres to the
 [Chrome Web Store User Data Policy](https://developer.chrome.com/docs/webstore/program-policies/user-data-faq),
 including the Limited Use requirements. Data is used only to provide the features you use; it is not used for
 advertising, not sold, not used to determine creditworthiness, and not read by humans.

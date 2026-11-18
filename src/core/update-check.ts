@@ -1,5 +1,6 @@
 // Whether a newer version of Teseo is out, for the downloadable build only: it is loaded unpacked and
-// never updates itself (the Chrome Web Store's build is updated by the store, a dev build is the source).
+// never updates itself (the Chrome Web Store's build is updated by the store, a dev build is the source;
+// Firefox's, for now, never asks: FIREFOX_CHECKS_FOR_UPDATES).
 // One request, the first time the toolbar popup opens after the browser starts (a marker in
 // storage.session, gone with the browser): GitHub's latest release of the build's own repository, of
 // which only its tag is read, kept as a version number. Nothing about the user goes, no credentials. A
@@ -43,10 +44,16 @@ export function compareVersions(a: string, b: string): number {
 export const latestFromRelease = (body: unknown): string | undefined =>
   typeof body === 'object' && body !== null ? parseVersion((body as { tag_name?: unknown }).tag_name) : undefined;
 
+// Whether Firefox's build checks. Not for now: whether it will be listed on addons.mozilla.org (then
+// Mozilla updates it, as the store does the Chrome Web Store's) or signed and self-distributed is not
+// decided. If it ends up self-distributed (it updates no other way), flip this to true: its popup then
+// checks and Settings → About shows the switch, as the downloadable build's (and say so in PRIVACY.md).
+export const FIREFOX_CHECKS_FOR_UPDATES = false;
+
 // Whether this build checks at all: a release's build (core/links releaseBuild) that is not the store's,
-// of a GitHub repository. Anything else never makes the request.
-export const updateCheckAllowed = (build: { release: boolean; store: boolean; slug: string | undefined }): boolean =>
-  build.release && !build.store && !!build.slug;
+// of a GitHub repository, nor Firefox's (FIREFOX_CHECKS_FOR_UPDATES). Anything else never makes the request.
+export const updateCheckAllowed = (build: { release: boolean; store: boolean; firefox: boolean; slug: string | undefined }): boolean =>
+  build.release && !build.store && (!build.firefox || FIREFOX_CHECKS_FOR_UPDATES) && !!build.slug;
 
 export const releasesApi = (slug: string): string => `https://api.github.com/repos/${slug}/releases/latest`;
 

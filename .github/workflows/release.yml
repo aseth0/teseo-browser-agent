@@ -1,10 +1,12 @@
 # On a version tag (vX.Y.Z, which must be package.json's version):
-#   version → checks (checks.yml) → build and build-store, in parallel → publish → dist-branch
-# The two builds are separate jobs, each with its own dist/: the downloadable zip (everything) and the Chrome Web
-# Store's (wxt.config.ts STORE: no `key`, no debugger permission; uploaded to the store by hand). `publish` creates
-# the tag's GitHub release, its notes made by scripts/release-notes.mjs from .github/release-notes.md and the
-# version's section of CHANGELOG.md, and attaches both zips; `dist-branch` then puts the downloadable build,
-# unzipped, on the `dist` branch. Built without EXTERNAL_MODEL_API_KEY: no key is embedded.
+#   version → checks (checks.yml) → build, build-store and build-firefox, in parallel → publish → dist-branch
+# The three builds are separate jobs, each with its own dist/: the downloadable zip (everything), the Chrome Web
+# Store's (wxt.config.ts STORE: no `key`, no debugger permission; uploaded to the store by hand) and Firefox's (a
+# trial: core/firefox-manifest, unsigned; with the sources zip addons.mozilla.org asks for, of the files
+# git tracks). `publish` creates the tag's GitHub release, its notes made by scripts/release-notes.mjs from
+# .github/release-notes.md and the version's section of CHANGELOG.md, and attaches the four zips; `dist-branch`
+# then puts the downloadable build, unzipped, on the `dist` branch. Built without EXTERNAL_MODEL_API_KEY: no key
+# is embedded.
 # Runs in whichever repository the tag is pushed to: this one for now, and the public one once
 # scripts/publish-public.sh puts a version there. Safe to re-run: an existing release gets its notes and zips
 # replaced, and the dist branch gets no new commit when the build is the same. The zips are kept 7 days as the
@@ -90,8 +92,35 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  # Firefox's build, a trial (`pnpm zip:firefox` → dist/teseo-browser-agent-X.Y.Z-firefox.zip, unsigned), and its
+  # sources for addons.mozilla.org's review (dist/teseo-browser-agent-X.Y.Z-firefox-sources.zip: wxt.config.ts
+  # trackedSources). Built from this release's tag in this repository: rebuilding it from the sources zip gives the
+  # same files only with the same GITHUB_REF_TYPE, GITHUB_REF_NAME and GITHUB_REPOSITORY (CONTRIBUTING.md).
+  build-firefox:
+    needs: checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm zip:firefox
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: firefox-zip
+          path: |
+            dist/*-firefox.zip
+            dist/*-firefox-sources.zip
+          if-no-files-found: error
+          retention-days: 7
+
   publish:
-    needs: [version, build, build-store]
+    needs: [version, build, build-store, build-firefox]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -112,6 +141,10 @@ jobs:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: chrome-store-zip
+          path: ${{ runner.temp }}/assets
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: firefox-zip
           path: ${{ runner.temp }}/assets
       # The notes fail here when CHANGELOG.md has no section for this version, or a zip is missing.
       # Links and checksums of the repository this run releases in (package.json's names the public one, which a

@@ -4,7 +4,7 @@ export interface Checksum {
   sha256: string;
 }
 
-export function assetNames(name: string, version: string): { zip: string; storeZip: string };
+export function assetNames(name: string, version: string): { zip: string; storeZip: string; firefoxZip: string; firefoxSources: string };
 export function changelogSection(changelog: string, version: string): string;
 export function unwrap(markdown: string): string;
 export function checksumsBlock(sums?: Checksum[]): string;

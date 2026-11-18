@@ -1,7 +1,7 @@
 {
   "name": "teseo-browser-agent",
   "private": true,
-  "version": "0.76.0",
+  "version": "0.77.0",
   "description": "An AI assistant that lives in your browser, reads the page you are on and acts on it, with your permission: any OpenAI-compatible provider, MCP and skills.",
   "repository": {
     "type": "git",
@@ -21,10 +21,12 @@
     "build": "wxt build",
     "zip": "wxt zip",
     "zip:store": "STORE=1 wxt zip",
+    "zip:firefox": "wxt zip -b firefox --mv3",
     "compile": "tsc --noEmit",
     "test": "vitest run",
     "postinstall": "wxt prepare",
     "e2e": "wxt build && node tests/e2e/sidepanel.e2e.mjs",
+    "e2e:firefox": "wxt build -b firefox --mv3 && node tests/e2e/firefox-smoke.mjs",
     "lint": "eslint src --max-warnings 0",
     "security": "sh scripts/security.sh"
   },

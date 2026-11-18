@@ -3,6 +3,27 @@
 What changed in each version of Teseo. Versions before 0.61.0 are not listed here; see
 the git tags and their commits.
 
+## 0.77.0
+
+### Added
+- Each release carries the Firefox trial build, `teseo-browser-agent-X.Y.Z-firefox.zip` (unsigned: Firefox loads
+  it only as a temporary add-on), and the sources it is built from, `teseo-browser-agent-X.Y.Z-firefox-sources.zip`,
+  as addons.mozilla.org asks for bundled code. `pnpm zip:firefox` makes both; the sources zip holds only the files
+  git tracks. Firefox is still not supported.
+
+### Changed
+- The Firefox trial build never checks for a new version: whether Mozilla will update it is not decided yet.
+- The Firefox trial build follows Mozilla's add-on policies: it leaves out the sources of custom tools (tools kept
+  in sync with a file at a URL; importing from a file or a URL once stays), and says so with a notice of its own; it
+  never runs in private windows; and the data Firefox asks you to accept at install now also names authentication
+  information (your keys and sign-ins, each sent only to its own service), bookmarks and your voice when you
+  dictate. The privacy policy says what differs in Firefox.
+
+### Fixed
+- The Firefox trial build no longer logs an error in the browser console every time the chat or the toolbar popup
+  looks for the window you are using, and if the last window you used was a pop-up, it now takes your last
+  normal window, as in Chrome.
+
 ## 0.76.0
 
 ### Added
