@@ -1,5 +1,6 @@
 // The toolbar button's popup, in three blocks under a line saying when the extension may not work on this
-// site (SiteAccessLine: Enable it asks for it). Open the chat: floating on this page, in the side panel or
+// site (SiteAccessLine: Enable it asks for it), and above it, in the downloadable build, that a newer
+// version is out (UpdateLine). Open the chat: floating on this page, in the side panel or
 // full screen in a tab, each with its key, the bubble's place marked. Into the chat: a screenshot of the
 // page (background/capture-host), each with its shortcut in its name; the tab's audio (AudioLine, greyed
 // where the browser cannot capture it); a recording of the page's requests
@@ -31,6 +32,8 @@ import { MARK, plainText, unlinkedText } from '../../ui/feature-texts';
 import { RecordLine } from './RecordLine';
 import { SpeakLine } from './SpeakLine';
 import { SiteAccessLine, useSiteAccess } from './SiteAccessLine';
+import { UpdateLine } from './UpdateLine';
+import { useUpdateNotice } from '../../ui/useUpdateNotice';
 import { PopupRow } from './Row';
 import { openSidePanel, PANEL_COMMAND } from '../../core/side-panel';
 import { FLOAT_COMMAND } from '../../widget/protocol';
@@ -44,6 +47,8 @@ if (PREVIEW) document.documentElement.style.overflow = 'hidden';
 export function Popup() {
   const [settings, update] = useSettings();
   useAppearance(settings?.appearance);
+  // A newer version (the downloadable build only): checked once per browser session, after this renders.
+  const newer = useUpdateNotice(settings, { check: !PREVIEW });
   // The tab the chat opens for, known before any click: the side panel opens only inside it.
   const [tab, setTab] = useState<Browser.tabs.Tab>();
   useEffect(() => {
@@ -117,6 +122,7 @@ export function Popup() {
             <Icon name="settings" size={16} />
           </button>
         </div>
+        {newer.popup && !PREVIEW && <UpdateLine latest={newer.popup.latest} onDismiss={newer.dismiss} />}
         {shows('site-access') && <SiteAccessLine access={access} url={tab?.url} onEnable={enableSite} />}
         {tiles.length > 0 && <>
           <div className="popup-label" id="popup-open" role="none">Open the chat</div>

@@ -305,6 +305,9 @@ export interface Settings {
   // The toolbar popup's Audio line: where a tab's audio goes once stopped (audio/protocol; none: the review page).
   audioTo?: AudioTo;
   speak?: SpeakSettings; // Settings → Speak: reading text aloud (speech/settings)
+  // Settings → About: the downloadable build asks GitHub for its latest release when the popup first opens
+  // after the browser starts (core/update-check); on unless false.
+  updateCheck?: boolean;
 }
 
 // A recording's preset (recording/presets): what it keeps of the calls a page makes.

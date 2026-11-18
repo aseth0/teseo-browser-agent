@@ -447,7 +447,7 @@ src/
     floating/                # floating.html: the chat floating on a page (the widget's iframe), its only web-accessible page
     manager/                 # the agent manager page: several chats (sidepanel.html?tab=…&manager iframes), one per tab
     options/                 # Settings
-    popup/                   # the toolbar popup: site access, Record, a tab's Audio
+    popup/                   # the toolbar popup: a newer version's notice, site access, Record, a tab's Audio
     audio/                   # the review of a tab's audio
     mic/                     # the one-time microphone grant for dictation
     offscreen/               # the offscreen document (a tab's audio, the floating chat's dictation, reading aloud)
@@ -571,6 +571,13 @@ permission, no `key`) is the natural starting point for "publish"; the names and
    row whose mark opens why, Settings → About's summary). Every link out of the extension comes from
    `core/links`: the repository set at build time (`package.json`, or `TESEO_REPO_URL`), releases at
    `/releases/latest`, the docs at the version's tag in a release's build and the default branch otherwise.
+   The downloadable release build (a release's, not the store's, of a GitHub repository) checks for a newer
+   version (`core/update-check`, wired by `ui/useUpdateNotice`): the toolbar popup, once per browser session
+   (`updateChecked` in storage.session) and after it renders, fetches `api.github.com/repos/<slug>/releases/latest`
+   without credentials and keeps only its `tag_name`, validated as a version (`updateNotice` in storage.local:
+   the latest found, the version whose popup notice was closed). The popup's line shows it until closed for that
+   version, Settings → About while the installed version is older; Settings `updateCheck: false` (About's switch)
+   stops the request. It is the extension's only request not set up by the user.
 
 ---
 

@@ -3,6 +3,16 @@
 What changed in each version of Teseo. Versions before 0.61.0 are not listed here; see
 the git tags and their commits.
 
+## 0.76.0
+
+### Added
+- The downloadable version tells you when a newer version is out. The first time you open the toolbar popup
+  after the browser starts, it asks GitHub for the latest release (one request, carrying nothing of yours). If
+  there is a newer one, the popup shows its number and a link to the releases until you close it with × (a later
+  release shows it again), and Settings → About says your version is out of date until you update. Turn it off
+  in Settings → About → Check for a new version. The Chrome Web Store version, which the store updates, never
+  checks.
+
 ## 0.75.3
 
 ### Changed

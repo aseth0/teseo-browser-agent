@@ -1586,6 +1586,9 @@ button.audio-time:not(:disabled):hover { color: var(--accent-text); }
 .popup-site.restricted { padding: 7px 10px; color: var(--muted); }
 .popup-site-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .popup-site button { flex: none; }
+/* A newer version is out (popup UpdateLine): its link, and its × to close it for that version. */
+.popup-update a { flex: none; }
+.popup-update .icon-button { justify-content: center; width: 24px; height: 22px; padding: 0; }
 .popup-label { padding: 4px 4px 0; font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
 .popup-tiles { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 6px; }
 .popup-tile { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 9px 4px 7px; font-size: var(--fs-sm); color: var(--fg); }

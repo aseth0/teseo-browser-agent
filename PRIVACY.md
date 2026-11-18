@@ -1,6 +1,6 @@
 # Privacy policy
 
-Last updated: 2026-11-09
+Last updated: 2026-11-18
 
 Teseo is a browser extension that puts an AI chat next to the page you are on. This policy says what data
 it handles, where that data goes, and what stays on your device. The technical details are in
@@ -12,6 +12,8 @@ it handles, where that data goes, and what stays on your device. The technical d
 - It has **no telemetry, no analytics, no ads and no tracking**, and it does not sell or share data with anyone.
 - Data leaves your browser only to the services **you set up** (your AI provider, MCP servers, your own tools)
   and the sites you ask it to read or act on.
+- The one exception is the downloadable version's **check for a new version**: one request to GitHub, carrying
+  none of your data, that you can turn off. The Chrome Web Store version never makes it.
 - Everything it keeps (settings, conversations, memory, logs) stays in your browser's local storage.
 
 ## What data it handles
@@ -41,9 +43,21 @@ Data is sent only to:
 | The APIs of the custom tools you create | The arguments of those tools | When they run |
 | Websites | The requests you would make visiting them | When the model reads or acts on them with your permission |
 | Your search engine | Your search terms | When the model searches the web |
+| GitHub (`api.github.com`), downloadable version only | Nothing of yours: a request for the latest release of Teseo's repository | Once per browser session, the first time you open the toolbar popup |
 
-Those services handle the data under their own privacy policies. Teseo sends nothing to its developer or
-to any other third party.
+Those services handle the data under their own privacy policies. Teseo sends nothing to its developer, and
+nothing of yours to any other third party.
+
+## The check for a new version
+
+The downloadable version does not update itself, so it asks GitHub whether a newer release exists: one `GET`
+request to `https://api.github.com/repos/<owner>/<name>/releases/latest` (the repository Teseo was built from),
+the first time you open the toolbar popup after the browser starts, and at no other moment. It carries no
+cookies, credentials or data of yours; GitHub sees what any request shows it, such as your IP address and your
+browser's standard headers. Only the version number of the answer is kept and shown: the popup offers a link to the
+releases page, and Settings → About says your version is out of date. Turn it off in **Settings → About → Check
+for a new version**: no request is made then. The Chrome Web Store version, updated by the store, and a build from
+source never make this request.
 
 ## What stays on your device
 

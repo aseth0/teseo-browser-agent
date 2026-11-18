@@ -9,7 +9,8 @@ The extension is free and open source (Apache-2.0) and has no account. You pay y
 
 **Does it send my browsing to anyone?**
 Only to the providers, servers and sites you configure, and only what goes with your messages and the tools the
-model runs. No telemetry. See [Privacy and security](privacy-and-security.md).
+model runs. No telemetry. The downloadable version also asks GitHub, once per browser session, whether a newer
+release is out, with nothing of yours in the request (Settings → About turns it off). See [Privacy and security](privacy-and-security.md).
 
 **The chat says it cannot read the page.**
 Allow the site when the chat asks (or in **Settings → Website access**). Browser pages (`chrome://`), the Chrome
@@ -34,6 +35,15 @@ See [Providers → Troubleshooting](providers.md#troubleshooting). For Ollama, s
 **I lost my settings after updating.**
 Updating means replacing the folder's files and clicking ↻ on the extension's card. Removing the extension
 deletes its data; load the new version over the same extension instead.
+
+**The downloadable version has a "key" in its manifest. Is a secret of someone's inside the download?**
+No. That key is public: it only fixes the extension's id, so that an update, or the same folder moved elsewhere,
+is still the same extension and keeps your settings. The Chrome Web Store version has none, as the store gives it
+its id, which is why its settings are apart
+([the versions](getting-started.md#the-downloadable-version)). No published version carries an API key: yours
+is typed in Settings and stays in your browser. Only a build you make yourself with a key in the environment
+has one inside ([personal builds](providers.md#a-provider-from-the-environment-personal-builds)): do not share
+that one.
 
 **How do I move my setup to another browser, or keep a copy?**
 [Settings → Export and import](settings.md#export-and-import): one file with the parts you choose, never with

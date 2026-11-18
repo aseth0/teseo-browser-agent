@@ -43,7 +43,7 @@ Settings page lists them:
 | Logs | The action log, filtered; export with the MCP logs | [The action log](action-log.md) |
 | Export and import | One file with the parts you choose, and its import with a preview | [Export and import](#export-and-import) |
 | ***Teseo*** | | |
-| About | The version, links to the docs, releases and issues, and what this version leaves out | [What each version has](#what-each-version-has) |
+| About | The version, links to the docs, releases and issues, whether a newer version is out and the switch for that check (the downloadable version), and what this version leaves out | [What each version has](#what-each-version-has) |
 
 ## The RAG sections
 
@@ -136,6 +136,13 @@ version), and **Settings → About** lists
 what your version leaves out. Where the browser lacks it, the notice links to the docs page about it; where it is the
 store's choice, to the downloadable version. Your settings move between versions with
 [Export and import](#export-and-import).
+
+The downloadable version does not update itself, so it **checks for a new version**: the first time the toolbar
+popup opens after the browser starts, one request to GitHub for the latest release of its repository, with nothing
+of yours in it. A newer one shows in the popup, with a link to the releases, until you close it with × (a later
+release shows it again), and in **Settings → About** for as long as yours is older. **Check for a new version** in
+Settings → About turns it off: no request, no notice. The Chrome Web Store version (the store updates it) and a
+build from source never check.
 
 ## Backups
 

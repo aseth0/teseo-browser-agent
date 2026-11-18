@@ -11,7 +11,7 @@ offers three versions; **Settings → About** shows what yours has
 
 | Version | For | Leaves out |
 |---|---|---|
-| [The downloadable version](#the-downloadable-version), `teseo-browser-agent-X.Y.Z-chrome.zip` | Everyone: every feature | Nothing, but it does not update itself |
+| [The downloadable version](#the-downloadable-version), `teseo-browser-agent-X.Y.Z-chrome.zip` | Everyone: every feature | Nothing, but it does not update itself: it tells you when a newer version is out |
 | [The Chrome Web Store version](#the-chrome-web-store-version), `teseo-browser-agent-X.Y.Z-chrome-store.zip` | The same build submitted to the Chrome Web Store | The [DevTools engine](devtools-engine.md) and the [sources of custom tools](custom-tools.md#sources-tools-shared-by-a-team); its settings are its own |
 | [From source](#from-source) | Development | Nothing: you build it |
 
@@ -29,13 +29,22 @@ offers three versions; **Settings → About** shows what yours has
 3. Click **Load unpacked** and choose the folder.
 4. Pin the icon: puzzle menu 🧩 → 📌.
 
-**Updating.** It does not update itself. Replace the folder's contents with the next release's (or `git pull` in
+**Updating.** It does not update itself, but it tells you when a newer version is out: the first time you open the
+toolbar popup after the browser starts, it asks GitHub for the latest release (one request, with nothing of yours;
+**Settings → About → Check for a new version** turns it off). If there is a newer one, the popup says so with a
+link to the releases until you close the notice with ×, and **Settings → About** keeps saying it until you update.
+To update, replace the folder's contents with the next release's (or `git pull` in
 the clone) and click ↻ on the extension's card. Do not remove the extension to update it: removing it deletes its
 settings, conversations and keys.
 
 **Its id is always the same.** The manifest carries a key that fixes the extension's id, so it is the same on any
 computer and from any folder: move or replace the folder and your settings stay. A build
 [from source](#from-source) has that same id.
+
+That key is not a secret and has nothing to do with a provider's API key: it is the public half of a key pair,
+there only to fix the id, and it is in the repository for anyone to read. No published version carries an API
+key of anyone's: the downloadable zip, the `dist` branch and the Chrome Web Store version are all built without
+one, and you add your provider's key in Settings ([where keys are kept](providers.md#where-keys-are-kept)).
 
 ### The Chrome Web Store version
 

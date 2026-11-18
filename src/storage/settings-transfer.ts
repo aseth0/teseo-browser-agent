@@ -48,6 +48,7 @@ const SETTINGS: Partial<Record<keyof Settings, [Kind, string]>> = {
   audioTo: ['string', 'Tab audio goes to'],
   interactions: ['object', 'Alerts'],
   logs: ['object', 'Logs'],
+  updateCheck: ['boolean', 'Check for a new version'],
 };
 
 // The fields of a setting that belong to this browser: never exported, and yours kept on import.

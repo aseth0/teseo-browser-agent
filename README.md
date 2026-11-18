@@ -39,7 +39,8 @@ something is shown to you first, unless you allowed it on that site.
 - **A page widget.** One-click buttons on the sites you choose: look something up, summarize, translate,
   show a count as the page loads, with or without the model.
 - **Private by design.** No telemetry and no servers of its own: requests go only to the providers, sites
-  and servers you configure. Keys stay in the extension's own storage, page content is sent as untrusted data,
+  and servers you configure (and, in the downloadable version, one check with GitHub for a newer release, which
+  you can turn off). Keys stay in the extension's own storage, page content is sent as untrusted data,
   and a word blacklist can mask names before anything reaches the model.
 
 <table>
@@ -56,7 +57,7 @@ supported. Each [GitHub release](https://github.com/aseth0/teseo-browser-agent/r
 
 | Version | For | Leaves out |
 |---|---|---|
-| **Downloadable** (recommended): `teseo-browser-agent-X.Y.Z-chrome.zip`, or the `dist` branch | Everyone: every feature. Its extension id is fixed: the same from any folder, so an update keeps your settings | Nothing, but it does not update itself |
+| **Downloadable** (recommended): `teseo-browser-agent-X.Y.Z-chrome.zip`, or the `dist` branch | Everyone: every feature. Its extension id is fixed: the same from any folder, so an update keeps your settings | Nothing, but it does not update itself: it tells you when a newer version is out |
 | **Chrome Web Store**: `teseo-browser-agent-X.Y.Z-chrome-store.zip` | The same build submitted to the Chrome Web Store | The [DevTools engine](docs/guide/devtools-engine.md) and the [sources of custom tools](docs/guide/custom-tools.md#sources-tools-shared-by-a-team); its own extension id, so its own settings; loaded unpacked, that id depends on the folder it is in |
 | **Source**: the repository at the release's tag | Development | Nothing: you build it ([Building from source](CONTRIBUTING.md#building-from-source)) |
 

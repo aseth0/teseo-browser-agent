@@ -76,5 +76,5 @@ export const SETTINGS_SECTIONS: { id: string; title: string; group?: string; fea
   { id: 'site-policies', title: 'Site policies', render: () => <SitePoliciesSection /> },
   { id: 'logs', title: 'Logs', render: (p) => <LogsSection {...p} /> },
   { id: 'export-import', title: 'Export and import', render: () => <ExportImportSection /> },
-  { id: 'about', title: 'About', group: 'Teseo', render: () => <AboutSection /> },
+  { id: 'about', title: 'About', group: 'Teseo', render: (p) => <AboutSection {...p} /> },
 ];

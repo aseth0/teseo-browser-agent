@@ -31,7 +31,8 @@ export function linksFor({ repo, version, release }: { repo: string; version?: s
 }
 
 const builtRepo = (): string => (typeof __REPO_URL__ !== 'undefined' ? __REPO_URL__ : '');
-const releaseBuild = (): boolean => typeof __RELEASE_BUILD__ !== 'undefined' && __RELEASE_BUILD__;
+// Built from a release's tag (core/repo-url isReleaseBuild): the zips and the dist branch, the store's too.
+export const releaseBuild = (): boolean => typeof __RELEASE_BUILD__ !== 'undefined' && __RELEASE_BUILD__;
 export const installedVersion = (): string | undefined => {
   try {
     return browser.runtime?.getManifest?.().version;
