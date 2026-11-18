@@ -1,0 +1,1 @@
+import{i as e}from"./runtime-DV_eYvS2.js";var t=t=>t?.url?.startsWith(e.runtime.getURL(`/`))??!1,n=e=>{let n=t(e);return{fromExtension:n,fromPage:!n&&e.tab?.id!==void 0&&e.frameId===0}};export{n,t};

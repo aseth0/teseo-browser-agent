@@ -1,0 +1,2 @@
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/style-C9rU6QBK.css"])))=>i.map(i=>d[i]);
+import{t as e}from"./ticket-gate-_4WwspJt.js";import{t}from"./preload-helper-DSTXd-68.js";e(()=>t(()=>import(`./chat-main-vaCv2zWq.js`),__vite__mapDeps([0]))).catch(e=>console.error(`[chat]`,e));
