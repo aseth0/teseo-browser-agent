@@ -80,7 +80,7 @@ describe('editable texts', () => {
       'summary', 'max_words', 'what', 'pending', 'definition', 'custom_tool_list', 'action_name', 'action_list', 'agent_list',
       'condition', 'minutes', 'after', 'end', 'steps', 'selector', 'attr', 'group', 'fragment', 'groups', 'ms', 'names', 'given', 'agents', 'shown', 'part', 'page', 'pages', 'other', 'kind', 'message', 'problems', 'changes',
       'template_catalog', 'template_list', 'template_description', 'view_description', 'rounds', 'plan_steps', 'duration',
-      'row', 'rows', 'state', 'step', 'max_steps', 'when', 'skills', 'feature']);
+      'row', 'rows', 'state', 'step', 'max_steps', 'when', 'skills', 'feature', 'context', 'constraints', 'report', 'failed', 'label']);
     for (const def of Object.values(TEXT_DEFS)) for (const p of placeholdersOf(def.text)) expect(known).toContain(p);
   });
 

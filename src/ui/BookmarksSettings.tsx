@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { browser } from 'wxt/browser';
 import { BOOKMARK_AUTO_DEFAULTS, BOOKMARK_CANDIDATES, BOOKMARKS_PERMISSION, bookmarksAllowed, bookmarksUnder, defaultFolder, DEFAULT_FOLDER_TITLE, everyFolder, rankBookmarks, type Folder } from '../bookmarks/store';
 import { withAutoAttach } from '../storage/settings-select';
-import type { StepAttach } from '../storage/settings-types';
+import { ATTACH_UNSEEN, type StepAttach } from '../storage/settings-types';
 import { MentionsFold } from './MentionsFold';
 import { bookmarkPicks } from '../bookmarks/auto';
 import { AttachPlayground, AutoAttachCard, StepsCheck } from './AutoAttachBlock';
@@ -143,7 +143,7 @@ function BookmarksMatching({ settings, onChange }: Props) {
 function BookmarksTry({ settings, disabled }: Pick<Props, 'settings'> & { disabled: boolean }) {
   const auto = settings.bookmarks?.autoAttach ?? {};
   const search = async (query: string) => {
-    const ranked = await rankBookmarks(settings, query, BOOKMARK_CANDIDATES);
+    const ranked = await rankBookmarks(settings, query, BOOKMARK_CANDIDATES, { unseen: ATTACH_UNSEEN });
     const picks = bookmarkPicks(ranked, query, [], settings.bookmarks?.autoAttach);
     return {
       picked: picks.map((p) => p.bookmark.id),

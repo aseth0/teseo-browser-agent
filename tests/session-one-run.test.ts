@@ -19,7 +19,7 @@ const { createSessions } = await import('../src/background/session');
 createSessions(vi.fn());
 
 const floating = (tabId: number) => {
-  const port = fakePort(PORT_NAME, { url: 'chrome-extension://ext-id/sidepanel.html?floating', tab: { id: tabId } });
+  const port = fakePort(PORT_NAME, { url: 'chrome-extension://ext-id/floating.html', tab: { id: tabId } });
   onConnect.emit(port);
   return port;
 };

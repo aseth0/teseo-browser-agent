@@ -23,6 +23,7 @@ import type { RequestViewOf } from '../context/request-view';
 import { hasCreateGroup } from '../agents/builtins';
 import type { Message } from '../core/types';
 import { heldSkills, offeredOnDemand, onDemandGroups } from '../tools/load';
+import { heldFor } from '../tools/match';
 
 // The request fields besides messages and tools, as the chat would send them: the active model
 // and its thinking level.
@@ -51,7 +52,9 @@ export function requestAs(agent: AgentProfile | undefined, settings: Settings, a
   const seen = seenBy(agent, settings, all.skills, all.templates);
   const callable = callableAgents(agent, all.agents, settings);
   const tools = offeredTools(withPanel(withAsk(agentOffers(agent, all.catalog, all.agents), callable), panel && callable.length > 0), seen.settings, seen.skills);
-  const groups = onDemandGroups(settings, tools, { create: hasCreateGroup(agent), skills: seen.skills });
+  const onDemand = onDemandGroups(settings, tools, { create: hasCreateGroup(agent), skills: seen.skills });
+  // With the tool groups your last message did not match held back too, as the run did (tools/match).
+  const groups = [...onDemand, ...heldFor(history, tools, onDemand)];
   const offered = offeredOnDemand(tools, history, groups) as ToolInfo[];
   return { ...seen, offered, specs: offered.map((t) => panelSpec(askSpec(toSpec(t), callable), callable)), asks: callable.length > 0, memory: memoryFor(all.memory, agent?.id), memoryOpts: memoryPromptOptions(seen.settings, agent), heldSkills: heldSkills(groups, history) };
 }

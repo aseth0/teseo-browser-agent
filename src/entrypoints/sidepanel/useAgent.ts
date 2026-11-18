@@ -26,8 +26,8 @@ export function useAgent() {
 
   // A new object only when the state changes.
   return useMemo(() => {
-    const { conversationId, history, subs, busy, compacting, status, error, notices, stepLimit, confirmations, usage } = state;
-    return { conversationId, history, live, subs, busy, compacting, status, error, notices, stepLimit, confirmations, usage, ...actions };
+    const { conversationId, history, subs, busy, compacting, status, error, notices, stepLimit, confirmations, usage, phases } = state;
+    return { conversationId, history, live, subs, busy, compacting, status, error, notices, stepLimit, confirmations, usage, phases, ...actions };
   }, [state, live, actions]);
 }
 
@@ -47,7 +47,7 @@ export function previewAgent(history: Message[], usage: SessionUsage): Agent {
   const nothing = () => {};
   const unsent = () => false;
   return {
-    conversationId: PREVIEW_ID, history, live: noLive(PREVIEW_ID), subs: {}, busy: false, compacting: false, status: '', error: '', notices: [], stepLimit: null, confirmations: [], usage,
+    conversationId: PREVIEW_ID, history, live: noLive(PREVIEW_ID), subs: {}, busy: false, compacting: false, status: '', error: '', notices: [], stepLimit: null, confirmations: [], usage, phases: [],
     send: unsent, resume: unsent, regenerate: unsent, stop: nothing, respond: nothing, respondAccess: nothing, respondUser: nothing, respondMore: nothing, reset: nothing, open: nothing, compact: () => history, setCompacting: nothing, dismissPlan: nothing,
   };
 }

@@ -225,18 +225,73 @@ RUN['widget-chat'] = async ({ page, errors, ctx, model }) => {
   await article.close();
 };
 
-RUN['widget-floating'] = async ({ page, errors, shop }) => {
+RUN['widget-floating'] = async ({ page, errors, ctx, shop, extId }) => {
   await widgetHover(shop, 'Agent').catch((e) => errors.push(`widget: ${e.message}`));
   await waitFor(async () => !(await widgetHidden(shop, 'menu')));
   await widgetClick(shop, 'Open the chat here').catch((e) => errors.push(`widget: ${e.message}`));
   const floating = async () => {
     let frame;
-    await waitFor(async () => (frame = shop.frames().find((f) => f.url().includes('sidepanel.html?floating'))) && (await frame.getByPlaceholder(/Ask something/).isVisible()));
+    await waitFor(async () => (frame = shop.frames().find((f) => f.url().includes('/floating.html'))) && (await frame.getByPlaceholder(/Ask something/).isVisible()));
     return frame;
   };
   const chat = await floating();
   if (!chat) throw new Error('floating: no chat on the page');
   if ((await shop.evaluate(() => [window.length, document.querySelectorAll('iframe').length].join())) !== '0,0') errors.push('floating: the page sees the frame');
+  // The page learns nothing of the bubble's ticket (its frame's URL), not from its performance entries either.
+  const seen = await shop.evaluate(() => performance.getEntries().map((e) => e.name).filter((n) => n.includes('ticket=')));
+  if (seen.length) errors.push(`floating: the page sees the frame's ticket (${seen.join(' ')})`);
+  // What a page can do by itself with the extension's pages, under their fixed URLs. Only floating.html is
+  // web-accessible: framed or opened in a tab of its own, with no ticket or a made-up one, it stays an
+  // empty document. Every other page (sidepanel.html, whatever its query) gets the browser's "blocked"
+  // page, framed or opened, and nothing else of the extension can be fetched. The bubble's own frame
+  // still shows the chat.
+  const base = `chrome-extension://${extId}/`;
+  const blocked = (url) => url.startsWith('chrome-error://');
+  const emptiness = (f) => f.evaluate(() => [document.getElementById('root')?.childElementCount ?? -1, document.styleSheets.length, document.scripts.length].join()).catch((e) => e.message);
+  const EMPTY = '0,0,1'; // its gate's script alone, which loaded nothing more
+  const ownFrame = async (src) => {
+    await shop.evaluate((src) => new Promise((loaded) => {
+      const f = Object.assign(document.createElement('iframe'), { id: 'own-frame', src });
+      f.addEventListener('load', loaded, { once: true });
+      document.body.append(f);
+    }), src);
+    const own = await (await shop.$('#own-frame'))?.contentFrame();
+    await shop.waitForTimeout(QUIET_MS);
+    const seen = { url: own?.url() ?? 'no frame', inside: own && !blocked(own.url()) ? await emptiness(own) : undefined };
+    await shop.evaluate(() => document.getElementById('own-frame')?.remove());
+    return seen;
+  };
+  const ownTab = async (src) => {
+    const [tab] = await Promise.all([ctx.waitForEvent('page', { timeout: T.medium }), shop.evaluate((u) => void (window.opened = window.open(u)), src)]);
+    await tab.waitForLoadState().catch(() => {});
+    await tab.waitForTimeout(QUIET_MS);
+    const seen = { url: tab.url(), inside: blocked(tab.url()) ? undefined : await emptiness(tab) };
+    await tab.close();
+    await shop.bringToFront();
+    return seen;
+  };
+  for (const hash of ['', `#ticket=${'0'.repeat(64)}`, '#ticket=made-up']) {
+    const src = `${base}floating.html${hash}`;
+    const framed = await ownFrame(src);
+    if (framed.inside !== EMPTY) errors.push(`floating: a page's own frame of floating.html${hash} is not empty (${framed.url} ${framed.inside})`);
+    const opened = await ownTab(src);
+    if (opened.inside !== EMPTY) errors.push(`floating: floating.html${hash} opened by a page in a tab is not empty (${opened.url} ${opened.inside})`);
+  }
+  for (const query of ['', '?full', '?tab=1', '?manager&agent=x', '?floating']) {
+    const src = `${base}sidepanel.html${query}`;
+    const framed = await ownFrame(src);
+    if (!blocked(framed.url)) errors.push(`floating: a page framed sidepanel.html${query} (${framed.url} ${framed.inside})`);
+    const opened = await ownTab(src);
+    if (!blocked(opened.url)) errors.push(`floating: a page opened sidepanel.html${query} in a tab (${opened.url} ${opened.inside})`);
+  }
+  const fetched = await shop.evaluate(async (base) => {
+    const status = (u) => fetch(u).then((r) => r.status, () => 'refused');
+    const gate = await fetch(`${base}floating.html`).then((r) => r.text(), () => '');
+    const script = gate.match(/src="\/(chunks\/[^"]+)"/)?.[1] ?? 'chunks/none.js';
+    return Object.fromEntries(await Promise.all(['floating.html', script, 'sidepanel.html', 'manifest.json', 'pdfjs/cmaps/LICENSE', 'background.js'].map(async (f) => [f.replace(/-[\w-]+\.js$/, '.js'), await status(base + f)])));
+  }, base);
+  if (JSON.stringify(fetched) !== JSON.stringify({ 'floating.html': 200, 'chunks/floating.js': 'refused', 'sidepanel.html': 'refused', 'manifest.json': 'refused', 'pdfjs/cmaps/LICENSE': 'refused', 'background.js': 'refused' })) errors.push(`floating: a page fetches ${JSON.stringify(fetched)}`);
+  if (!(await chat.getByPlaceholder(/Ask something/).isVisible())) errors.push("floating: the bubble's frame lost the chat");
   // Each chat holds the conversation it shows (history/held), seen from the others: the side panel and
   // the chat floating on a page share the locks, the frame in a site's page too.
   const held = (f) => f.evaluate(async () => (await navigator.locks.query()).held.map((l) => l.name).filter((n) => /^browser-agent:held:(chat|floating):/.test(n)).sort().join());
@@ -294,11 +349,11 @@ RUN['widget-floating'] = async ({ page, errors, shop }) => {
   // The widget is back on the page; the chat would open with it.
   if (!(await waitFor(async () => (await widgetText(shop)).trim().length > 0, T.medium))) errors.push('floating: no widget after the reload');
   await shop.waitForTimeout(QUIET_MS);
-  if (shop.frames().some((f) => f.url().includes('sidepanel.html?floating'))) errors.push('floating: open again after closing it');
+  if (shop.frames().some((f) => f.url().includes('/floating.html'))) errors.push('floating: open again after closing it');
 };
 
 RUN['widget-move'] = async ({ page, errors, ctx, extId, shop, sw, action }) => {
-  const floatingFrame = () => shop.frames().find((f) => f.url().includes('sidepanel.html?floating'));
+  const floatingFrame = () => shop.frames().find((f) => f.url().includes('/floating.html'));
   const frameText = async () => (await floatingFrame()?.locator('#root').innerText().catch(() => '')) ?? '';
   // A second panel (a tab here): its conversation floats on its page, the shop.
   const other = await ctx.newPage();
@@ -332,7 +387,7 @@ RUN['widget-move'] = async ({ page, errors, ctx, extId, shop, sw, action }) => {
 };
 
 RUN['widget-turn-reload'] = async ({ errors, shop }) => {
-  const frameOf = () => shop.frames().find((f) => f.url().includes('sidepanel.html?floating'));
+  const frameOf = () => shop.frames().find((f) => f.url().includes('/floating.html'));
   const floating = async () => {
     let frame;
     await waitFor(async () => (frame = frameOf()) && (await frame.getByPlaceholder(/Ask something/).isVisible()));
@@ -363,7 +418,7 @@ RUN['widget-turn-reload'] = async ({ errors, shop }) => {
 };
 
 RUN['widget-float-default'] = async ({ page, errors, ctx, extId, shop, action }) => {
-  const floatingFrame = () => shop.frames().find((f) => f.url().includes('sidepanel.html?floating'));
+  const floatingFrame = () => shop.frames().find((f) => f.url().includes('/floating.html'));
   // The bubble's click floats the chat, where and as big as the settings say.
   await widgetClick(shop, 'Agent').catch((e) => errors.push(`widget: ${e.message}`));
   if (!(await waitFor(async () => !!floatingFrame()))) errors.push('float default: the bubble did not float the chat');
@@ -391,7 +446,7 @@ RUN['widget-float-default'] = async ({ page, errors, ctx, extId, shop, action })
 
 RUN['widget-sticky'] = async ({ page, errors, ctx, extId, shop }) => {
   const DONE = 'SLOW DONE'; // each answer takes a few seconds (the mock's manager-slow)
-  const frameOf = (tab) => tab.frames().find((f) => f.url().includes('sidepanel.html?floating'));
+  const frameOf = (tab) => tab.frames().find((f) => f.url().includes('/floating.html'));
   const textOf = async (tab) => (await frameOf(tab)?.locator('#root').innerText().catch(() => '')) ?? '';
   const answers = async (tab) => (await textOf(tab)).split(DONE).length - 1;
   const floatOn = async (tab) => {

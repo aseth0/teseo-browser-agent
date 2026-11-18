@@ -80,4 +80,7 @@ export const ENGINE = fs.readFileSync('tests/fixtures/engine.html', 'utf8');
 export const WORKER = fs.readFileSync('tests/fixtures/worker.html', 'utf8');
 export const EDITOR = fs.readFileSync('tests/fixtures/editor.html', 'utf8');
 export const RAIL = fs.readFileSync('tests/fixtures/rail.html', 'utf8');
+// The brief panel-boss hands its worker (agents/brief), and how every asked agent is told to answer.
+export const WORKER_BRIEF = { context: 'Start at one.', constraints: 'Click nothing.', done: 'You said three.', report: 'The numbers, one per line.' };
+export const BRIEF_ANSWER = '\n\nEnd your answer with two short lines:\nDid: what you did.\nNot done or not verified: what you could not do or check, or "nothing".';
 export const HELLO = 'Hello, I am the mock.';

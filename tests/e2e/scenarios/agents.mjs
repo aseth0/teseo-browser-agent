@@ -29,6 +29,7 @@ Object.assign(ACTIONS, {
   'webmcp-navigate': { model: 'webmcp-navigate', answer: [{ button: 'Allow' }, { button: 'Allow' }], expect: 'WEBMCP NAV OK' },
   mcp: { model: 'mcp', answer: 'Allow', expect: ['MCP OK echo', 'MCP 4/4'] }, // two more servers added at the end (AFTER.mcp)
   'mcp-on-demand': { model: 'mcp-on-demand', answer: 'Allow', expect: ['MCP ON DEMAND OK'] },
+  'tool-match': { model: 'tool-match', answer: 'Allow', expect: ['TOOL MATCH OK'] },
   'site-access': { model: 'site-access', answer: 'Allow', expect: 'SITE ACCESS OK' },
   'mcp-oauth': { model: 'mcp', answer: 'Allow', expect: ['MCP OK echo', 'notes'] }, // with a warning: signed out at the end
   'access-deny': { model: 'access-deny', answer: [{ dialog: 'Confirm action', button: 'Allow' }, { dialog: 'Allow reading a site', button: 'Deny' }], expect: 'ACCESS OK' },

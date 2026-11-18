@@ -10,6 +10,7 @@ import { toWireName, type ToolRegistry } from './tool-registry';
 import { namedTab } from './util';
 import { DEFAULT_MAX_STEPS } from './limits';
 import { text } from './model-texts';
+import { callPhaseId, noPhases, type PhaseHandle, type PhaseRecorder } from './phases';
 import { ToolsUnsupportedError, type AccessRequest, type Authorization, type CallUsage, type ChatEvent, type ChatRequest, type LLMProvider, type TabSeen, type Message, type Part, type ThinkingLevel, type Tool, type ToolCallLog, type ToolContext, type ToolSpec, type WindowSource } from './types';
 
 export type LoopEvent =
@@ -90,6 +91,9 @@ export interface LoopHooks {
   // calls that ended were done; core/messages markStopped).
   onResult?: (result: Part) => void;
   onOverflow?: (error: string) => void; // a refusal as too long, which may say the model's window (context/window learnContextWindow)
+  // The turn's phases (core/phases): each model call and its parts, each tool call, what was attached
+  // between steps. None: not recorded.
+  phases?: PhaseRecorder;
 }
 
 export interface LoopOptions {
@@ -150,6 +154,8 @@ export async function* runAgentLoop(history: Message[], opts: LoopOptions, signa
   let anchor: Anchor | undefined;
   // The model sent again a call already not run (core/repeated-calls): the next request lets it call none.
   let callsBlocked = false;
+  const phases = opts.hooks?.phases ?? noPhases;
+  let modelCalls = 0; // the model calls of this run, for their phases' labels
   try {
     for (let step = 0; step < maxSteps; step++) {
       if (step > 0 && opts.tools.refresh) tools = (await bestEffort(opts.tools.refresh(tools), 'refresh-tools')) ?? tools; // the ones offered stay
@@ -164,8 +170,15 @@ export async function* runAgentLoop(history: Message[], opts: LoopOptions, signa
       }
       const toolChoice = !specs.length ? undefined : callsBlocked ? 'none' : step === 0 ? model.toolChoice : undefined;
       const request: ChatRequest = { model: model.name, system: view.system, messages: view.messages, tools: specs.length ? specs : undefined, thinking: model.thinking, toolChoice };
-      const answer = yield* streamStep(opts, request, builder, { squeeze, signal });
+      const callPhase = phases.start({ kind: 'call', label: `Model call ${++modelCalls}`, detail: model.name });
+      let answer: StepAnswer;
+      try {
+        answer = yield* streamStep(opts, request, builder, { squeeze, signal, phases: phases.under(callPhase.id) });
+      } finally {
+        callPhase.end();
+      }
       if (answer.again) {
+        callPhase.note(answer.again === 'without-tools' ? `${model.name} · took no tools: sent again without them` : `${model.name} · refused as too long: sent again shortened`);
         if (answer.again === 'without-tools') toolsDisabled = true;
         else refused = true;
         step--;
@@ -206,7 +219,10 @@ export async function* runAgentLoop(history: Message[], opts: LoopOptions, signa
       // What the model wrote in this step (not its reasoning nor its calls) may bring memory or bookmarks,
       // and its plan a reminder: after the last result, also inside its content (what the model reads).
       const reply = builder.parts.map((p) => (p.type === 'text' && !p.context ? p.text : '')).join('').trim();
-      const extra = context.attachAfter ? (await bestEffort(context.attachAfter(reply, [...messages, { role: 'tool', parts: results }]), 'attach-after')) ?? [] : [];
+      const attachAfter = context.attachAfter;
+      const extra = attachAfter
+        ? await phases.time({ kind: 'attach', label: 'Attached after the results' }, async () => (await bestEffort(attachAfter(reply, [...messages, { role: 'tool', parts: results }]), 'attach-after')) ?? [], (items) => (items.length ? attachedDetail(items) : undefined))
+        : [];
       const last = results.at(-1);
       if (extra.length && last?.type === 'tool_result') {
         results[results.length - 1] = {
@@ -277,7 +293,9 @@ type StepAnswer =
   | { again?: undefined; reported?: CallUsage['reported']; callStart: number; firstTokenMs?: number; looped?: string };
 
 // One request to the model, streamed into `builder`: its deltas and notices as they come.
-async function* streamStep(opts: LoopOptions, request: ChatRequest, builder: PartsBuilder, { squeeze, signal }: { squeeze: number; signal: AbortSignal }): AsyncGenerator<LoopEvent, StepAnswer> {
+// `phases`: under the call's phase, its parts: the wait for the first token, then the reasoning and
+// the answer as they take turns.
+async function* streamStep(opts: LoopOptions, request: ChatRequest, builder: PartsBuilder, { squeeze, signal, phases }: { squeeze: number; signal: AbortSignal; phases: PhaseRecorder }): AsyncGenerator<LoopEvent, StepAnswer> {
   const { model, hooks = {} } = opts;
   let reported: CallUsage['reported'];
   let started = false;
@@ -286,12 +304,25 @@ async function* streamStep(opts: LoopOptions, request: ChatRequest, builder: Par
   // This call's own signal: cut when the model is caught in a loop, as when the run is stopped.
   const call = new AbortController();
   let looped: string | undefined; // what the model kept repeating
+  const waiting = phases.start({ kind: 'wait', label: 'Waiting for the first token' });
+  let part: { kind: 'reasoning' | 'answer'; phase: PhaseHandle } | undefined;
+  const partIs = (kind: 'reasoning' | 'answer' | undefined) => {
+    if (part?.kind === kind) return;
+    part?.phase.end();
+    part = kind && { kind, phase: phases.start({ kind, label: kind === 'reasoning' ? 'Reasoning' : 'Answer' }) };
+  };
   try {
     const stream: AsyncIterable<ChatEvent> = model.provider.chat(request, AbortSignal.any([signal, call.signal]));
     for await (const evt of stream) {
       started = true;
       if (evt.type === 'usage') reported = { input: evt.inputTokens, output: evt.outputTokens, ...(evt.reasoningTokens !== undefined && { reasoning: evt.reasoningTokens }), ...(evt.cachedTokens !== undefined && { cached: evt.cachedTokens }) };
-      if (firstTokenMs === undefined && (evt.type === 'text-delta' || evt.type === 'reasoning-delta' || evt.type === 'tool-call')) firstTokenMs = Date.now() - callStart;
+      if (firstTokenMs === undefined && (evt.type === 'text-delta' || evt.type === 'reasoning-delta' || evt.type === 'tool-call')) {
+        firstTokenMs = Date.now() - callStart;
+        waiting.end();
+      }
+      if (evt.type === 'reasoning-delta') partIs('reasoning');
+      else if (evt.type === 'text-delta') partIs('answer');
+      else if (evt.type === 'reasoning-end') partIs(undefined);
       builder.add(evt);
       if (evt.type === 'text-delta' || evt.type === 'reasoning-delta' || evt.type === 'notice') yield evt;
       if ((evt.type === 'text-delta' || evt.type === 'reasoning-delta') && (looped = builder.loopAfter(evt.text.length))) break;
@@ -313,6 +344,8 @@ async function* streamStep(opts: LoopOptions, request: ChatRequest, builder: Par
     if (!looped) throw e;
   } finally {
     if (looped) call.abort();
+    waiting.end(firstTokenMs === undefined ? 'no answer' : undefined);
+    partIs(undefined);
   }
   return { reported, callStart, firstTokenMs, looped };
 }
@@ -323,6 +356,7 @@ async function* streamStep(opts: LoopOptions, request: ChatRequest, builder: Par
 // for the second time in the turn, so the model does not heed the reply that says why.
 async function runCalls(opts: LoopOptions, tools: ToolRegistry, calls: Extract<Part, { type: 'tool_call' }>[], { elements, failed }: { elements: Map<string, string>; failed: Map<string, number> }, signal: AbortSignal): Promise<{ results: Part[]; blockedAgain: boolean } | undefined> {
   const { hooks = {} } = opts;
+  const phases = hooks.phases ?? noPhases;
   const ctx: ToolContext = { ...opts.tools.context, signal };
   const results: Part[] = [];
   let blockedAgain = false;
@@ -348,7 +382,10 @@ async function runCalls(opts: LoopOptions, tools: ToolRegistry, calls: Extract<P
     // By the name as written ("browser.find"); the registry has them as the model calls them.
     const callTool: ToolContext['callTool'] = (name, args) => execute(opts, opts.tools.stepTools ?? tools, toWireName(name), args, { ...inner, callId: `${call.id}.${++subCall}` });
     const emit: ToolContext['emit'] = (label, message) => hooks.onSub?.(call.id, label, { type: 'message', message });
-    const { data: _data, elements: list, ...done } = await execute(opts, tools, call.name, call.args, { ...ctx, callId: call.id, callTool, emit });
+    const name = tools.get(call.name)?.name ?? call.name;
+    const phase = phases.start({ kind: DELEGATES.has(name) ? 'agent' : 'tool', label: name, id: callPhaseId(call.id) });
+    const { data: _data, elements: list, ...done } = await execute(withConfirmPhase(opts, phases.under(phase.id)), tools, call.name, call.args, { ...ctx, callId: call.id, callTool, emit }).finally(() => phase.end());
+    if (done.isError) phase.note(done.content.split('\n')[0]!.slice(0, 120));
     if (list) elements.set(call.id, list);
     if (done.isError) failed.set(key, failures + 1);
     const content = done.isError && failures ? `${done.content}\n\n${text('result.repeated_failure')}` : done.content;
@@ -356,4 +393,33 @@ async function runCalls(opts: LoopOptions, tools: ToolRegistry, calls: Extract<P
     hooks.onResult?.(results[results.length - 1]!);
   }
   return { results, blockedAgain };
+}
+
+// The tools that hand work to another agent: their phase says so (an agent asked, one started).
+const DELEGATES = new Set(['agents.ask', 'panel.start']);
+
+// A call's policy timed: when it asked the user, the wait for the answer is a phase of its own, so the
+// call's own time can be told from yours.
+function withConfirmPhase(opts: LoopOptions, phases: PhaseRecorder): LoopOptions {
+  const { authorize } = opts.tools;
+  if (!authorize) return opts;
+  return {
+    ...opts,
+    tools: {
+      ...opts.tools,
+      authorize: async (tool, args, ctx) => {
+        const at = Date.now();
+        const auth = await authorize(tool, args, ctx);
+        if (auth.seen?.asked) phases.add({ kind: 'confirm', label: 'Waiting for your confirmation', detail: auth.seen.asked, at, ms: Date.now() - at });
+        return auth;
+      },
+    },
+  };
+}
+
+// What was attached between steps, for its phase: how many of each kind.
+function attachedDetail(items: ContextItem[]): string {
+  const counts = new Map<string, number>();
+  for (const i of items) counts.set(i.kind, (counts.get(i.kind) ?? 0) + 1);
+  return [...counts].map(([kind, n]) => `${n} ${kind}`).join(', ');
 }

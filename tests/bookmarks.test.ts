@@ -132,6 +132,14 @@ describe('bookmarks', () => {
     allowed = false;
     expect(await bookmarkAutoItems('lemon pie', [], on)).toEqual([]);
   });
+
+  it('a message mostly of words no bookmark has: the one in common is no full match', async () => {
+    const on = { bookmarks: { rootId: '20', autoAttach: { enabled: true, threshold: 60 } } } as never;
+    expect(await bookmarkAutoItems('Crea una receta de prueba con los cables recomendados para la cena', [], on)).toEqual([]);
+    expect(await bookmarkAutoItems('busca otra lemon pie', [], on)).toHaveLength(1);
+    // The panel's search still finds it by that word.
+    expect((await searchBookmarks(on, 'Crea una receta de prueba con los cables recomendados para la cena', 5)).map((b) => b.id)).toEqual(['21']);
+  });
 });
 
 describe('bookmarks.save', () => {

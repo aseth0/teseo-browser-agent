@@ -215,6 +215,39 @@ describe('what the popup shows (Settings → Appearance → Popup)', () => {
     expect([...box.querySelector('.popup')!.classList]).toEqual(['popup', 'no-shortcuts', 'no-titles']);
     settings = undefined;
   });
+  it('where the chat cannot float (Firefox): the Page tile greyed, saying why, never chosen; the bubble opens it full screen', async () => {
+    vi.stubGlobal('__FIREFOX__', true);
+    try {
+      settings = { providers: [], systemPrompt: '', chatWindow: { opens: 'floating' } };
+      const { box } = await show();
+      const tiles = [...box.querySelectorAll<HTMLButtonElement>('.popup-tile')];
+      const page = tiles[0]!;
+      expect(page.classList.contains('off')).toBe(true);
+      expect(page.getAttribute('aria-disabled')).toBe('true');
+      expect(page.getAttribute('aria-label')).toBe('Chat on this page: This feature is not available in your browser.');
+      expect(page.title).toBe('Chat on this page: This feature is not available in your browser. See the documentation.');
+      expect(page.querySelector('.feature-mark')?.textContent).toBe('unavailable');
+      expect(page.querySelector('kbd')).toBeNull();
+      await act(async () => page.click());
+      expect(actions.floatChat).not.toHaveBeenCalled();
+      expect(actions.enableAndFloat).not.toHaveBeenCalled();
+      // The saved "floating" falls back: the page opens the chat full screen, marked so.
+      expect(tiles.map((t) => t.classList.contains('default'))).toEqual([false, false, true]);
+      expect(tiles[2]!.title).toBe('Chat full screen in a tab (where the bubble opens it)');
+      settings = { providers: [], systemPrompt: '', popup: { hidden: ['page'] } };
+      expect((await show()).box.querySelectorAll('.popup-tile')).toHaveLength(2);
+    } finally {
+      vi.unstubAllGlobals();
+      settings = undefined;
+    }
+  });
+  it('in Chrome, a saved "floating" marks the Page tile', async () => {
+    settings = { providers: [], systemPrompt: '', chatWindow: { opens: 'floating' } };
+    const tiles = [...(await show()).box.querySelectorAll<HTMLButtonElement>('.popup-tile')];
+    expect(tiles.map((t) => t.classList.contains('default'))).toEqual([true, false, false]);
+    expect(tiles[0]!.classList.contains('off')).toBe(false);
+    settings = undefined;
+  });
   it("where the browser cannot capture a tab's audio: its line greyed, saying why, until hidden", async () => {
     const { browser } = await import('wxt/browser');
     const api = browser as unknown as Record<string, unknown>;

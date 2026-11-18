@@ -5,7 +5,9 @@ const storage = fakeStorage();
 const store = storage.local.data;
 const secrets = fakeSecretDb();
 vi.mock('../src/storage/secret-db', () => secrets);
-vi.mock('wxt/browser', () => ({ browser: fakeBrowser(storage) }));
+// With offscreen documents, as Chrome: Speak can read (core/build). A test takes them out, as Firefox.
+const api: Record<string, unknown> = { ...fakeBrowser(storage), offscreen: {} };
+vi.mock('wxt/browser', () => ({ browser: api }));
 
 const { loadSettings, onSettingsChanged, saveSettings, syncWidgetSettings } = await import('../src/storage/settings');
 const { ENV_PROVIDER_ID } = await import('../src/storage/settings-migrate');
@@ -77,6 +79,24 @@ describe("the page widget's own key", () => {
     store.settings = { ...settings, appearance: { mode: 'light' }, speak: { systemVoice: false } };
     await syncWidgetSettings();
     expect(store.widgetSettings).toEqual({ appearance: { mode: 'light' }, pageWidget: { everywhere: false }, speakBoxes: 'setup' });
+  });
+  it('has none of Speak where the browser cannot read aloud: the page gets no button that could only fail', async () => {
+    const { offscreen } = api;
+    delete api.offscreen;
+    try {
+      await saveSettings(settings);
+      expect(store.widgetSettings).toEqual({ appearance: { mode: 'dark' }, pageWidget: { everywhere: false } });
+    } finally {
+      api.offscreen = offscreen;
+    }
+  });
+  it('tells the page where the chat cannot float (Firefox), which it cannot ask itself: the chat window kept as saved', async () => {
+    vi.stubGlobal('__FIREFOX__', true);
+    await saveSettings({ ...settings, chatWindow: { opens: 'floating', side: 'left' } });
+    expect(store.widgetSettings).toMatchObject({ chatWindow: { opens: 'floating', side: 'left' }, noFloating: true });
+    vi.unstubAllGlobals();
+    await saveSettings({ ...settings, chatWindow: { opens: 'floating' } });
+    expect(store.widgetSettings).not.toHaveProperty('noFloating');
   });
   it('is not made without settings', async () => {
     await syncWidgetSettings();

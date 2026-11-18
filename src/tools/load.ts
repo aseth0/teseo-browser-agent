@@ -29,7 +29,7 @@ interface Trimmed {
 // templates.run: saved templates only, its draft views (`views`, most of its definition) with create.
 export const TRIMMED: Record<string, Trimmed> = { 'templates.run': { stub: ['views'], text: 'tools.templates_run_saved' } };
 
-interface OnDemandGroup {
+export interface OnDemandGroup {
   id: string;
   tools: readonly string[]; // by their dotted names
   what: () => string; // its line in tools.load's description (TEXT_DEFS tools.load_*), as the user has it now
@@ -48,12 +48,16 @@ const SHOWN = 6; // tool names on an MCP server's line
 function mcpOnDemand(server: string, tools: Listed[]): OnDemandGroup[] {
   const own = tools.filter((t) => toolGroup(t) === mcpGroup(server)).map((t) => t.name);
   if (!own.length) return [];
-  const names = own.map((n) => n.slice(`mcp.${server}.`.length));
-  const what = () => {
-    const listed = names.slice(0, SHOWN).join(', ') + (names.length > SHOWN ? text('tools.load_more', { count: String(names.length - SHOWN) }) : '');
-    return own.length === 1 ? text('tools.load_mcp_one', { server, tools: listed }) : text('tools.load_mcp_many', { count: String(own.length), server, tools: listed });
-  };
-  return [{ id: mcpGroup(server), tools: own, what }];
+  return [{ id: mcpGroup(server), tools: own, what: () => mcpLine(server, own) }];
+}
+
+// Some names of a group's tools, and how many more (tools.load_more).
+export const someNames = (names: string[]) => names.slice(0, SHOWN).join(', ') + (names.length > SHOWN ? text('tools.load_more', { count: String(names.length - SHOWN) }) : '');
+
+// A server's line in tools.load's description, from its tools (by their dotted names).
+export function mcpLine(server: string, own: string[]): string {
+  const listed = someNames(own.map((n) => n.slice(`mcp.${server}.`.length)));
+  return own.length === 1 ? text('tools.load_mcp_one', { server, tools: listed }) : text('tools.load_mcp_many', { count: String(own.length), server, tools: listed });
 }
 
 // The groups on demand for an agent offered `tools`: `create` when it has it (agents/builtins hasCreateGroup), with

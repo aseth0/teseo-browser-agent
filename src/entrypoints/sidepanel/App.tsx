@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { floatingChatAvailable } from '../../core/build';
 import { createPortal } from 'react-dom';
 import type { DisplayValues } from '../../core/display-defs';
 import type { ChatView } from '../../storage/settings-types';
@@ -125,7 +126,7 @@ function LiveChat(props: { overlay: Overlay; onCloseOverlay: () => void; onOpenM
     <div className="chat-area">
       {props.topbar.watches && createPortal(<WatchesMenu currentId={agent.conversationId} onOpen={openSaved} openOff={openOff} />, props.topbar.watches)}
       {saving && props.topbar.temporary && createPortal(<TemporaryButton agent={agent} temporary={temporary} />, props.topbar.temporary)}
-      {props.topbar.move && createPortal(<MoveButton agent={agent} agentId={settings.activeAgentId} tabId={page.tabId} windowId={page.windowId} temporary={temporary.on} />, props.topbar.move)}
+      {props.topbar.move && floatingChatAvailable() && createPortal(<MoveButton agent={agent} agentId={settings.activeAgentId} tabId={page.tabId} windowId={page.windowId} temporary={temporary.on} />, props.topbar.move)}
       {props.topbar.pin && createPortal(<PinButton agent={agent} agentId={settings.activeAgentId} page={page} temporary={temporary.on} />, props.topbar.pin)}
       {saving && temporary.on && <div className="temporary-note" role="status">Temporary conversation: it is not saved in the history.</div>}
       {tabGone && <div className="temporary-note" role="status">The tab this chat worked on was closed: now on {page.title || page.url || 'no tab'}.</div>}
@@ -219,7 +220,7 @@ function usePanelsPerTab(): boolean | undefined {
 }
 
 // The conversation moved from the side panel to the chat floating on its page (floating.ts), between
-// turns, only where the page widget is; the panel then closes (where it cannot, it starts anew). Says
+// turns, only where the page widget is (never where the chat cannot float: core/build floatingChat); the panel then closes (where it cannot, it starts anew). Says
 // so a moment. A temporary one stays: the other chat would save it. Back to the side panel from the
 // floating chat's own bar (widget/ui/floating-chat).
 function MoveButton({ agent, agentId, tabId, windowId, temporary }: { agent: Agent; agentId?: string; tabId?: number; windowId?: number; temporary: boolean }) {

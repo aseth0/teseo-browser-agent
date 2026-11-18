@@ -212,7 +212,7 @@ describe('conversation history', () => {
     // Not again in the same chat, nor when you mention it, nor below the threshold, nor when off.
     expect((await autoAttachItems('brass lamp cheapest', [{ role: 'user', parts: [{ type: 'text', text: 'x', context: 'page', source: item!.source }] }], on)).items).toEqual([]);
     expect((await autoAttachItems('brass lamp cheapest #which-lamp-is-cheapest', [], on)).items).toEqual([]);
-    // Words no conversation has do not count against it; the others do.
+    // Words no conversation has count against it only in part (half a word one conversation has); the others in full.
     expect((await autoAttachItems('quiero probar: brass lamp', [], on)).items).toHaveLength(1);
     await save('weather', [user('Weather in Madrid tomorrow?'), answer('Sunny in Madrid.')]);
     const { items: none, check: below } = await autoAttachItems('brass lamp and the weather in Madrid tomorrow', [], on);
@@ -220,6 +220,17 @@ describe('conversation history', () => {
     expect((await autoAttachItems('which brass lamp was cheapest', [], { enabled: false })).items).toEqual([]);
     // Among all, when asked: the cables one too.
     expect((await autoAttachItems('cheapest usb cable', [], { enabled: true, scope: 'all' })).items.map((i) => historyAutoOf(i.source)!.id)).toEqual(['cables']);
+  });
+
+  it('a message mostly of words no conversation has: the one in common is no full match', async () => {
+    await save('lamps', [user('Which lamp is cheapest?'), answer('The brass lamp is 40 €.')]);
+    await save('cables', [user('Cheapest USB cable'), answer('The USB-C one.')]);
+    await save('weather', [user('Weather in Madrid tomorrow?'), answer('Sunny in Madrid.')]);
+    const typed = 'Necesito que revises el correo de Juan, contestes lo urgente y me apuntes las tareas de la lamp para mañana';
+    const { items, check } = await autoAttachItems(typed, [], { enabled: true });
+    expect([items, check!.best!.match < 60]).toEqual([[], true]);
+    // history.search still finds it by that word.
+    expect((await searchConversations(typed)).map((c) => c.id)).toEqual(['lamps']);
   });
 });
 

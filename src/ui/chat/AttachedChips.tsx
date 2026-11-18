@@ -3,7 +3,7 @@
 import { useContext, useEffect, useState } from 'react';
 import { bookmarkUrl } from '../../bookmarks/store';
 import { bookmarkAutoOf, fileOf, historyAutoOf, recordingOf } from '../../context/sources';
-import type { Message } from '../../core/types';
+import type { Message, ToolMatch } from '../../core/types';
 import { Icon, type ChatIconName } from '../chat-icons';
 import { ChatActionsContext } from './contexts';
 import { replacedInMessage, replacedInResult, ReplacedContext, type ReplacedView } from './replaced';
@@ -30,9 +30,50 @@ export function messageAttached(message: Message, openMemory?: () => void, repla
       ...memory.map((m) => ({ key: `memory-${m.host}`, icon: 'memory' as const, label: `Memory for ${m.host}`, entries: m.items.map((t) => ({ text: t })), open: openMemory })),
       ...memoryIndexAttached(message).map((m) => ({ key: `memory-index-${m.host}`, icon: 'memory' as const, label: `Memory for ${m.host}, by title: the model reads one if it needs it`, entries: m.titles.map((t) => ({ text: t })), open: openMemory })),
       ...(siteSkills.length ? [{ key: 'skills', icon: 'skill' as const, label: 'Site skills: their rules for this site', entries: siteSkills.map((n) => ({ text: n })) }] : []),
+      ...toolMatchGroups(message.toolMatch),
       ...(masked ? [masked] : []),
     ],
   };
+}
+
+// Tool matching (Settings → Tools → Matching, tools/match), as a pill: the groups recommended, or how many
+// offered and held. None when nothing was matched (only groups recommended when they match, and none did).
+const OUTCOME: Record<ToolMatch['groups'][number]['outcome'], string> = {
+  matched: 'matches',
+  unsure: 'offered: nothing stood out for this message',
+  used: 'offered: one of its tools was used in this conversation',
+  earlier: 'offered: offered earlier in the conversation',
+  loaded: 'offered: the model loaded it',
+  mentioned: 'offered: one of its tools is mentioned',
+  held: 'held: listed in tools.load',
+  unmatched: 'not recommended: no match',
+};
+const shortLabel = (label: string) => label.replace(/^MCP · /, '');
+const toolShort = (name: string) => name.split('.').at(-1)!;
+export function toolMatchGroups(match: ToolMatch | undefined): AutoGroup[] {
+  if (!match?.groups.length) return [];
+  const modeOf = (g: ToolMatch['groups'][number]) => g.mode ?? (match.mode === 'recommend' ? 'recommend' : 'matching');
+  const recommended = match.groups.filter((g) => modeOf(g) === 'recommend' && g.outcome === 'matched');
+  const filtered = match.groups.filter((g) => modeOf(g) === 'matching');
+  const offered = filtered.filter((g) => g.outcome !== 'held').length;
+  const held = filtered.length - offered;
+  if (!recommended.length && !filtered.length) return [];
+  const pill = [recommended.length ? `Recommended: ${recommended.map((g) => shortLabel(g.label)).join(', ')}` : '', filtered.length ? `${offered} offered · ${held} held` : ''].filter(Boolean).join(' · ');
+  return [{
+    key: 'tools',
+    icon: 'tool' as const,
+    label: `Tool matching${match.byWords ? ' (by words only: the embeddings provider did not answer)' : match.wordsOnly ? ' (by words only)' : ''}${match.unsure ? ': nothing stood out, so nothing was held' : ''}`,
+    pill,
+    entries: match.groups.map((g) => ({
+      text: g.label,
+      note: [
+        modeOf(g) === 'recommend' ? 'recommended when it matches' : 'only when it matches',
+        modeOf(g) === 'recommend' && g.outcome === 'matched' ? 'recommended' : OUTCOME[g.outcome],
+        `words ${g.match}%${g.meaning !== undefined ? ` · meaning ${g.meaning}%` : ''}`,
+        g.tools?.length && g.outcome !== 'held' && g.outcome !== 'unmatched' ? g.tools.slice(0, 3).map(toolShort).join(', ') + (g.tools.length > 3 ? '…' : '') : '',
+      ].filter(Boolean).join(' · '),
+    })),
+  }];
 }
 
 // Those as chips and small pills. With `onShow`, the pill opened is the caller's, which shows its list
@@ -77,8 +118,9 @@ export interface AutoGroup {
   key: string;
   icon: ChatIconName;
   label: string;
-  entries: { text: string; pct?: number; url?: string; bookmarkId?: string }[]; // url: a bookmark's, linked when http(s); bookmarkId: to look it up when the source has none
+  entries: { text: string; pct?: number; url?: string; bookmarkId?: string; note?: string }[]; // url: a bookmark's, linked when http(s); bookmarkId: to look it up when the source has none; note: said after it (tool matching)
   open?: () => void; // where to see them all (the memory)
+  pill?: string; // what the pill says after its icon; none: how many
 }
 export function AutoAttached({ groups, shown: given, onShow }: { groups: AutoGroup[]; shown?: string; onShow?: (key: string | undefined) => void }) {
   const [own, setOwn] = useState<string>();
@@ -91,9 +133,9 @@ export function AutoAttached({ groups, shown: given, onShow }: { groups: AutoGro
       <span className="msg-auto-pills">
         {groups.map((g) => (
           <button key={g.key} type="button" className="msg-auto-pill" aria-expanded={shown === g.key}
-            title={`${g.label}, sent with this message:\n${g.entries.map((e) => `• ${e.text}${e.pct !== undefined ? ` (${e.pct}%)` : ''}`).join('\n')}`}
+            title={`${g.label}${g.pill ? '' : ', sent with this message'}:\n${g.entries.map((e) => `• ${e.text}${e.pct !== undefined ? ` (${e.pct}%)` : ''}${e.note ? ` — ${e.note}` : ''}`).join('\n')}`}
             onClick={() => show(shown === g.key ? undefined : g.key)}>
-            <Icon name={g.icon} size={11} /> {g.entries.length}
+            <Icon name={g.icon} size={11} /> {g.pill ?? g.entries.length}
           </button>
         ))}
       </span>
@@ -112,6 +154,7 @@ export function AutoList({ group }: { group: AutoGroup }) {
           <span key={i} role="listitem" className="msg-auto-entry">
             <EntryText text={e.text} url={e.url} bookmarkId={e.bookmarkId} />
             {e.pct !== undefined && <span className="msg-auto-pct">{e.pct}%</span>}
+            {e.note && <span className="msg-auto-note">{e.note}</span>}
           </span>
         ))}
         {group.open && <button type="button" className="link-button" onClick={group.open}>Open the memory</button>}

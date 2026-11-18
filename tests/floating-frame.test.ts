@@ -1,10 +1,22 @@
 // @vitest-environment jsdom
-// The side panel's page is the floating chat when its URL says so, and also whenever a page (not the
-// extension) frames it: a page that embeds it never gets the side panel's UI.
+// Whether the chat's page is framed by a web page (the gates of entrypoints/sidepanel/ticket-gate), and
+// which chat it is: floating only as floating.html, never as sidepanel.html, whatever its query says.
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('wxt/browser', () => ({ browser: {} }));
-const { framedByPage } = await import('../src/ui/floating-frame');
+vi.mock('wxt/browser', () => ({ browser: { tabs: { getCurrent: async () => undefined } } }));
+const { framedByPage } = await import('../src/ui/framed-by-page');
+
+// ui/floating-frame loaded afresh at that URL.
+async function chatAt(url: string) {
+  const { pathname, search } = new URL(url);
+  vi.stubGlobal('location', { pathname, search });
+  vi.resetModules();
+  try {
+    return await import('../src/ui/floating-frame');
+  } finally {
+    vi.unstubAllGlobals();
+  }
+}
 
 const EXTENSION = 'chrome-extension://ext-id';
 const list = (origins: string[]) => Object.assign([...origins], { contains: (o: string) => origins.includes(o), item: (i: number) => origins[i] ?? null }) as unknown as DOMStringList;
@@ -32,5 +44,15 @@ describe('framedByPage', () => {
     expect(framedByPage(framed('https://example.com', ['https://example.com']))).toBe(true);
     expect(framedByPage(framed(EXTENSION, [EXTENSION, 'https://example.com']))).toBe(true);
     expect(framedByPage(framed('https://example.com'))).toBe(true); // no ancestorOrigins (Firefox)
+  });
+});
+
+describe('FLOATING', () => {
+  it('is floating.html, the page in the widget\'s frame', async () => {
+    expect((await chatAt(`${EXTENSION}/floating.html#ticket=x`)).FLOATING).toBe(true);
+  });
+
+  it('is never sidepanel.html, even with the query that used to say so', async () => {
+    for (const query of ['', '?floating', '?full', '?tab=3', '?tab=3&manager', '?preview']) expect((await chatAt(`${EXTENSION}/sidepanel.html${query}`)).FLOATING).toBe(false);
   });
 });

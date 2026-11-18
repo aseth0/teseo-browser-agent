@@ -7,7 +7,7 @@ import type { Settings } from '../src/storage/settings';
 
 // What a build leaves out (core/build) and how the UI tells it (ui/FeatureNotice), in each of the three
 // builds: the downloadable Chrome one (everything), the Chrome Web Store's (__STORE__, no debugger
-// permission) and Firefox's (no debugger, offscreen, tts, tabCapture nor sidePanel).
+// permission) and Firefox's (no debugger, offscreen, tts, tabCapture nor sidePanel; __FIREFOX__: no floating chat).
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 const REPO = 'https://github.com/example/teseo';
@@ -28,6 +28,7 @@ async function load(build: Build, release = false) {
   vi.resetModules();
   fake.browser = browserOf(build);
   vi.stubGlobal('__STORE__', build === 'store');
+  vi.stubGlobal('__FIREFOX__', build === 'firefox');
   vi.stubGlobal('__REPO_URL__', REPO);
   vi.stubGlobal('__RELEASE_BUILD__', release);
   return {
@@ -70,13 +71,24 @@ describe('the features of each build', () => {
 
   it("the store's leaves out the DevTools engine, by its choice", async () => {
     const { build } = await load('store');
-    expect(reasons(build)).toEqual({ devtools: 'store', speak: 'here', systemVoice: 'here', tabAudio: 'here', customToolSources: 'here' });
+    expect(reasons(build)).toEqual({ devtools: 'store', speak: 'here', systemVoice: 'here', tabAudio: 'here', floatingChat: 'here', customToolSources: 'here' });
   });
 
   it("Firefox's lacks what it has no API for", async () => {
     const { build } = await load('firefox');
-    expect(reasons(build)).toEqual({ devtools: 'browser', speak: 'browser', systemVoice: 'browser', tabAudio: 'browser', customToolSources: 'here' });
-    expect([build.speakAvailable(), build.tabAudioAvailable(), build.debuggerAvailable()]).toEqual([false, false, false]);
+    expect(reasons(build)).toEqual({ devtools: 'browser', speak: 'browser', systemVoice: 'browser', tabAudio: 'browser', floatingChat: 'browser', customToolSources: 'here' });
+    expect([build.speakAvailable(), build.tabAudioAvailable(), build.debuggerAvailable(), build.floatingChatAvailable()]).toEqual([false, false, false, false]);
+  });
+
+  // No API tells it apart (an extension's own pages have them all in both browsers; only a page's frame of
+  // one lacks them): the build says it, whatever the browser's API.
+  it('the floating chat: in every build but Firefox\'s, by the build, not the API', async () => {
+    const { build } = await load('chrome');
+    expect(build.floatingChatAvailable()).toBe(true);
+    expect(build.featureIn('floatingChat', { store: false, leavesOut: [], browser: {} })).toMatchObject({ available: true });
+    expect(build.featureIn('floatingChat', { store: false, leavesOut: [], browser: CHROMIUM, firefox: true })).toMatchObject({ available: false, reason: 'browser' });
+    expect(build.feature('floatingChat')).toMatchObject({ name: 'Floating chat', docs: 'docs/guide/chat-windows.md#floating-on-the-page' });
+    expect((await load('store')).build.floatingChatAvailable()).toBe(true);
   });
 
   it('each feature says what it does in a sentence (its docs page: docs-links.test)', async () => {
@@ -193,7 +205,7 @@ describe('the notice', () => {
     expect(box.textContent).toBe('This version has every feature.');
     ({ notice } = await load('firefox'));
     box = await render(createElement(notice.BuildSummary));
-    expect([...box.querySelectorAll('li strong')].map((s) => s.textContent)).toEqual(['Chromium DevTools engine', 'Speak', 'System voice', "A tab's audio"]);
+    expect([...box.querySelectorAll('li strong')].map((s) => s.textContent)).toEqual(['Chromium DevTools engine', 'Speak', 'System voice', "A tab's audio", 'Floating chat']);
     expect(box.querySelector('a[href="#export-import"]')).not.toBeNull();
   });
 });
@@ -249,6 +261,45 @@ describe('where the notices show', () => {
     ({ PopupOptions } = await import('../src/ui/PopupOptions'));
     box = await render(createElement(PopupOptions, { settings, onChange: vi.fn() }));
     expect(box.querySelector('.feature-row')).toBeNull();
+  });
+
+  it('the default way to open the chat: "floating" falls back to the side panel where the chat cannot float', async () => {
+    const floating = { chatWindow: { opens: 'floating' as const } };
+    await load('chrome');
+    let { chatOpensIn } = await import('../src/storage/settings-select');
+    expect([chatOpensIn(floating), chatOpensIn({}), chatOpensIn(undefined)]).toEqual(['floating', 'panel', 'panel']);
+    await load('firefox');
+    ({ chatOpensIn } = await import('../src/storage/settings-select'));
+    expect([chatOpensIn(floating), chatOpensIn({ chatWindow: { opens: 'panel' } })]).toEqual(['panel', 'panel']);
+  });
+
+  it('Settings → Bubble → Opening the chat: the floating option greyed with its mark and why in Firefox, a choice in Chrome', async () => {
+    const saved = { ...settings, chatWindow: { opens: 'floating' as const } };
+    await load('firefox');
+    let { ChatWindowOptions } = await import('../src/ui/bubble/BubbleSettings');
+    const onChange = vi.fn();
+    let box = await render(createElement(ChatWindowOptions, { settings: saved, onChange }));
+    const radios = [...box.querySelectorAll<HTMLInputElement>('input[name="chat-opens"]')];
+    expect(radios.map((r) => [r.checked, r.disabled])).toEqual([[true, false], [false, true]]); // the side panel, as it falls back
+    expect(box.querySelector('.drawn-option.off')?.textContent).toContain('Floating on the page');
+    expect(box.querySelector('.drawn-option.off .feature-mark')?.textContent).toBe('unavailable');
+    expect(box.querySelector('.feature-notice')?.textContent).toContain(BROWSER_TEXT);
+    expect(linkOf(box.querySelector('.feature-notice')!)).toBe(`${REPO}/blob/master/docs/guide/chat-windows.md#floating-on-the-page`);
+    expect(box.querySelector('input[name="chat-side"]')).toBeNull(); // nothing about its size
+    await load('chrome');
+    ({ ChatWindowOptions } = await import('../src/ui/bubble/BubbleSettings'));
+    box = await render(createElement(ChatWindowOptions, { settings: saved, onChange }));
+    expect([...box.querySelectorAll<HTMLInputElement>('input[name="chat-opens"]')].map((r) => [r.checked, r.disabled])).toEqual([[false, false], [true, false]]);
+    expect(box.querySelector('.drawn-option.off, .feature-notice')).toBeNull();
+    expect(box.querySelector('input[name="chat-side"]')).not.toBeNull();
+  });
+
+  it("the popup's options: Page greyed in Firefox, saying why, with its switch", async () => {
+    await load('firefox');
+    const { PopupOptions } = await import('../src/ui/PopupOptions');
+    const box = await render(createElement(PopupOptions, { settings, onChange: vi.fn() }));
+    const row = [...box.querySelectorAll('.feature-row')].find((r) => r.querySelector('strong')?.textContent === 'Page');
+    expect(row?.querySelector('input[aria-label="Page"]')).not.toBeNull();
   });
 
   it("Settings → Voice: the tab's audio tab says why in Firefox", async () => {

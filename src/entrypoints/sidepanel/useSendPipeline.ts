@@ -9,7 +9,7 @@ import { audioPart, filePart, pdfPart } from '../../context/attached-file';
 import { recordingSource } from '../../context/sources';
 import { errorText } from '../../core/errors';
 import type { KeptText } from '../../core/kept-results';
-import type { ImagePayload, Message, Part, SentText } from '../../core/types';
+import type { ImagePayload, Message, Part, SentText, TurnPhase } from '../../core/types';
 import { recordingBlock } from '../../recording/block';
 import { recordedCalls, type Recording } from '../../recording/recording';
 import { applyModelSettings } from '../../context/model-settings';
@@ -128,6 +128,8 @@ export function useSendPipeline({ agent, page, queued, runGate, provider, model,
       return 'failed';
     }
     let sending: Message[];
+    const before = agent.history;
+    const compactStart = Date.now();
     try {
       sending = base ?? (await compaction.beforeSend());
     } catch (e) {
@@ -135,7 +137,9 @@ export function useSendPipeline({ agent, page, queued, runGate, provider, model,
       setSendError(`Not sent: the earlier turns could not be compacted (${errorText(e)}).`);
       return 'failed';
     }
-    if (!sendToAgent(text, options, pageSkipped(), sending, images, attached)) {
+    // Compacted just now: the turn's first phase (core/phases), measured here.
+    const lead = sending !== before && !base ? compactionPhase(sending, compactStart) : undefined;
+    if (!sendToAgent(text, lead ? { ...options, lead: [lead] } : options, pageSkipped(), sending, images, attached)) {
       runGate?.unclaim();
       return 'refused';
     }
@@ -264,4 +268,11 @@ export function useSendPipeline({ agent, page, queued, runGate, provider, model,
   const sendInsteadNow = useStableCallback(sendInstead);
   const waiting = { items: queue, edit: editQueued, remove: dequeue };
   return { send, sendNow, sendInsteadNow, canSend, sendError, regenerateLatest, continueRun, stopRun, waiting };
+}
+
+// The compaction a message waited for, as a phase of its turn: what it compacted, and how.
+function compactionPhase(history: Message[], at: number): TurnPhase {
+  const c = history.findLast((m) => m.compaction && m.compaction.at >= at)?.compaction;
+  const detail = c && [c.turns ? `${c.turns} earlier ${c.turns === 1 ? 'turn' : 'turns'}` : 'the latest turn', c.summary ? 'summarized' : 'trimmed'].join(' · ');
+  return { id: `compact.${at.toString(36)}`, kind: 'compact', label: 'Compacting the earlier turns', at, ms: Date.now() - at, ...(detail && { detail }) };
 }

@@ -66,6 +66,7 @@ export interface Message {
   meta?: MessageMeta; // assistant messages: how the call that produced it went (never sent to the model)
   pageSkipped?: 'off' | 'unreadable'; // your messages: why the page was not attached (for the views)
   autoAttach?: AutoAttachCheck; // your messages: what the auto-attach of saved conversations found (for the views)
+  toolMatch?: ToolMatch; // your messages: which tool groups it matched and which were offered (tools/match; for the views, and later turns)
   stopped?: boolean; // the last message of a turn the user stopped (the model is told on the next one)
   interrupted?: boolean; // with `stopped`: stopped by a message sent at once (sidepanel/send-queue), not by Stop
   cut?: string; // the last message of a turn cut as it kept repeating this (core/repetition; the model is told on the next one)
@@ -73,7 +74,21 @@ export interface Message {
   compaction?: Compaction; // your messages: everything before goes to the model compacted (context/compaction)
   systemMemory?: SystemMemory; // your messages: the memory part of the system prompt from this turn on (memory/prompt keepMemory)
   masked?: boolean; // assistant messages: the request went through the word blacklist; the rest of the conversation does too (word-blacklist/gate)
+  phases?: TurnPhase[]; // your messages: the phases of the turns it started, with their timings (core/phases; for Layers, never sent)
 }
+
+// One phase of a turn (core/phases): what the agent did, when it began (Date.now()) and how long it
+// took; none while it goes (or a turn cut short before it ended). `parent`: the phase it is part of.
+export interface TurnPhase {
+  id: string;
+  kind: PhaseKind;
+  label: string;
+  detail?: string;
+  at: number;
+  ms?: number;
+  parent?: string;
+}
+export type PhaseKind = 'compact' | 'start' | 'setup' | 'tools' | 'context' | 'call' | 'wait' | 'reasoning' | 'answer' | 'tool' | 'confirm' | 'agent' | 'attach' | 'other';
 
 // The memory part of the system prompt as a conversation keeps it, so the prompt stays the same on
 // every turn (the server's prompt cache): its text, what it was built with (`key`: built again when that
@@ -103,6 +118,26 @@ export interface AutoAttachCheck {
   threshold: number; // %
   scope: 'pinned' | 'all';
   best?: { title: string; match: number }; // %
+}
+
+// Which groups of tools a message matched (Settings → Tools → Matching, tools/match), and what each
+// got: for the views (the turn's phases) and the next turns (a group offered once stays offered).
+// outcome: 'matched' (by this message), 'unsure' (offered: nothing stood out, Only matching; does not stay),
+// 'used' (one of its tools was called in the conversation), 'earlier' (offered for an earlier message), 'loaded' (by
+// tools.load), 'mentioned' (one of its tools is, $tool): offered; 'held': left for tools.load (Only
+// matching); 'unmatched': offered, not recommended (Recommended). tools: those of the group the
+// message matches by words, best first (the group goes by the best one). mode: the group's own (a
+// server's choice in Settings → MCP servers, else the setting's); none (an older record): `mode`.
+export interface ToolMatch {
+  mode: 'all' | 'recommend' | 'matching'; // Settings → Tools → Matching's
+  threshold: number; // % of the message's words
+  groups: { id: string; label: string; mode?: 'recommend' | 'matching'; match: number; meaning?: number; tools?: string[]; outcome: 'matched' | 'unsure' | 'used' | 'earlier' | 'loaded' | 'mentioned' | 'held' | 'unmatched' }[]; // match, meaning: %; best first
+  always: string[]; // the groups never filtered that were offered (browser, user, memory, agents…)
+  byWords?: boolean; // meaning was asked for but the embeddings provider did not answer
+  wordsOnly?: boolean; // matched by words only (no embeddings model, meaning left out, or too few tools indexed)
+  wordsNeeded?: { matching: number; recommend: number }; // the match by words (%) a group needed for this message, per mode
+  meaningNeeded?: { matching: number; recommend: number }; // the cosine (%) a group's closest tool needed for this message, per mode
+  unsure?: boolean; // neither words nor meaning pointed at any tool: Only matching offered its groups ('unsure')
 }
 
 // One model call: its tokens (as reported by the server, else estimated) and how long it took.

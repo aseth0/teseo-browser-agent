@@ -136,14 +136,19 @@ export function createBubble(s: WidgetState, { render, savePlace }: WidgetHost, 
     root.addEventListener('focusin', () => keyboardFocus() && unfold());
     root.addEventListener('focusout', (e) => !root.contains((e as FocusEvent).relatedTarget as Node | null) && fold());
     document.documentElement.append(host);
-    void theme.load();
+    void theme.load().then(followSettings);
   };
 
+  let filledFor: boolean | undefined; // s.noFloating, as the menu's chat button says it
   const fillMenu = () => {
+    filledFor = s.noFloating;
     const hide = trustedButton({ className: 'act small', textContent: '✕', title: 'Hide on this site: nothing of the bubble runs here, not even its actions on page load, until the keyboard shortcut or Settings → Bubble brings it back', ariaLabel: 'Hide on this site' },
       () => void savePlace({ hidden: true }));
-    const here = trustedButton({ className: 'act', title: 'Open the chat here, on this page', ariaLabel: 'Open the chat here' }, () => void chat.show());
-    here.append(...actLabel('💬', 'Chat here'));
+    // Where the chat cannot float (s.noFloating), it opens full screen in a tab (floating-chat show).
+    const here = s.noFloating
+      ? trustedButton({ className: 'act', title: 'Open the chat full screen in a tab', ariaLabel: 'Open the chat' }, () => void chat.show())
+      : trustedButton({ className: 'act', title: 'Open the chat here, on this page', ariaLabel: 'Open the chat here' }, () => void chat.show());
+    here.append(...actLabel('💬', s.noFloating ? 'Chat' : 'Chat here'));
     s.menu.replaceChildren(...s.actions.map(card.actionButton), here, hide);
     loads.showFound();
   };
@@ -154,5 +159,10 @@ export function createBubble(s: WidgetState, { render, savePlace }: WidgetHost, 
     s.hovering = false;
   };
 
-  return { position, build, fillMenu, dispose };
+  // The settings read (the menu is filled before): its chat button again, only if where it opens changed.
+  const followSettings = () => {
+    if (s.host && s.noFloating !== filledFor) fillMenu();
+  };
+
+  return { position, build, fillMenu, followSettings, dispose };
 }

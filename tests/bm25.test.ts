@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Message } from '../src/core/types';
 import { rank } from '../src/history/rank';
-import { firstMatch, matchSpans, stem, terms } from '../src/search/bm25';
+import { firstMatch, indexTexts, matchSpans, scored, stem, terms } from '../src/search/bm25';
 import type { Conversation } from '../src/history/store';
 
 const conv = (id: string, title: string, history: Message[], updatedAt = 0): Conversation => ({ id, title, history, createdAt: 0, updatedAt, turns: 1 });
@@ -86,5 +86,18 @@ describe('BM25 over saved conversations', () => {
     expect(rank('orn', convs).map((r) => r.conv.id)).toEqual(['whole']); // whole words only without `prefix`
     const text = 'The ornithorhynchus';
     expect(matchSpans(text, 'orn', { prefix: true }).map((s) => text.slice(s.start, s.end))).toEqual(['ornithorhynchus']);
+  });
+});
+
+describe('words no item has', () => {
+  const docs = ['meetings on the calendar', 'tasks of a project', 'notes'].map((t, i) => indexTexts(i, [[t, 1]]));
+  it('do not count against a match by default (memory, history), and count as `unseen` asks (tool groups)', () => {
+    const query = 'crear una nueva meeting por favor';
+    expect(scored(query, docs)[0]!.match).toBeGreaterThan(0.8);
+    const lowered = scored(query, docs, { unseen: 0.5 })[0]!;
+    expect(lowered.item).toBe(0);
+    expect(lowered.match).toBeLessThan(0.4);
+    // A query whose words the items all know: the same either way.
+    expect(scored('calendar meetings', docs, { unseen: 0.5 })[0]!.match).toBe(scored('calendar meetings', docs)[0]!.match);
   });
 });

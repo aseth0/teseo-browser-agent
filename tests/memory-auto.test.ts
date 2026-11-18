@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { stripMarks } from '../src/core/model-texts';
+import { memoryAttachMatches, memoryMatches } from '../src/memory/items';
 import { memoryAutoItems } from '../src/memory/prompt';
 import { memoryIndexOf, memoryIndexSource, memoryMatchOf } from '../src/context/sources';
 import type { MemoryItem } from '../src/memory/store';
@@ -30,9 +31,20 @@ describe('memory auto-attach', () => {
     expect(memoryAutoItems(items, 'weather tomorrow', [], on)).toEqual([]);
   });
 
+  it('a message mostly of words no item has: no full match for the one in common', () => {
+    const on = { enabled: true, threshold: 60 };
+    const many = [item('m-test', 'Prueba siempre los cambios en el navegador antes del commit', { title: 'Pruebas' }), item('m-cat', 'The cat is called Tofu'), item('m-tz', 'My timezone is Europe/Madrid'), item('m-pkg', 'Prefer pnpm over npm')];
+    expect(memoryAutoItems(many, 'Crea una Meeting de prueba con Ana para el martes y mándale la invitación', [], on)).toEqual([]);
+    expect(memoryAttachMatches(many, 'Crea una Meeting de prueba con Ana para el martes y mándale la invitación')[0]!.match).toBeLessThan(0.6);
+    // memory__search still finds it by that word, as it did.
+    expect(memoryMatches(many, 'Crea una Meeting de prueba con Ana para el martes y mándale la invitación')[0]!.match).toBe(1);
+    // A message about it still attaches it.
+    expect(stripMarks(memoryAutoItems(many, 'prueba los cambios antes del commit', [], on)[0]!.text)).toContain('[m-test]');
+  });
+
   it('between steps: what the model wrote, its own block, not again after a step', () => {
     const on = { enabled: true, threshold: 60, steps: true };
-    const [block] = memoryAutoItems(items, 'Let me open grafana', [], on, 'step');
+    const [block] = memoryAutoItems(items, 'Grafana SSO login', [], on, 'step');
     expect(memoryMatchOf(block!.source)).toMatchObject({ origin: 'step', count: 1 });
     expect(stripMarks(block!.text)).toContain('what you wrote in your last reply');
     // Attached after a tool's result already: neither with a later step nor with your message.

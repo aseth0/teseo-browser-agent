@@ -4,10 +4,16 @@ The 🎤 button under the message box dictates into it: speak, and the text appe
 the chat model until you send the message, so you can correct it first.
 
 - **Dictate** starts; **Stop dictating** stops (it also stops when you send, change conversation or the agent
-  manager hides the chat). *Finishing dictation…* shows while the last piece is transcribed.
+  manager hides the chat).
+- While it records, the message box is framed in red, with a strip inside it: the time, the sound's waves, the words
+  just transcribed (or *…* while a piece is being transcribed) and **Stop**. The text comes a piece at a time (every
+  **Chunk length** seconds), not word by word. Once stopped, the strip says *Finishing dictation…* in amber while the
+  last piece is transcribed.
 - The first time, the browser asks for the microphone. If it is blocked, **Allow microphone** opens a page to grant
   it once.
-- Dictation is not available in the chat floating on a page: the page decides who may use the microphone there.
+- In the chat floating on a page, the extension records in the background, with the microphone you allowed it, on any
+  site, even one that keeps the microphone from its frames; the site is not asked. Folding or closing the chat, leaving
+  the page or closing the tab stops it.
 
 ## Settings → Voice
 

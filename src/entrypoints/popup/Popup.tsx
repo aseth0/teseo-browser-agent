@@ -13,7 +13,7 @@ import { CAPTURE_COMMANDS, type CaptureKind } from '../../capture/protocol';
 import { CAPTURE, PANEL_SHOWN } from '../../core/protocol';
 import { sendRuntime } from '../../core/runtime';
 import { isRestrictedUrl } from '../../page/permissions';
-import { panelFollowsOn, popupShows } from '../../storage/settings-select';
+import { chatOpensIn, panelFollowsOn, popupShows } from '../../storage/settings-select';
 import type { PopupItem } from '../../storage/settings-types';
 import { useAppearance } from '../../ui/appearance';
 import { Icon, type ChatIconName } from '../../ui/chat-icons';
@@ -87,8 +87,11 @@ export function Popup() {
   // it has, out of the way of the page (a section is dragged there).
   const capture = (kind: CaptureKind) => tab?.id !== undefined && done(sendRuntime({ type: CAPTURE, kind, tabId: tab.id, windowId: tab.windowId }));
   const noCapture = !tab || isRestrictedUrl(tab.url);
-  // The place the chat opens in by default (Settings → Bubble → Opening the chat), marked.
-  const opens = settings?.chatWindow?.opens ?? 'panel';
+  // The place the bubble opens the chat in (Settings → Bubble → Opening the chat), marked. Where the chat
+  // cannot float (Firefox: core/build), the page opens it full screen, whatever was saved; its Page tile
+  // greyed, saying why.
+  const floating = feature('floatingChat');
+  const opens = floating.available ? chatOpensIn(settings ?? undefined) : 'full';
   const view = settings?.popup;
   // Where the browser cannot capture a tab's audio (Firefox): its line greyed, saying why, until hidden
   // in Settings → Appearance → Popup.
@@ -96,11 +99,13 @@ export function Popup() {
   const shows = (item: PopupItem) => popupShows(view, item);
   const captures = shows('screenshot') ? CAPTURES.filter(({ kind }) => shows(kind)) : [];
   const tiles = [
-    shows('page') && <Tile key="page" icon="float" label="Page" title="Chat on this page" shortcut={shortcutOf(shortcuts, FLOAT_COMMAND)} isDefault={opens === 'floating'}
-      disabled={isRestrictedUrl(tab?.url)} onClick={() => void floatHere().catch(report)} />,
+    shows('page') && (floating.available
+      ? <Tile key="page" icon="float" label="Page" title="Chat on this page" shortcut={shortcutOf(shortcuts, FLOAT_COMMAND)} isDefault={opens === 'floating'}
+        disabled={isRestrictedUrl(tab?.url)} onClick={() => void floatHere().catch(report)} />
+      : <Tile key="page" icon="float" label="Page" title="Chat on this page" lacks={floating} onClick={() => {}} />),
     shows('panel') && <Tile key="panel" icon="panel" label="Panel" title="Chat in the side panel" shortcut={shortcutOf(shortcuts, PANEL_COMMAND)} isDefault={opens === 'panel'} disabled={!tab}
       onClick={() => tab && done(openSidePanel(tab, settings ? panelFollowsOn(settings) : true, panelShown))} />,
-    shows('full-screen') && <Tile key="full" icon="fullChat" label="Full screen" title="Chat full screen in a tab" onClick={() => done(openFullChat())} />,
+    shows('full-screen') && <Tile key="full" icon="fullChat" label="Full screen" title="Chat full screen in a tab" isDefault={opens === 'full'} onClick={() => done(openFullChat())} />,
   ].filter(Boolean);
   const classes = ['popup', view?.noShortcuts && 'no-shortcuts', view?.noTitles && 'no-titles'].filter(Boolean).join(' ');
   return (
@@ -187,11 +192,14 @@ const captureSub = (shown: typeof CAPTURES) => {
 };
 
 // One of the places the chat opens in: an icon over a short label and its key, the full meaning in its
-// title; the default one (where the bubble opens it) marked.
-const Tile = ({ icon, label, title, shortcut, isDefault, disabled, onClick }: { icon: ChatIconName; label: string; title: string; shortcut?: string; isDefault?: boolean; disabled?: boolean; onClick: () => void }) => (
-  <button className={`popup-tile${isDefault ? ' default' : ''}`} role="menuitem" title={isDefault ? `${title} (where the bubble opens it)` : title} aria-label={title} disabled={disabled} onClick={onClick}>
+// title; the default one (where the bubble opens it) marked. `lacks`: the build lacks it (core/build):
+// greyed and inert (aria-disabled, no click: a disabled button shows no title in some browsers), its mark
+// in place of the key and why in its title (the notice without its link).
+const Tile = ({ icon, label, title, shortcut, isDefault, disabled, lacks, onClick }: { icon: ChatIconName; label: string; title: string; shortcut?: string; isDefault?: boolean; disabled?: boolean; lacks?: Feature; onClick: () => void }) => (
+  <button className={`popup-tile${isDefault ? ' default' : ''}${lacks ? ' off' : ''}`} role="menuitem" title={lacks ? `${title}: ${plainText(lacks)}` : isDefault ? `${title} (where the bubble opens it)` : title}
+    aria-label={lacks ? `${title}: ${unlinkedText(lacks)}` : title} disabled={disabled} aria-disabled={lacks ? true : undefined} onClick={lacks ? undefined : onClick}>
     <Icon name={icon} size={20} />
     {label}
-    {shortcut && <kbd>{shortcut}</kbd>}
+    {lacks ? <span className="badge feature-mark">{MARK}</span> : shortcut && <kbd>{shortcut}</kbd>}
   </button>
 );

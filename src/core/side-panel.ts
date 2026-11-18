@@ -12,8 +12,7 @@ export const PANEL_COMMAND = 'open-side-panel';
 export const tabPanelPath = (tabId: number) => `${PANEL_PATH}?tab=${tabId}`;
 
 // The tab a panel opened per tab belongs to, from its URL (none: the window's panel). Only the
-// extension opens it there: pages cannot load the panel's page under its plain URL (manifest
-// use_dynamic_url).
+// extension opens it there: no web page can load sidepanel.html (not web-accessible, manifest).
 export function panelTabOf(search: string): number | undefined {
   const tab = Number(new URLSearchParams(search).get('tab') ?? NaN);
   return Number.isInteger(tab) ? tab : undefined;

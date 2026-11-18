@@ -199,6 +199,16 @@ when the request goes to the tool's own site, masked in the answer, the tool con
 value the user chose to save waits in the secret store (`recording/pending-secrets`) until a tool that
 uses it is saved.
 
+**Dictation** (`src/voice/`, driven by `sidepanel/useDictation`): the microphone (`voice/mic`), a level meter and a
+recorder per chunk (`voice/recorder`) around `voice/session`, each chunk sent through `voice/transcribe` and its text
+put at the box's caret (`voice/insert`), while the strip inside the box (`sidepanel/DictationStrip`) shows the time,
+the level, the words just in and the chunks out. The side panel and the other chats record in their own page, with the
+microphone permission of the extension's origin (granted once by `entrypoints/mic` where the page cannot prompt). The
+chat floating on a page cannot: the page's Permissions-Policy decides its frames' microphone. There the same session
+runs in the offscreen document (`voice/offscreen`, opened by `background/dictation-host`) on a port from the chat
+(`voice/remote`, `voice/protocol`), which hands back the texts, the level, the chunks out and the end; the port closing (the frame gone) drops it,
+the microphone off, and the widget folding the chat stops it (`WIDGET_FOLDED`).
+
 **A tab's audio** (`src/audio/`, its state machine `audio/session`, hosted by `background/audio-host`): one at a
 time, started from the toolbar popup's Audio line or its command, whose gesture lets `tabCapture.getMediaStreamId` take that tab. The offscreen
 document (`audio/offscreen-document`) holds it: `audio/tab-capture` records the whole
@@ -400,6 +410,24 @@ extended with an optional `matches` list (Chrome match patterns, `src/skills/typ
   goes as a note. The terms are a secret (`wordBlacklist`, IndexedDB); when it applies is in
   `storage.local` (`wordBlacklist`), where a content script could change it. Not covered: what the
   context hints at, and the Layers view, which shows the requests in real terms.
+- The chat floating on a page is a page of its own, `floating.html` (`entrypoints/floating`), in an iframe of the
+  page widget: the same chat app (`sidepanel/chat-main`), floating (`ui/floating-frame` `FLOATING`, from its path
+  alone). It is the only file in `web_accessible_resources`, under the extension's fixed URL (not
+  `use_dynamic_url`, whose frame a Chromium-based browser, Vivaldi, refuses): any page can frame it or open it,
+  and so tell the extension is installed. It starts only in a web page's frame (`ui/framed-by-page`), with a
+  one-time ticket (`background/frame-tickets`): the widget asks the background for one for its tab (only a
+  content script in a tab's top frame can) and puts it in the frame's URL fragment (never in a request or a
+  referrer); the page has the background redeem it before it imports anything of the chat (`sidepanel/ticket-gate`
+  `startFloating`). The background redeems it only for `floating.html` in a frame (`frameId` > 0, never a tab's
+  top document), issued for the frame's tab (the sender's, as the browser says), unused and less than 2 minutes
+  old; it is spent either way. Opened in a tab of its own, or framed with no ticket or a bad one, the page stays an
+  empty document. Tickets are kept in `storage.session` (`floatingTickets`), so a worker asleep in between keeps
+  them. The frame's own scripts, styles and pdf.js's worker and data load from its own origin without being listed
+  (measured in Chrome). Firefox's build has neither the page nor `web_accessible_resources` (no floating chat).
+- `sidepanel.html` (the side panel, `?full`, `?tab=N`, the agent manager's chats, the Appearance preview) is not
+  web-accessible: a web page that opens or frames it gets the browser's "blocked" page, and none can fetch its
+  files (`chunks/`, `assets/`, `pdfjs/`). As a second line, framed by a web page it would not start
+  (`sidepanel/ticket-gate` `startPanel`); it never floats, whatever its query.
 - *Pending:* sensitive domains (banking, password managers) blocked by default.
 
 ---
@@ -416,20 +444,21 @@ src/
     page-widget.ts           # the page widget's bubble, a content script registered by the background
     page-keys.ts             # the keys set in Settings → Shortcuts, heard in pages
     sidepanel/               # React: App, Chat, ErrorBoundary, usePageTarget; also full-screen in a tab (sidepanel.html?full)
+    floating/                # floating.html: the chat floating on a page (the widget's iframe), its only web-accessible page
     manager/                 # the agent manager page: several chats (sidepanel.html?tab=…&manager iframes), one per tab
     options/                 # Settings
     popup/                   # the toolbar popup: site access, Record, a tab's Audio
     audio/                   # the review of a tab's audio
     mic/                     # the one-time microphone grant for dictation
-    offscreen/               # the offscreen document (a tab's audio, reading aloud)
-  background/  tool-catalog.ts  session.ts  agent-run.ts  run-setup.ts  sub-agent.ts  widget-host.ts  sticky-chat.ts (the floating chat's pinned conversation)  widget-run.ts  summarize.ts  capture-host.ts  floating-tabs.ts  panel-windows.ts (where the side panel shows, in Vivaldi)  panel-trace.ts (its opens and states, in storage.session `panelTrace`)
+    offscreen/               # the offscreen document (a tab's audio, the floating chat's dictation, reading aloud)
+  background/  tool-catalog.ts  session.ts  agent-run.ts  run-setup.ts  sub-agent.ts  widget-host.ts  frame-tickets.ts (the floating chat's one-time tickets)  sticky-chat.ts (the floating chat's pinned conversation)  widget-run.ts  summarize.ts  capture-host.ts  floating-tabs.ts  panel-windows.ts (where the side panel shows, in Vivaldi)  panel-trace.ts (its opens and states, in storage.session `panelTrace`)
                memory-index.ts  session-host.ts  recording-host.ts  audio-host.ts  speech-host.ts   # a background session's host: its pill, shortcut and resume; the recorder's, a tab's audio's, reading aloud's
                badge.ts  notify.ts  open-chat.ts  shortcuts.ts  tab-access.ts  keep-awake.ts  float-to-panel.ts  panel-mode.ts  watches.ts
   core/        types.ts  agent-loop.ts  parts-builder.ts  tool-exec.ts  tool-args.ts  tool-registry.ts  protocol.ts (panel↔background messages)  handoff.ts (what is handed to a chat)  texts/ (TEXT_DEFS)
                sources.ts (the context parts' sources)  builder-ids.ts  memory-names.ts  site-policy.ts  mcp-keys.ts   # leaves that several feature folders name without importing each other
   browser/     open-manager.ts                  # host glue: the extension's pages opened in a tab, for the background and the pages (core calls no browser API; core/side-panel is to move here)
   providers/   openai-compat.ts  wire.ts  context-window.ts  registry.ts  reasoning.ts  sse.ts  headers.ts  connection-test.ts  provider-access.ts  util.ts
-  tools/       browser/ (read-tools.ts  write-tools.ts  engine-tools.ts  watch-tools.ts)  custom/ (tools without code; script-tool.ts, the script base)  user/  define.ts  http.ts  load.ts
+  tools/       browser/ (read-tools.ts  write-tools.ts  engine-tools.ts  watch-tools.ts)  custom/ (tools without code; script-tool.ts, the script base)  user/  define.ts  http.ts  load.ts  match.ts  match-turn.ts  match-meaning.ts  # Settings → Tools → Matching (docs/context.md)
   content/     a11y.ts  a11y-names.ts  dom-find.ts  dom-tree.ts  extractors.ts           # pure DOM extractors (jsdom-testable); never TEXT_DEFS (lint): core/clip, core/origin-marks
   vendor/      playwright/                      # Playwright's roleUtils and injected-script pieces (Apache-2.0): roles, names, hidden-ness (content/a11y-names); hit test, fill checks (content/actions)
   page/        bridge.ts  protocol.ts  webmcp.ts  access.ts  background-tab.ts   # background → page-agent messaging, site access, WebMCP
@@ -450,7 +479,7 @@ src/
   widget/      actions.ts  output-lines.ts  steps.ts  run.ts  store.ts  protocol.ts  selection-bar.ts  ui/   # the page widget and its actions
   capture/     protocol.ts  plan.ts  run.ts  area.ts  page.ts   # screenshots from the popup and shortcuts into the chat (CHAT_ATTACH)
   audio/       protocol.ts  session.ts  tab-capture.ts  offscreen.ts  offscreen-document.ts  transcript.ts   # a tab's audio: its state, its capture in the offscreen document, its transcript
-  voice/       session.ts  transcribe.ts  recorder.ts  mic.ts   # dictation, and the transcription a tab's audio uses
+  voice/       session.ts  transcribe.ts  recorder.ts  mic.ts  protocol.ts  offscreen.ts  remote.ts   # dictation (the floating chat's in the offscreen document), and the transcription a tab's audio uses
   speech/      spoken.ts  pieces.ts  plan.ts  languages/  request.ts  trim.ts  player.ts  offscreen.ts  session.ts  protocol.ts  pill.ts  selection.ts  settings.ts  profiles.ts  tool.ts  markdown.ts   # Speak: text read aloud by a TTS model, in pieces, in the offscreen document
   recording/   recorder.ts  ledger.ts  devtools.ts  webrequest.ts  filter.ts  bodies.ts  pill.ts  presets.ts  review.ts  …   # a recording of a page's requests
   shortcuts/   keys.ts  listen.ts  script.ts   # keys set in Settings → Shortcuts, heard in pages (entrypoints/page-keys) and run by background/shortcuts

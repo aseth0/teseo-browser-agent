@@ -92,7 +92,7 @@ message while they still apply. "Don't resend" notes stop pointing to copies tha
 - **Tools on demand** (`tools/load.ts`): `tools.load` instead of a group's tools, offered once the
   model loads them, for the rest of the conversation. The tools that create things for Default
   (Settings → Tools, on by default: about 7,000 tokens less in every request), and an MCP server's
-  set so (Settings → MCP servers → Its tools on demand, off by default), for every agent. With the
+  set so (Settings → MCP servers → On demand, not the default), for every agent. With the
   first come the skills that guide them (`CREATE_SKILLS`, while `skills.load` is offered: left out of
   the system prompt's skills while the group is held back, `heldSkills`, from the same groups as
   `withOnDemand`; named by `tools.load_skills`) and the whole `templates.run` (until then `TRIMMED`:

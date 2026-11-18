@@ -4,6 +4,8 @@ declare const __ENV_PROVIDER__: { baseURL: string; defaultModel: string } | null
 declare const __ENV_API_KEY__: string | null;
 // The Chrome Web Store's build (core/build).
 declare const __STORE__: boolean;
+// Firefox's build (core/build).
+declare const __FIREFOX__: boolean;
 // The project's repository (core/repo-url), and whether this is a release's build (core/links).
 declare const __REPO_URL__: string;
 declare const __RELEASE_BUILD__: boolean;

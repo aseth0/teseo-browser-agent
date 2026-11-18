@@ -59,6 +59,21 @@ describe('handoffStep, for a conversation', () => {
     expect(isChatHandoff({ ...h, anyPanel: 'yes' })).toBe(false);
   });
 
+  // Where the chat cannot float (Firefox), the page opens it full screen in a tab (background/widget-host):
+  // what it carries is for that chat alone, which takes nothing else (another chat's would be lost).
+  it('takes one for the chat full screen in a tab only there', () => {
+    const full = { ...h, full: true };
+    expect(isChatHandoff(full)).toBe(true);
+    expect(step(full, { ...at, full: true }).step).toBe('take');
+    expect(step(full, at).step).toBe('none'); // the window's side panel
+    expect(step(full, { ...at, panelTab: 3 }).step).toBe('none');
+    expect(step(full, { ...at, tab: 3 }).step).toBe('none');
+    expect(step(h, { ...at, full: true }).step).toBe('none');
+    expect(step({ ...h, panelTab: 3, anyPanel: true }, { ...at, full: true }).step).toBe('none');
+    expect(step(full, { ...at, full: true, idle: false }).step).toBe('wait');
+    expect(isChatHandoff({ ...h, full: 'yes' })).toBe(false);
+  });
+
   it('waits while a turn runs or the turns are compacted, and drops one too old', () => {
     expect(step(h, { ...at, idle: false }).step).toBe('wait');
     expect(step(h, { ...at, now: 1000 + HANDOFF_MS }).step).toBe('drop');

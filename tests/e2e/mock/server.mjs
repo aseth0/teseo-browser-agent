@@ -182,6 +182,11 @@ export const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     return res.end(WEBMCP);
   }
+  // A page that denies the microphone to every frame, its own included (scenarios/voice voice-floating).
+  if (req.url === '/no-mic.html') {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Permissions-Policy': 'microphone=()' });
+    return res.end('<title>No microphone</title><h1>No microphone here</h1>');
+  }
   if (req.url.startsWith('/shop.html')) {
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     return res.end(SHOP);
@@ -232,6 +237,16 @@ export const server = http.createServer((req, res) => {
   if (req.method !== 'POST') {
     res.writeHead(404);
     return res.end(); // favicon.ico, etc.
+  }
+  // Embeddings: a text about notes ("add note", or the message "apuntes") points one way, any other another.
+  if (req.url.endsWith('/embeddings') && req.method === 'POST') {
+    let data = '';
+    req.on('data', (c) => (data += c));
+    return req.on('end', () => {
+      const { input } = JSON.parse(data);
+      mock.embedded.push(input);
+      json(res, { data: input.map((s, index) => ({ index, embedding: /add note|apuntes/i.test(s) ? [1, 0, 0] : [0, 0, 1] })) });
+    });
   }
   let body = '';
   req.on('data', (c) => (body += c));

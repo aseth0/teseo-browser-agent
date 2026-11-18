@@ -10,7 +10,7 @@ import { limit, limitText } from '../core/limits';
 import { attachedParts, type ContextItem } from '../core/messages';
 import { cutNote, markValue, stripMarks, text } from '../core/model-texts';
 import type { Message, SystemMemory } from '../core/types';
-import { autoAttachable, memoryMatches, MEMORY_AUTO_DEFAULTS, reachesMeaning, siteMemoryMatches, withMeaning, type MeaningMatch } from './items';
+import { autoAttachable, memoryAttachMatches, MEMORY_AUTO_DEFAULTS, reachesMeaning, siteMemoryMatches, withMeaning, type MeaningMatch } from './items';
 import { fuseRanks } from './semantic';
 import { latestFirst, memoryLabel, onDomain, type MemoryItem } from './store';
 import { autoPicks } from '../storage/auto-picks';
@@ -184,7 +184,7 @@ const siteIndexBlock = (host: string, items: MemoryItem[], tools: SiteMatch): Co
     ? [{ kind: 'memory', source: memoryIndexSource(host, items.map((m) => memoryLabel(m))), text: text('memory.site_index_block', { host: markValue(host), memory_items: indexLines(items, `Memory index for ${host}`, tools).join('\n') }) }]
     : [];
 
-// From the items ranked against a text (memoryMatches, withMeaning, as Settings → Memory's playground
+// From the items ranked against a text (memoryAttachMatches, withMeaning, as Settings → Memory's playground
 // ranks them), those that go on their own (Settings → Memory → Auto-attach): neither pinned nor linked
 // to a site, not sent in this conversation yet, the best first, at most `max`.
 export function memoryPicks<R extends { item: MemoryItem; match: number; meaning?: number }>(ranked: R[], history: Message[], auto: StepAttach | undefined, meaning?: MeaningMatch): R[] {
@@ -198,7 +198,7 @@ export function memoryPicks<R extends { item: MemoryItem; match: number; meaning
 export function memoryAutoItems(items: MemoryItem[], typed: string, history: Message[], auto: StepAttach | undefined, origin: AttachOrigin = 'message', meaning?: MeaningMatch): ContextItem[] {
   if (!auto?.enabled || !typed.trim()) return [];
   const byMeaning = origin === 'message' ? meaning : undefined;
-  const picked = memoryPicks(withMeaning(memoryMatches(items, typed), items, byMeaning), history, auto, byMeaning);
+  const picked = memoryPicks(withMeaning(memoryAttachMatches(items, typed), items, byMeaning), history, auto, byMeaning);
   const threshold = auto.threshold ?? MEMORY_AUTO_DEFAULTS.threshold;
   const block = (id: 'memory.auto_block' | 'memory.step_block' | 'memory.meaning_block', these: MemoryItem[]): ContextItem[] =>
     these.length ? [{ kind: 'memory', source: memoryMatchSource(origin, these.map((m) => memoryLabel(m))), text: text(id, { memory_items: these.map(memoryLine).join('\n') }) }] : [];

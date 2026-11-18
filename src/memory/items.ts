@@ -4,14 +4,15 @@ import { agentIdByName, type AgentProfile } from '../agents/profiles';
 import { isHost } from '../core/hosts';
 import { escapeRegExp } from '../core/util';
 import { indexTexts, scored, type MatchOptions } from '../search/bm25';
-import { MATCH_THRESHOLD, type AttachDefaults } from '../storage/settings-types';
+import { ATTACH_UNSEEN, MATCH_THRESHOLD, type AttachDefaults } from '../storage/settings-types';
 import { fuseRanks } from './semantic';
 import { domainOf, MAX_TITLE, memoryLabel, type MemoryItem } from './store';
 
 const MAX_TEXT = 2000; // characters of an item
 
 // The items that match, best first, each with how much of the query it covers (search/bm25): the
-// title (its own, else the text's first line) weighs more than the text.
+// title (its own, else the text's first line) weighs more than the text. For a message (auto-attach,
+// the playground), the words no item has count against it (ATTACH_UNSEEN); for a search they do not.
 export function memoryMatches(items: MemoryItem[], query: string, options?: MatchOptions): { item: MemoryItem; match: number }[] {
   return bestFirst(scored(query, items.map((m) => indexTexts(m, [...contentOf(m), [m.domains.join(' '), 1]])), options));
 }
@@ -23,12 +24,13 @@ const bestFirst = (found: { item: MemoryItem; score: number; match: number }[]) 
 // The same for the items of a site open at `host`: on their title and text only, and for a message
 // without the site's name, as naming it would match them all, by their domains or by a word ("com"
 // finds "come"), and says nothing of which one you mean. How rare a word is comes from all the agent's
-// items: among a site's few, any word in common would be a full match, the words no item has not counting.
+// items: among a site's few, any word in common would be a full match. The words no item has count
+// against it, as for auto-attach (ATTACH_UNSEEN).
 export function siteMemoryMatches(site: MemoryItem[], all: MemoryItem[], query: string, host: string): { item: MemoryItem; match: number }[] {
   const names = [...new Set([host.replace(/:\d+$/, ''), ...site.flatMap((m) => m.domains)])].sort((a, b) => b.length - a.length);
   const asked = names.reduce((q, name) => q.replace(new RegExp(escapeRegExp(name), 'gi'), ' '), query);
   const doc = (m: MemoryItem) => indexTexts(m, contentOf(m));
-  return bestFirst(scored(asked, site.map(doc), { corpus: all.map(doc) }));
+  return bestFirst(scored(asked, site.map(doc), { corpus: all.map(doc), unseen: ATTACH_UNSEEN }));
 }
 
 // Each item's closeness in meaning to a text (memory/query-meaning, 0 to 1) and the % it needs.
@@ -44,6 +46,9 @@ export function withMeaning(ranked: { item: MemoryItem; match: number }[], all: 
   const closest = [...meaning.scores].filter(([id]) => byId.has(id)).sort(([, a], [, b]) => b - a).map(([id]) => id);
   return fuseRanks([ranked.map((r) => r.item.id), closest]).map((id) => ({ item: byId.get(id)!, match: matchOf.get(id) ?? 0, meaning: meaning.scores.get(id) }));
 }
+
+// As a message attaches them (memory/prompt, Settings → Memory's playground).
+export const memoryAttachMatches = (items: MemoryItem[], message: string) => memoryMatches(items, message, { unseen: ATTACH_UNSEEN });
 
 export const searchMemory = (items: MemoryItem[], query: string, options?: MatchOptions) => memoryMatches(items, query, options).map((r) => r.item);
 

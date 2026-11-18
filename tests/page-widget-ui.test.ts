@@ -65,16 +65,18 @@ Element.prototype.attachShadow = function (init: ShadowRootInit) {
   return root;
 };
 
-const { WIDGET_ACTIONS, WIDGET_FLOAT, WIDGET_PLACE, WIDGET_PLACES, WIDGET_RUN, WIDGET_TOGGLE } = await import('../src/widget/protocol');
+const { FRAME_TICKET, WIDGET_ACTIONS, WIDGET_FLOAT, WIDGET_FLOATING, WIDGET_FOLDED, WIDGET_OPEN_CHAT, WIDGET_PLACE, WIDGET_PLACES, WIDGET_RUN, WIDGET_TOGGLE } = await import('../src/widget/protocol');
 const { changePlace } = await import('../src/widget/places');
 const { default: widget } = (await import('../src/entrypoints/page-widget')) as unknown as { default: () => void };
 
 const summarize: WidgetActionInfo = { id: 'a1', name: 'Summarize', icon: '📝', input: 'none' };
 let actions: WidgetActionInfo[] = [];
-// The background: the page's actions, and the places it keeps per site.
+let ticket: string | undefined = 'b'.repeat(64);
+// The background: the page's actions, the places it keeps per site, and a ticket for the chat's frame.
 fake.sendMessage.mockImplementation(async (msg: unknown) => {
   const m = msg as { type: string; site?: string; patch?: object };
   if (m.type === WIDGET_ACTIONS) return { actions };
+  if (m.type === FRAME_TICKET) return ticket ? { ticket } : undefined;
   if (m.type === WIDGET_PLACE) return changePlace(m.site!, m.patch!);
   return undefined;
 });
@@ -91,6 +93,7 @@ const tellWidget = (msg: object) => Promise.all(fake.runtime.onMessage.emit(msg,
 beforeEach(() => {
   storage.reset();
   actions = [summarize];
+  ticket = 'b'.repeat(64);
 });
 afterEach(() => {
   for (const h of hosts()) h.remove();
@@ -304,6 +307,49 @@ describe('the page widget hidden on the site', () => {
     expect(storageListeners.size).toBe(0);
   });
 
+  it("asks the background for a ticket before it builds the chat's frame, and puts it in the fragment", async () => {
+    await load();
+    fake.sendMessage.mockClear();
+    asUser(root().querySelector('.menu button[aria-label="Open the chat here"]')!, new MouseEvent('click', { bubbles: true }));
+    await settle();
+    const types = fake.sendMessage.mock.calls.map(([m]) => (m as { type: string }).type);
+    expect(types.indexOf(FRAME_TICKET)).toBeGreaterThanOrEqual(0);
+    expect(types.indexOf(FRAME_TICKET)).toBeLessThan(types.indexOf(WIDGET_FLOATING));
+    const src = root().querySelector('iframe')!.getAttribute('src')!;
+    expect(new URL(src).pathname).toBe('/floating.html'); // the only page a web page can load
+    expect(new URL(src).search).toBe('');
+    expect(new URL(src).hash).toBe(`#ticket=${ticket}`);
+  });
+
+  it('folded, by its bar or the shortcut, it tells the chat (its dictation stops); shown again, it does not', async () => {
+    await load();
+    asUser(root().querySelector('.menu button[aria-label="Open the chat here"]')!, new MouseEvent('click', { bubbles: true }));
+    await settle();
+    const chatRoot = root();
+    const folds = () => fake.sendMessage.mock.calls.filter(([m]) => (m as { type: string }).type === WIDGET_FOLDED).length;
+    fake.sendMessage.mockClear();
+    asUser(chatRoot.querySelector('button[aria-label^="Fold it"]')!, new MouseEvent('click', { bubbles: true }));
+    await settle();
+    expect(folds()).toBe(1);
+    await tellWidget({ type: WIDGET_FLOAT, toggle: true }); // shown again
+    await settle();
+    expect(folds()).toBe(1);
+    await tellWidget({ type: WIDGET_FLOAT, toggle: true }); // folded
+    await settle();
+    expect(folds()).toBe(2);
+  });
+
+  it('builds no frame without a ticket', async () => {
+    ticket = undefined;
+    await load();
+    fake.sendMessage.mockClear();
+    asUser(root().querySelector('.menu button[aria-label="Open the chat here"]')!, new MouseEvent('click', { bubbles: true }));
+    await settle();
+    expect(hosts()).toHaveLength(1); // the bubble alone
+    expect(roots.filter((r) => r.host.isConnected).flatMap((r) => [...r.querySelectorAll('iframe')])).toEqual([]);
+    expect(fake.sendMessage.mock.calls.map(([m]) => (m as { type: string }).type)).not.toContain(WIDGET_FLOATING);
+  });
+
   it('floating the chat there calls the bubble back', async () => {
     await load();
     asUser(root().querySelector('.menu button[aria-label="Open the chat here"]')!, new MouseEvent('click', { bubbles: true }));
@@ -315,4 +361,61 @@ describe('the page widget hidden on the site', () => {
     expect((storage.local.data[WIDGET_PLACES] as Record<string, { hidden?: boolean }>)[site]!.hidden).toBe(false);
     expect(hosts()).toHaveLength(2); // the bubble back beside the chat
   });
+});
+
+// Where the chat cannot float (Firefox frames an extension page without the APIs the chat needs), the
+// extension tells the page so (its settings copy: noFloating): the page never frames the chat, and what
+// opens it there asks the background, which opens it full screen in a tab (background/widget-host).
+describe('the page widget where the chat cannot float', () => {
+  const ask: WidgetActionInfo = { id: 'a2', name: 'Ask', icon: '❓', input: 'none', openChat: true };
+  const frames = () => roots.filter((r) => r.host.isConnected).flatMap((r) => [...r.querySelectorAll('iframe')]);
+  const opens = () => fake.sendMessage.mock.calls.map(([m]) => m as { type: string; floating?: boolean }).filter((m) => m.type === WIDGET_OPEN_CHAT);
+  beforeEach(async () => {
+    await storage.local.set({ widgetSettings: { chatWindow: { opens: 'floating' }, noFloating: true } });
+  });
+
+  it('its chat button opens the chat full screen, never a frame', async () => {
+    await load();
+    const chat = root().querySelector<HTMLButtonElement>('.menu button[aria-label="Open the chat"]')!;
+    expect(chat.title).toBe('Open the chat full screen in a tab');
+    expect(chat.textContent).toContain('Chat');
+    asUser(chat, new MouseEvent('click', { bubbles: true }));
+    await settle();
+    expect(frames()).toEqual([]);
+    expect(hosts()).toHaveLength(1);
+    expect(opens()).toEqual([{ type: WIDGET_OPEN_CHAT }]);
+  });
+
+  it('the bubble opens it so too, though the settings saved "floating"', async () => {
+    await load();
+    asUser(root().querySelector('[role="button"][aria-label="Agent"]')!, new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    await settle();
+    expect(frames()).toEqual([]);
+    expect(opens()).toEqual([{ type: WIDGET_OPEN_CHAT }]);
+  });
+
+  it('an action that opens the chat sends its message there, not to a chat floating here', async () => {
+    actions = [summarize, ask];
+    await load();
+    asUser(root().querySelector('.menu button[aria-label="Ask"]')!, new MouseEvent('click', { bubbles: true }));
+    await settle();
+    expect(frames()).toEqual([]);
+    expect(opens()).toEqual([{ type: WIDGET_OPEN_CHAT, action: { id: 'a2', input: '', reads: {} } }]);
+  });
+
+  it('the extension asking it to float the chat (the shortcut, the side panel) gets no frame', async () => {
+    await load();
+    // The widget's answers, as the background gets them (onRuntime answers through sendResponse).
+    const answers = async (msg: object) => {
+      const got: unknown[] = [];
+      await Promise.all(fake.runtime.onMessage.emit(msg, {}, (r: unknown) => void got.push(r)));
+      await settle();
+      return got.filter(Boolean);
+    };
+    expect(await answers({ type: WIDGET_FLOAT })).toEqual([{ floated: false }]);
+    expect(await answers({ type: WIDGET_FLOAT, toggle: true })).toEqual([{ floated: false }]);
+    await settle();
+    expect(frames()).toEqual([]);
+  });
+
 });

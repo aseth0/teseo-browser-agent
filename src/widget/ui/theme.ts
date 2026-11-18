@@ -35,6 +35,7 @@ export function createTheme(s: WidgetState, others: () => (HTMLElement | undefin
     const settings = await storageGet<WidgetSettings>('local', WIDGET_SETTINGS_KEY);
     s.appearance = settings?.appearance;
     s.chatWindow = settings?.chatWindow;
+    s.noFloating = settings?.noFloating;
     s.speakButton = settings?.speakButton;
     s.speakBoxes = settings?.speakBoxes;
     s.canSpeak = settings?.canSpeak;

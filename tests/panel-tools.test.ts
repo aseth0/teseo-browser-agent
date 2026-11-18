@@ -31,14 +31,40 @@ describe('which chats get them', () => {
   });
 });
 
+const ANSWER = '\n\nEnd your answer with two short lines:\nDid: what you did.\nNot done or not verified: what you could not do or check, or "nothing".';
+
 describe('panel.start', () => {
   it('starts the agent with its task, on the URL given', async () => {
     const p = page();
     expect(textOf(await tools(p).start.run({ agent: 'reader', task: ' compare prices ', url: 'https://shop.example.com/a' }, ctx()))).toBe(
       'Started reader in row r1 on https://shop.example.com/a. It works in parallel: call panel__wait for its answer.',
     );
-    // The model gets who started it; the chat, and its row, show the task alone.
-    expect(p.start).toHaveBeenCalledWith({ agent: reader, message: { text: 'The agent "Browser" started you in the Agents Panel: compare prices', shown: 'compare prices' }, url: 'https://shop.example.com/a', max: 1 });
+    // The model gets who started it and how to answer; the chat, and its row, show the task alone.
+    expect(p.start).toHaveBeenCalledWith({
+      agent: reader,
+      message: { text: `The agent "Browser" started you in the Agents Panel: compare prices${ANSWER}`, shown: 'compare prices', title: 'compare prices' },
+      url: 'https://shop.example.com/a',
+      max: 1,
+    });
+  });
+  it('starts it with a full brief: its chat shows the sections, its row the task, the card every field given', async () => {
+    const p = page();
+    const { start } = tools(p);
+    const args = { agent: 'reader', task: 'compare prices', url: 'https://shop.example.com/a', context: 'A is 10 €', constraints: 'buy nothing', done: 'both prices', report: 'a table' };
+    await start.run(args, ctx());
+    const shown = 'compare prices\n\n## Already known\nA is 10 €\n\n## Do not\nbuy nothing\n\n## Done when\nboth prices\n\n## Send back\na table';
+    expect(p.start).toHaveBeenCalledWith(expect.objectContaining({ message: { text: `The agent "Browser" started you in the Agents Panel: ${shown}${ANSWER}`, shown, title: 'compare prices' } }));
+    // Marked as the background marks values (core/origin-marks), the chat still shows it plain.
+    const { withMarkedValues } = await import('../src/core/model-texts');
+    const marked = page();
+    await withMarkedValues(() => tools(marked).start.run(args, ctx()));
+    expect(marked.start).toHaveBeenCalledWith(expect.objectContaining({ message: expect.objectContaining({ shown, title: 'compare prices' }) }));
+    expect((await start.describe!({ ...args, done: ' ' }, ctx())).details).toEqual([
+      { label: 'Task', value: 'compare prices' },
+      { label: 'Already known', value: 'A is 10 €' },
+      { label: 'Do not', value: 'buy nothing' },
+      { label: 'Send back', value: 'a table' },
+    ]);
   });
   it('refuses an agent it may not start, no task, a URL that is not http(s)', async () => {
     const { start } = tools(page());

@@ -8,7 +8,7 @@ import type { Message } from '../core/types';
 import { bookmarkAutoOf, bookmarkAutoSource, bookmarkMentionOf, type AttachOrigin } from '../core/sources';
 import { autoPicks } from '../storage/auto-picks';
 import type { Settings } from '../storage/settings';
-import type { StepAttach } from '../storage/settings-types';
+import { ATTACH_UNSEEN, type StepAttach } from '../storage/settings-types';
 import { BOOKMARK_AUTO_DEFAULTS, BOOKMARK_CANDIDATES, bookmarksAllowed, bookmarkSlug, bookmarkSlugs, rankBookmarks, type Bookmark } from './store';
 import { bookmarkLine } from './tools';
 
@@ -28,7 +28,7 @@ export function bookmarkPicks(ranked: { bookmark: Bookmark; match: number }[], t
 export async function bookmarkAutoItems(typed: string, history: Message[], settings: Settings, origin: AttachOrigin = 'message'): Promise<ContextItem[]> {
   const auto = settings.bookmarks?.autoAttach;
   if (!auto?.enabled || !typed.trim() || !(await bookmarksAllowed())) return [];
-  const ranked = await rankBookmarks(settings, typed, BOOKMARK_CANDIDATES).catch(() => []);
+  const ranked = await rankBookmarks(settings, typed, BOOKMARK_CANDIDATES, { unseen: ATTACH_UNSEEN }).catch(() => []);
   return bookmarkPicks(ranked, typed, history, auto).map(({ bookmark: b, match }) => {
     const pct = Math.round(match * 100);
     const note = text(origin === 'step' ? 'bookmark.step_note' : 'bookmark.auto_note', { score: String(pct) });

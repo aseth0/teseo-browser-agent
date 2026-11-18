@@ -51,6 +51,17 @@ export function memoryIndexOf(source: string | undefined): { host: string; title
 // Skills and tools mentioned inline: "skill-mention:summarize-page", "tool-mention:browser.find,…".
 export const SKILL_MENTION_SOURCE = 'skill-mention:';
 export const TOOL_MENTION_SOURCE = 'tool-mention:';
+// The tool groups a message matched, recommended with it (tools/match): their labels as a JSON array.
+export const TOOL_MATCH_SOURCE = 'tool-match:';
+export function toolMatchOf(source: string | undefined): string[] | undefined {
+  if (!source?.startsWith(TOOL_MATCH_SOURCE)) return undefined;
+  try {
+    const labels = JSON.parse(source.slice(TOOL_MATCH_SOURCE.length)) as unknown;
+    return Array.isArray(labels) ? labels.map(String) : [];
+  } catch {
+    return []; // a saved conversation can be edited by hand: it must still open
+  }
+}
 const HISTORY_AUTO_SOURCE = 'history-auto:'; // "history-auto:<id>:<match %>:<title>"
 const FILE_SOURCE = 'file:'; // "file:<name>": a text file you attached (the paperclip → File…)
 const PDF_SOURCE = 'pdf:'; // "pdf:<name>": a PDF you attached, the same way

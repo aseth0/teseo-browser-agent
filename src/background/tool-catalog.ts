@@ -8,7 +8,7 @@ import { agentTools } from '../agents/tools';
 import { bookmarksAllowed } from '../bookmarks/store';
 import { bookmarkTools } from '../bookmarks/tools';
 import { bestEffort, errorText } from '../core/errors';
-import { LIST_TOOLS, TOOLS_CHANGED, type ListToolsReply, type ToolInfo } from '../core/protocol';
+import { LIST_TOOLS, MCP_CONNECT, TOOLS_CHANGED, type ListToolsReply, type ToolInfo } from '../core/protocol';
 import { onRuntime, sendRuntime } from '../core/runtime';
 import { isExtensionPage } from '../core/sender';
 import { historyTools } from '../history/tools';
@@ -58,7 +58,7 @@ export function createToolCatalog(say: Say) {
 
   // The MCP servers' tools (Settings → MCP servers): connected when first needed, and again when
   // the servers or the providers' keys change.
-  const mcp = new McpManager();
+  const mcp = new McpManager(toolsChanged); // a server back after failing: the panels list the tools again
   // Signed in or out (Settings → MCP servers): connected again with what there is now, and the
   // panels ask for the tools again.
   onSignInChanged(() => {
@@ -70,20 +70,25 @@ export function createToolCatalog(say: Say) {
   browser.permissions.onRemoved.addListener(toolsChanged);
   // Settings → Chromium DevTools turned on or off: the same.
   watchKey('local', SETTINGS_KEY, (change) => settingChanged(change, devtoolsOn) && toolsChanged());
-  const mcpTools = async (settings: Settings, waitMs?: number, signal?: AbortSignal) => {
+  const mcpTools = async (settings: Settings, waitMs?: number, signal?: AbortSignal, chat?: boolean) => {
     mcp.keepOnly(settings.mcpServers ?? [], settings.providers);
-    return mcp.tools(settings.mcpServers ?? [], settings.providers, waitMs, signal);
+    return mcp.tools(settings.mcpServers ?? [], settings.providers, waitMs, signal, chat);
   };
+  // A conversation starts in a panel: the servers are connected before its first message.
+  onRuntime(MCP_CONNECT, (_msg, sender) => {
+    if (isExtensionPage(sender)) void settingsNow().then((settings) => mcp.connect(settings.mcpServers ?? [], settings.providers)).catch((e: unknown) => console.error('[mcp]', e));
+  });
 
   // The fixed tools, the MCP servers' and, for a tab, the tools its page offers (WebMCP); and the
   // MCP servers that could not be reached. With `waitMs`, the MCP servers still connecting are left
-  // out (`mcpPending` settles when they are done); `signal`, a run's Stop, ends the wait for them.
+  // out (`mcpPending` settles when they are done); `signal`, a run's Stop, ends the wait for them;
+  // `chat`, a chat's message, waits only for the servers reached before (mcp/manager).
   // Then the user's custom tools, made from any of those (tools/custom/runtime). Settings → Web search may
   // have every search confirmed first, also those of custom tools. `url`: the tab's, when the caller
   // has just read it.
-  const toolsFor = async (tabId: number | undefined, settings: Settings, { waitMs, url, signal }: { waitMs?: number; url?: string; signal?: AbortSignal } = {}) => {
+  const toolsFor = async (tabId: number | undefined, settings: Settings, { waitMs, url, signal, chat }: { waitMs?: number; url?: string; signal?: AbortSignal; chat?: boolean } = {}) => {
     const pageUrl = async (id: number) => url ?? tabUrl(id);
-    const [fromPage, fromMcp, customs, bookmarks] = await Promise.all([tabId === undefined ? [] : pageTools(tabId, await pageUrl(tabId)), mcpTools(settings, waitMs, signal), customToolStore.load(), bookmarksAllowed()]);
+    const [fromPage, fromMcp, customs, bookmarks] = await Promise.all([tabId === undefined ? [] : pageTools(tabId, await pageUrl(tabId)), mcpTools(settings, waitMs, signal, chat), customToolStore.load(), bookmarksAllowed()]);
     const search = tools.list().find((t) => t.name === 'web.search');
     const asking = settings.webSearch?.ask && search ? [askingFirst(search)] : [];
     // The bookmarks' tools only once the user allows them (Settings → Bookmarks); while Settings →

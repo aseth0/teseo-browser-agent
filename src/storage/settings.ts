@@ -11,6 +11,7 @@ import { serialized } from './serial';
 import { hasSecrets, hasUnbound, settleStoredSecrets, splitSecrets, withSecrets, type SettingsSecrets } from './settings-secrets';
 import { ENV_PROVIDER_ID, envKeyInjected, injectedBaseURL, normalize } from './settings-migrate';
 import { SETTINGS_KEY, type Settings } from './settings-types';
+import { floatingChatAvailable, speakAvailable } from '../core/build';
 import { actionBoxesButton, canRead, planOptions, selectionButtonOn } from '../speech/settings';
 
 // The types nearly every module uses, still from here.
@@ -20,18 +21,23 @@ export type { ProviderConfig, Settings } from './settings-types';
 // speakButton: Settings → Speak's button beside a selection, on with a voice to read with (as speech/settings
 // selectionButtonOn says); speakBoxes: its button on an action's text boxes (actionBoxesButton); canSpeak:
 // Speak can read (canRead), for the actions whose boxes are read on their own, with the pieces' sizes
-// (Settings → Speak: First piece, Other pieces), to read an answer as it streams.
-export type WidgetSettings = Pick<Settings, 'appearance' | 'chatWindow' | 'pageWidget'> & { speakButton?: boolean; speakBoxes?: 'on' | 'setup'; canSpeak?: boolean; pieceSizes?: { first: number; rest: number } };
+// (Settings → Speak: First piece, Other pieces), to read an answer as it streams. None of the three where the
+// browser cannot read aloud (core/build speakAvailable): the page gets no button that could only fail.
+// noFloating: the chat cannot float on a page (core/build floatingChatAvailable: Firefox), which cannot ask
+// itself: the page never frames it, and what opens the chat there opens it full screen in a tab.
+export type WidgetSettings = Pick<Settings, 'appearance' | 'chatWindow' | 'pageWidget'> & { speakButton?: boolean; speakBoxes?: 'on' | 'setup'; canSpeak?: boolean; pieceSizes?: { first: number; rest: number }; noFloating?: boolean };
 const widgetSettingsOf = (s: Partial<Settings> | undefined): WidgetSettings => {
-  const speakBoxes = s && actionBoxesButton(s);
-  const sizes = s && canRead(s) ? planOptions({ speak: s.speak, voice: s.voice }) : undefined;
+  const speaks = speakAvailable();
+  const speakBoxes = s && speaks && actionBoxesButton(s);
+  const sizes = s && speaks && canRead(s) ? planOptions({ speak: s.speak, voice: s.voice }) : undefined;
   return {
     appearance: s?.appearance,
     chatWindow: s?.chatWindow,
     pageWidget: s?.pageWidget,
-    ...(s && selectionButtonOn(s) && { speakButton: true }),
+    ...(s && speaks && selectionButtonOn(s) && { speakButton: true }),
     ...(speakBoxes && { speakBoxes }),
     ...(sizes && { canSpeak: true, pieceSizes: { first: sizes.first, rest: sizes.rest } }),
+    ...(!floatingChatAvailable() && { noFloating: true }),
   };
 };
 

@@ -136,6 +136,9 @@ tabs:
   every site, **Allow every site** asks for it. Its shortcut, and the sites it was hidden on, each with **Show**.
 - **Opening the chat**: the side panel or floating on the page, and how the floating chat starts on a site. Its 📌
   keeps one conversation in the floating chat of every tab ([A conversation on every page](chat-windows.md#a-conversation-on-every-page)).
+  Firefox has no floating chat: there the bubble, its actions and their cards open the chat full screen in a tab
+  ([Floating on the page](chat-windows.md#floating-on-the-page)); the actions and their cards on the page work as
+  everywhere.
 - **Shortcuts**: the bubble's, the floating chat's and the side panel's.
 
 ## Bubble look

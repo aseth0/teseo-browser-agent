@@ -27,6 +27,29 @@ Everything in the left column is untrusted: it comes from pages and servers. The
 Layers is the place to see why the model did what it did, how big each request is, and whether a skill, template or
 memory item went where you expected.
 
+### Phases of the turn
+
+While the turn runs, the chat's waiting line (the *…* of the other views) becomes **Phases of the turn**: every
+step between sending your message and the last token, in order, each with what it did, how long it took and a bar
+of its place in the turn; the one going on counts up. Once the turn ends the list is kept under your message:
+
+| Phase | What it covers |
+|---|---|
+| **Compacting the earlier turns** | When the context reached the threshold before your message went ([compaction](compaction.md)) |
+| **Starting the agent** | From the panel sending the message to the agent starting on it |
+| **Setting up** | The provider (and its site access) and what the agent works with: skills, templates, memory |
+| **Listing the tools** | The tools offered to the model, and the MCP servers that could not be reached |
+| **Preparing your message** | Under it, each source that attached something: memory by meaning, site skills and memory, the sites, skills, conversations and bookmarks mentioned or matched, the site skill values and templates, the page itself; and *Matching the tools*, when [tool matching](tools.md#matching-which-tools-reach-the-model) is on: how many groups were recommended, offered and held |
+| **Model call N** | Under it, *Waiting for the first token*, *Reasoning* and *Answer* as they take turns; a call sent again (without tools, or shortened) says so |
+| A tool's name | Each tool call; *Waiting for your confirmation* under it when it asked you |
+| **agents.ask** / **panel.start** | An agent asked or started: under it, the asked agent's own phases; it says how many model and tool calls it made |
+| **Attached after the results** | Memory, bookmarks or the plan reminder added between the model's steps |
+
+Under your message the list is folded into one line: how many phases, how long the turn took and the slowest
+phase. Click it (or the list in the waiting line) to open or fold it. The phases are kept in your
+message, so a saved conversation shows them too; a turn that was stopped shows *not ended* on what was still going.
+A turn continued after the step limit adds its phases after the first run's.
+
 ## The context meter
 
 The ring next to the message box shows how much of the model's context window the last call used (a token count

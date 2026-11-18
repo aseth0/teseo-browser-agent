@@ -19,7 +19,9 @@ Include what an attacker can do, the steps or a page that shows it, and the vers
   than the one allowed, or escapes an agent's sites or tools.
 - Secrets (API keys, header values, sign-ins, `{{secret:…}}` values) reaching a page, the model, a log or another
   site.
-- Web pages detecting, reading or controlling the extension, its storage or its pages.
+- Web pages reading or controlling the extension, its storage or its pages: a page showing the chat in a frame or a
+  tab of its own included (only the floating chat's page is web-accessible, and only a frame the extension's widget
+  opened, with its one-time ticket, shows it).
 - Script tools escaping their sandbox, or an HTTP tool, a script or a tool source reaching a site other than
   its own, through a redirect too.
 
@@ -30,6 +32,8 @@ Include what an attacker can do, the steps or a page that shows it, and the vers
   welcome as issues.
 - Builds made with `EXTERNAL_MODEL_API_KEY`, which embed the key by design and must not be shared.
 - Access by someone who already controls the user's browser profile or machine.
+- A web page detecting that the extension is installed: the floating chat's page is web-accessible under a fixed
+  URL (its frame needs it), as most extensions' pages are.
 
 ## Supported versions
 

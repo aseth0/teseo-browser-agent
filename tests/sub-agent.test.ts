@@ -1,6 +1,7 @@
 // An agent asked by another (agents.ask): on its own model or its caller's, its answer back to the
 // caller with notes for a step limit or a reply cut, and a failure with the whole run as its trace.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { noPhases } from '../src/core/phases';
 import type { ChatEvent, LLMProvider } from '../src/core/types';
 import { fakeBrowser, fakeSecretDb, fakeStorage } from './fakes/browser';
 
@@ -40,7 +41,7 @@ vi.mock('../src/page/background-tab', () => ({
   },
   closeBackgroundTab: async (id: number) => void tabs.closed.push(id),
 }));
-const { runSubAgent } = await import('../src/background/sub-agent');
+const { runSubAgent, toolsNote } = await import('../src/background/sub-agent');
 const { ToolRegistry } = await import('../src/core/tool-registry');
 const { newAgentProfile } = await import('../src/agents/profiles');
 type RunScope = import('../src/background/run-setup').RunScope;
@@ -56,7 +57,7 @@ const questions = { ask: async (q: (id: string) => unknown) => { const asked = q
 const run = (all = new ToolRegistry(), tabId = 5): RunScope => ({
   msg: { type: 'run', history: [], providerId: 'main', model: 'big', tabId },
   settings, all, agents: [], allSkills: [], allTemplates: [], allMemory: [], logMode: 'off', listedUrl: undefined,
-  inConversation: undefined, askAccess: async () => true, runSubAgent: async () => ({ type: 'text', text: '' }), blacklist: blacklistGate(undefined),
+  inConversation: undefined, askAccess: async () => true, runSubAgent: async () => ({ type: 'text', text: '' }), blacklist: blacklistGate(undefined), phases: noPhases,
   signal: new AbortController().signal, send: () => undefined, questions: questions as never, interact: async () => ({}) as never,
 } as unknown as RunScope);
 const asked = { ...newAgentProfile(), id: 'mm', name: 'mm' };
@@ -81,6 +82,20 @@ describe('an agent asked by another', () => {
     expect(r1.type === 'text' && r1.text).toContain('Found it');
     await ask({ ...asked, providerId: 'own', model: 'small' });
     expect(used.at(-1)).toBe('own/small');
+  });
+
+  it('says after its answer, outside the untrusted block, how many tool calls it made and how many failed', async () => {
+    script = answer('Found it');
+    const r = await ask();
+    expect(r.type === 'text' && r.text).toMatch(/<\/untrusted_agent_answer>\n\(It made no tool calls\.\)$/);
+    const call = (id: string) => ({ type: 'tool_call' as const, id, name: 'x', args: {} });
+    const result = (id: string, isError?: boolean) => ({ type: 'tool_result' as const, toolCallId: id, content: '', ...(isError && { isError }) });
+    const said = (n: number, failed: number) => toolsNote([
+      { role: 'assistant', parts: Array.from({ length: n }, (_, i) => call(`c${i}`)) },
+      { role: 'tool', parts: Array.from({ length: n }, (_, i) => result(`c${i}`, i < failed)) },
+    ]);
+    expect(said(1, 0)).toBe('(It made 1 tool call; 0 failed.)');
+    expect(said(3, 2)).toBe('(It made 3 tool calls; 2 failed.)');
   });
 
   it('says it could not run without access to its provider', async () => {

@@ -5,6 +5,7 @@ import { browser } from 'wxt/browser';
 import { bestEffort } from '../../core/errors';
 import { sendRuntime } from '../../core/runtime';
 import { WIDGET_SETTINGS_KEY } from '../../storage/keys';
+import { onStorageChanged } from '../../storage/watch';
 import { ACTIONS_KEY, WIDGET_ACTIONS } from '../protocol';
 import type { createBubble } from './bubble';
 import type { createCard } from './card';
@@ -71,7 +72,7 @@ export function createLifecycle(s: WidgetState, { render }: Pick<WidgetHost, 're
     }
     if (!s.host) {
       bubble.build();
-      if (reply?.floating) void chat.show(); // open in this tab before the page reloaded
+      if (reply?.floating && !s.noFloating) void chat.show(); // open in this tab before the page reloaded
     }
     bubble.fillMenu();
     if (!s.pop.hidden && !s.actions.some((a) => a.id === s.menu.querySelector<HTMLElement>('.act.on')?.dataset.action)) card.close();
@@ -82,9 +83,10 @@ export function createLifecycle(s: WidgetState, { render }: Pick<WidgetHost, 're
 
   let url = location.href;
   let watch: ReturnType<typeof setInterval> | undefined;
+  let offStorage: (() => void) | undefined;
   const onStorage = (changes: Record<string, unknown>, area: string) => {
     if (area === 'local' && (ACTIONS_KEY in changes || WIDGET_SETTINGS_KEY in changes)) void refresh();
-    if (area === 'local' && WIDGET_SETTINGS_KEY in changes) void theme.load().then(speak.follow);
+    if (area === 'local' && WIDGET_SETTINGS_KEY in changes) void theme.load().then(() => (speak.follow(), bubble.followSettings()));
   };
   // Shown on the site: its actions asked, built, and their loads run, as on a page just loaded.
   const start = () => {
@@ -97,7 +99,7 @@ export function createLifecycle(s: WidgetState, { render }: Pick<WidgetHost, 're
       url = location.href;
       void refresh().then((changed) => !changed && loads.run()); // the same actions, another ticket or repository
     }, URL_WATCH_MS);
-    browser.storage.onChanged.addListener(onStorage);
+    offStorage = onStorageChanged(onStorage);
     speak.start();
     return refresh();
   };
@@ -108,7 +110,8 @@ export function createLifecycle(s: WidgetState, { render }: Pick<WidgetHost, 're
     started = false;
     clearInterval(watch);
     watch = undefined;
-    browser.storage.onChanged.removeListener(onStorage);
+    offStorage?.();
+    offStorage = undefined;
     speak.stop();
     loads.drop();
     s.running?.abort();

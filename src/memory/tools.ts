@@ -1,6 +1,7 @@
 // The tools on memory (memory/store): search, list and read the items of the agent running, and save or
 // delete one, which the user reviews every time (a card with the whole item; for a change, what
-// changes).
+// changes). Reading touches no site (`siteless`): an agent held to its sites reads its own items from any
+// page, a full-tab chat too; saving and deleting are confirmed every time, so they need no site either.
 import { countArg, fields, optBoolean } from '../tools/define';
 import { agentNameById, agentStore, type AgentProfile } from '../agents/profiles';
 import { text } from '../core/model-texts';
@@ -94,6 +95,7 @@ export function memoryTools(): Tool[] {
       },
       source: 'memory',
       effect: 'read',
+      siteless: true,
       run: async (args, ctx) => {
         const { query: asked, limit } = fields(args);
         const query = String(asked ?? '');
@@ -120,6 +122,7 @@ export function memoryTools(): Tool[] {
       },
       source: 'memory',
       effect: 'read',
+      siteless: true,
       run: async (args, ctx) => {
         const { site, pinned: asked, offset: from, limit } = fields(args);
         const host = site ? domainOf(String(site)) : undefined;
@@ -143,6 +146,7 @@ export function memoryTools(): Tool[] {
       inputSchema: { type: 'object', properties: { id: { type: 'string' } }, required: ['id'] },
       source: 'memory',
       effect: 'read',
+      siteless: true,
       run: async (args, ctx) => {
         const id = idOf(args);
         const m = (await mine(ctx)).find((x) => x.id === id);

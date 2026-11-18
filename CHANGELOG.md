@@ -3,6 +3,90 @@
 What changed in each version of Teseo. Versions before 0.61.0 are not listed here; see
 the git tags and their commits.
 
+## 0.75.2
+
+### Fixed
+- A message sent after the chat sat idle a while no longer waits on "…" for good where the side panel lives in a
+  tab (Vivaldi): the chat opens a new connection to the worker when the old one went quiet, sends a message the
+  worker did not answer once more, and then says so.
+
+## 0.75.1
+
+### Fixed
+- An agent held to its sites reads its memory from any page: memory__read, memory__search and memory__list touch
+  no site, so they no longer refuse "the agent may not use this page" in a full-tab chat or on a page not among
+  the agent's sites. Saving and deleting are confirmed every time, as before.
+
+## 0.75.0
+
+### Added
+- The phases of a turn, as they happen: while the agent works, the chat names the step going on instead of "…",
+  and Layers lists them all with how long each took (starting the agent, listing the tools, what was attached to
+  your message and by which source, each model call with its wait for the first token, reasoning and answer, each
+  tool call, a confirmation waited for, an agent asked). They stay in your message once the turn ends.
+- Tool matching (**Settings → Tools → Matching**): which tool groups go with a message. *All tools* (the default, as
+  before), *Recommended* (every tool, and the groups your message matches named with it) or *Only matching* (only
+  those; the others listed in `tools.load`, for the model to load when needed). Web, history, bookmarks, each custom
+  tools section and each MCP server are matched, a group by its best tool; each MCP server can have its own choice.
+- How a tool matches: by words and, with Memory's Semantic search, by meaning (in any language), judged against all
+  the other tools for the message, not by a fixed percentage. When nothing stands out, *Only matching* offers rather
+  than holds. How many groups it holds by meaning: *Offer more* (the default), *Balanced* or *Hold more*. Without an
+  embeddings model it matches by words, which works in the language of the tools' descriptions; the tab and the pill
+  say so. The tools are indexed in the background, and the tab shows how far.
+- A group whose tool was used stays offered for the conversation; one offered only because nothing stood out does
+  not. Each MCP server can have a **What it is for** of its own, in your words, matched with its tools.
+- A 🔧 pill under your message says what tool matching did; the phases of a turn show it as *Matching the tools*.
+
+### Changed
+- An MCP server's **Its tools on demand** switch is now **Offered**, in its panel and its editor: *Same as Tools →
+  Matching* (the default), *Always offered*, *Recommended when it matches*, *Only when it matches* or *On demand*.
+- An MCP server that was not reached is no longer said in the chat with every message: the MCP button marks it, and
+  a notice says why only when the model calls one of its tools.
+
+### Fixed
+- Messages no longer wait up to 15 seconds, again and again, for an MCP server that does not answer: the servers are
+  connected as a conversation starts, before its first message, and a message goes without the tools of one that is
+  not in yet. A server that failed is tried again when a new conversation starts.
+- Auto-attach of memory, bookmarks and saved conversations no longer finds a full match in a message that shares one
+  word with an item: the message's words no item has count against the match too (each as half a rare word). The
+  model's own searches and the search boxes still find by any word.
+
+## 0.74.0
+
+### Added
+- Agents hand each other work as a brief: `agents.ask` and `panel.start` take, besides the task, what is already
+  known, what not to do, when it is done and what to send back, each optional; the asked agent gets them in sections
+  and ends its answer with what it did and what it could not do or verify, and the caller is told how many tool
+  calls it made and how many failed.
+- The chat floating on a page has 🎤 dictation, on any site, even one that keeps the microphone from its frames: it
+  records with the microphone allowed to the extension, and stops when the chat is folded or closed, or the page goes.
+
+### Changed
+- While dictating, the message box is framed in red with a strip inside it: the time, the sound's waves, the words
+  just transcribed and **Stop**; *Finishing dictation…* in amber once stopped, instead of the dashed border.
+- Firefox has no chat floating on the page, as it has no Speak: the popup's **Page** tile, **Settings → Appearance
+  → Popup** and **Settings → Bubble → Opening the chat** show it greyed with the **unavailable** mark, and Settings →
+  About lists it. There the bubble, its actions that open the chat, a card's **Open in the chat** and **Alt+Shift+F**
+  open the chat full screen in a tab, with the action's message or the card's conversation.
+
+### Fixed
+- In Vivaldi, the chat floating on a page showed "… refused to connect": its frame is now a page of its own, loaded
+  from the extension's fixed address, and shows the chat only in the bubble's frame, with a one-time ticket from it.
+  A page that frames or opens that page by itself gets an empty document; every other page of Teseo stays out of a
+  web page's reach, as before. A page can now tell that Teseo is installed, as with most extensions.
+- In Firefox, connecting to an MCP server failed before any request ("Invalid domain … for
+  declarativeNetRequest.updateSessionRules"): the rule that takes the Origin header out of the extension's own
+  requests named the extension by its id, which in Firefox is not a domain.
+- Where the browser cannot read aloud (Firefox), pages no longer get Speak's buttons, which could only fail with
+  "Not read aloud": the speaker beside a selection (its actions still show), the one on an action's text boxes,
+  and an action's answers read on their own.
+- In Firefox, the chat floating on a page no longer opens only to fail with "can't access property
+  "onActivated", … tabs is undefined": Firefox gives an extension page framed by a web page none of the APIs the
+  chat needs.
+- After the extension was reloaded or updated, the bubble on a page already open stayed there dead, kept the new
+  one from starting, and its chat showed "… refused to connect", until the page was reloaded: the old copy failed
+  while leaving. It now always leaves the page to the new one.
+
 ## 0.73.0
 
 ### Added

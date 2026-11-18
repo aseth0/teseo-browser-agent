@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 
 const updateSessionRules = vi.fn(async (_update: { removeRuleIds: number[]; addRules: { id: number; condition: { requestDomains: string[]; initiatorDomains: string[] } }[] }) => undefined);
-vi.mock('wxt/browser', () => ({ browser: { runtime: { id: 'ext-id' }, declarativeNetRequest: { updateSessionRules } } }));
+const getURL = vi.fn((_path: string) => 'chrome-extension://ext-id/');
+vi.mock('wxt/browser', () => ({ browser: { runtime: { id: 'ext-id', getURL }, declarativeNetRequest: { updateSessionRules } } }));
 const { withoutOrigin } = await import('../src/mcp/origin');
 
 const added = async (url: string) => {
@@ -27,5 +28,11 @@ describe('withoutOrigin', () => {
   it("only takes the Origin out of the extension's own requests to that host", async () => {
     const { rule } = await added('https://mcp.example.com:8443/mcp');
     expect(rule.condition).toMatchObject({ requestDomains: ['mcp.example.com'], initiatorDomains: ['ext-id'] });
+  });
+
+  it("names the extension by its pages' host, which in Firefox is not its id", async () => {
+    getURL.mockReturnValueOnce('moz-extension://11111111-2222-4333-8444-555555555555/');
+    const { rule } = await added('https://mcp.example.com/mcp');
+    expect(rule.condition.initiatorDomains).toEqual(['11111111-2222-4333-8444-555555555555']);
   });
 });

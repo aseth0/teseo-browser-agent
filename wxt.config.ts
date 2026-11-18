@@ -6,8 +6,9 @@ import { isReleaseBuild, repoUrlOf } from './src/core/repo-url';
 
 // Provider preloaded from the environment of the shell that runs the build.
 // The key ends up embedded in dist/ (git-ignored): for personal builds only. Only in the worker
-// (__ENV_API_KEY__, read by background/env-key alone), never in the pages' chunks, which are
-// web-accessible; the provider's URL and model (__ENV_PROVIDER__) go everywhere.
+// (__ENV_API_KEY__, read by background/env-key alone), never in the pages' chunks; the provider's URL
+// and model (__ENV_PROVIDER__) go everywhere. No web page can read either: the chunks are not
+// web-accessible (web_accessible_resources below).
 const envApiKey = () => process.env.EXTERNAL_MODEL_API_KEY || null;
 
 // The Chrome Web Store's build (`pnpm zip:store`): no `key` (the store refuses one and gives the
@@ -54,6 +55,10 @@ function firefoxManifest(manifest: Record<string, unknown>) {
   delete manifest.key;
   delete (manifest.commands as Record<string, unknown> | undefined)?.['audio-toggle']; // no tab audio there (core/build)
   delete (manifest.commands as Record<string, unknown> | undefined)?.['speak-toggle']; // nor Speak
+  // No chat floating on a page there (core/build floatingChat): its key opens the chat full screen in a tab.
+  const float = (manifest.commands as Record<string, { description?: string }> | undefined)?.['float-chat'];
+  if (float) float.description = 'Open the chat full screen in a tab';
+  delete manifest.web_accessible_resources; // its only entry, the floating chat's page, is not built there
   manifest.browser_specific_settings = {
     gecko: {
       id: 'teseo-browser-agent@aseth0',
@@ -92,8 +97,9 @@ export default defineConfig({
   webExt: { disabled: true },
   // The store's zip beside the release's, not over it.
   ...(STORE && { zip: { artifactTemplate: '{{name}}-{{version}}-{{browser}}-store.zip' } }),
-  vite: () => ({
-    define: { __ENV_PROVIDER__: JSON.stringify(envProvider()), __ENV_API_KEY__: JSON.stringify(envApiKey()), __STORE__: JSON.stringify(STORE), __REPO_URL__: JSON.stringify(REPO_URL), __RELEASE_BUILD__: JSON.stringify(RELEASE_BUILD) },
+  // __FIREFOX__: Firefox's build, for what no API tells apart (core/build).
+  vite: (env) => ({
+    define: { __FIREFOX__: JSON.stringify(env.browser === 'firefox'), __ENV_PROVIDER__: JSON.stringify(envProvider()), __ENV_API_KEY__: JSON.stringify(envApiKey()), __STORE__: JSON.stringify(STORE), __REPO_URL__: JSON.stringify(REPO_URL), __RELEASE_BUILD__: JSON.stringify(RELEASE_BUILD) },
     // No <link rel="modulepreload">: extension files are local, and Chrome discards those
     // preloads with a "cross-world extension resource mismatch" warning.
     build: { modulePreload: false },
@@ -142,11 +148,18 @@ export default defineConfig({
     host_permissions: ['https://api.openai.com/*', 'https://api.groq.com/*', 'https://openrouter.ai/*'],
     optional_host_permissions: ['<all_urls>'],
     optional_permissions: ['bookmarks'], // Settings → Bookmarks
-    // The chat floating on a page (the page widget's "Open the chat here") is the side panel's page in
-    // an iframe there: web-accessible, under a URL that changes each session, so pages cannot load it
-    // or tell the extension is installed; only the widget knows it.
-    // pdfjs/: the data pdf.js reads an attached PDF with (entrypoints/sidepanel/pdf), from that frame too.
-    web_accessible_resources: [{ resources: ['sidepanel.html', 'chunks/*', 'assets/*', 'pdfjs/*'], matches: ['<all_urls>'], use_dynamic_url: true }],
+    // The chat floating on a page (the page widget's "Open the chat here") is its own page, floating.html,
+    // in an iframe there: the only file a web page can load, under the extension's fixed URL. Any page can
+    // frame or open it, and so tell the extension is installed; but it shows nothing outside a page's
+    // frame, nor there without a one-time ticket the widget asked the background for, for its own tab
+    // (background/frame-tickets, sidepanel/ticket-gate). Every other page (sidepanel.html among them) and
+    // file stays out of reach: a page that opens or frames one gets the browser's "blocked" page.
+    // Not use_dynamic_url (a URL that changes each session): a Chromium-based browser (Vivaldi) refuses
+    // to load the frame under it.
+    // Nothing else listed: the frame's own scripts, styles and pdf.js's worker and data (pdfjs/) load
+    // from its own origin, which the browser does not check against this list.
+    // None in Firefox's build (firefoxManifest): no chat floating on a page there (core/build), nor its page.
+    web_accessible_resources: [{ resources: ['floating.html'], matches: ['<all_urls>'], use_dynamic_url: false }],
     // Its popup (entrypoints/popup) says where the chat opens and takes screenshots into it; ⌥⇧A opens the
     // side panel (commands).
     action: { default_title: 'Teseo' },

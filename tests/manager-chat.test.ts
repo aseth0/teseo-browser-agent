@@ -67,8 +67,8 @@ describe('what a chat shows, by mode', () => {
   it('the side panel keeps them all, and has the agents button', () => {
     expect(chatChrome({ floating: false, manager: false, full: false, preview: false })).toEqual({ lead: true, watches: true, move: true, history: true, agents: true, voice: true });
   });
-  it('floating: no lead and no move (the widget has its own bar, with the move to the side panel)', () => {
-    expect(chatChrome({ floating: true, manager: false, full: false, preview: false })).toEqual({ lead: false, watches: true, move: false, history: true, agents: false, voice: false });
+  it('floating: no lead and no move (the widget has its own bar, with the move to the side panel); dictation, recorded in the offscreen document', () => {
+    expect(chatChrome({ floating: true, manager: false, full: false, preview: false })).toEqual({ lead: false, watches: true, move: false, history: true, agents: false, voice: true });
   });
   it('full-screen in a tab: history and watches, no lead and no move', () => {
     expect(chatChrome({ floating: false, manager: false, full: true, preview: false })).toEqual({ lead: false, watches: true, move: false, history: true, agents: false, voice: true });

@@ -39,6 +39,7 @@ import type { BlacklistGate } from '../word-blacklist/gate';
 import type { RunContext } from './agent-run';
 import { seenTab, urlOfTab } from './tabs';
 import { lackedBy } from '../tools/build-tools';
+import type { PhaseRecorder } from '../core/phases';
 
 export type RunMessage = Extract<PanelToBackground, { type: 'run' }>;
 // The provider and model an agent runs on, the window its requests fit in (context/window runWindow), and
@@ -70,6 +71,9 @@ export interface RunScope extends Omit<RunContext, 'toolsFor' | 'startedAt'> {
   askAccess: (access: AccessRequest) => Promise<boolean>; // this run's: once it stops, answered no without asking
   runSubAgent: (run: SubAgentRun) => Promise<ToolResult>;
   blacklist: BlacklistGate; // every request of the run goes through it, the sub-agents' too
+  // The turn's phases (core/phases): its own, and under each agents.ask call those of the agent asked.
+  // Other parts of a run add theirs here (with a label, a detail and a duration).
+  phases: PhaseRecorder;
 }
 
 // The tab an agent works on: the panel's, or a sub-agent's own (background/sub-agent), and the page

@@ -52,7 +52,7 @@ Each section starts from what you see, then gives the likely causes and what to 
 | The tool is offered [on demand](tools.md#tools-on-demand): the tools that create things, or an MCP server with **Its tools on demand**. The model has to load them with `tools.load` first, and small models may not. | Ask it to load them (*"load the tools that create things"*), or turn the on-demand option off. |
 | **Builder** is on: the tools that create things are its alone. | See below. |
 | The model cannot call tools at all: *… does not support tools: this turn goes on without them*. | Choose a model that supports tool calling. |
-| The MCP server was not reached: *MCP server "…" could not be reached, its tools are not offered*. | See [MCP servers](#an-mcp-server-is-not-reached-or-waits-for-sign-in). |
+| The MCP server was not reached: the MCP button under the message box marks it. | See [MCP servers](#an-mcp-server-is-not-reached-or-waits-for-sign-in). |
 
 ## Browser cannot create skills, tools or agents
 
@@ -104,7 +104,7 @@ The context meter shows how much of the model's window the conversation takes.
 
 | What you see | Cause and fix |
 |---|---|
-| *MCP server "…" could not be reached, its tools are not offered: …* | The URL, the network, or the server is down. Open the server in **Settings → MCP servers** and click **Test connection**; its **Connection logs**, under it, show each attempt. |
+| The MCP button shows a warning and *No tools from …*; or, when the model calls one of its tools, *MCP server "…" could not be reached, its tools are not offered: …* | The URL, the network, or the server is down. Open the server in **Settings → MCP servers** and click **Test connection**; its **Connection logs**, under it, show each attempt. |
 | *The MCP server "…" needs you to sign in* | The sign-in is missing or expired. Click **Sign in** on its row (or **Allow and sign in**, when the extension needs access to the sign-in site first). |
 | *Not signed in: …* after the sign-in window | The service refused. For a server that does not register clients itself, fill in **Client ID** (and **Client secret**, **Scope**) under **Sign-in (OAuth)**. |
 | *Request timed out* on a tool that is slow by nature | The call went past the server's limit (60 seconds unless you set another). Raise **Tool timeout (seconds)** in its editor. If the server then says the task is already running, wait for the first call to end. |

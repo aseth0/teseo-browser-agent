@@ -1,5 +1,5 @@
 // What the chat reads from the settings, and changes to them made by more than one page.
-import { debuggerAvailable, STORE_BUILD } from '../core/build';
+import { debuggerAvailable, floatingChatAvailable, STORE_BUILD } from '../core/build';
 import { DISPLAY_IDS, displayFrom, type DisplayId, type DisplayValue, type DisplayValues } from '../core/display-defs';
 import { levelOf, type AlertLevel, type InteractionKind } from '../core/interaction-kinds';
 import { modelKey } from '../core/util';
@@ -16,6 +16,10 @@ export const includePageOn = (s: Settings) => s.includePage ?? true;
 // Never in the store's build, nor where the browser has no debugger API (Firefox).
 export const devtoolsOn = (s: Settings) => !STORE_BUILD && s.devtoolsTools === true && debuggerAvailable();
 export const panelFollowsOn = (s: Settings) => s.panelFollows ?? true;
+// Where the bubble and its actions open the chat (Settings → Bubble → Opening the chat): floating only where
+// the chat can float (core/build floatingChat); else the side panel, the default, whatever was saved.
+export const chatOpensIn = (s: Pick<Settings, 'chatWindow'> | undefined): 'panel' | 'floating' =>
+  s?.chatWindow?.opens === 'floating' && floatingChatAvailable() ? 'floating' : 'panel';
 // Whether the toolbar popup shows an item (Settings → Appearance → Popup).
 export const popupShows = (view: PopupView | undefined, item: PopupItem) => !view?.hidden?.includes(item);
 // What the chat shows (Settings → Display): an element's value, the default where none is stored, the

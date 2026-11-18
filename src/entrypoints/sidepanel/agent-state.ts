@@ -4,8 +4,9 @@ import { withPlansDismissed } from '../../tools/user/shapes';
 import { appendContext, keepSystemMemory, markStopped } from '../../core/messages';
 import { appendLive, type LiveSegment, type SubRun } from '../../core/live';
 import type { BackgroundToPanel } from '../../core/protocol';
-import type { AccessRequest, ActionDetail, CallUsage, Compaction, Message, Part, UserRequest } from '../../core/types';
+import type { AccessRequest, ActionDetail, CallUsage, Compaction, Message, Part, TurnPhase, UserRequest } from '../../core/types';
 import { unknownCase } from '../../core/util';
+import { keepPhases, withPhase } from '../../core/phases';
 import { callTokens, contextUsed, estimateOutput, estimateReasoning } from '../../context/usage';
 
 // What the agent is waiting for: approval of an action, or access to a site.
@@ -48,6 +49,7 @@ export interface AgentState {
   confirmations: Confirmation[];
   usage: SessionUsage;
   results: Part[]; // the step's results as its calls ended, until its results message: kept on a Stop
+  phases: TurnPhase[]; // the turn's phases as they go (core/phases): kept in your message once it ends
 }
 
 export type AgentAction =
@@ -78,11 +80,14 @@ export const initialAgentState = (conversationId: string): AgentState => ({
   confirmations: [],
   usage: EMPTY_USAGE,
   results: [],
+  phases: [],
 });
 
 // What a turn leaves behind while it goes, cleared when it ends.
 const endTurn = (s: AgentState, error = ''): AgentState => ({
   ...s,
+  history: keepPhases(s.history, s.phases),
+  phases: [],
   busy: false,
   status: '',
   live: [],
@@ -144,6 +149,8 @@ function onEvent(s: AgentState, evt: BackgroundToPanel): AgentState {
       return { ...resetTurn(s), history: evt.history, usage: usageOf(evt.history), busy: true };
     case 'status':
       return { ...s, status: evt.text };
+    case 'phase':
+      return s.busy ? { ...s, phases: withPhase(s.phases, evt.phase) } : s;
     case 'text-delta':
       return { ...s, live: appendLive(s.live, 'text', evt.text) };
     case 'reasoning-delta':
@@ -168,6 +175,11 @@ function onEvent(s: AgentState, evt: BackgroundToPanel): AgentState {
     case 'access': {
       const { type: _type, ...access } = evt;
       return { ...s, confirmations: [...s.confirmations, { kind: 'access', ...access }] };
+    }
+    case 'tool-match': {
+      // Kept in your message, for the views and the next turns (tools/match).
+      const last = s.history.at(-1);
+      return last?.role === 'user' ? { ...s, history: [...s.history.slice(0, -1), { ...last, toolMatch: evt.match }] } : s;
     }
     case 'auto-attach': {
       // Kept in your message, for Layers.

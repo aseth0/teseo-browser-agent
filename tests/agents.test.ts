@@ -18,6 +18,8 @@ const { agentAllows, agentById, agentIdByName, agentNameById, agentDisabledTools
 const { upgradeBuilder } = await import('../src/agents/builder');
 const { EMPTY_AGENT } = await import('../src/agents/builtins');
 const { isHost } = await import('../src/core/hosts');
+const { memoryTools } = await import('../src/memory/tools');
+const { MEMORY_DELETE, MEMORY_LIST, MEMORY_READ, MEMORY_SAVE, MEMORY_SEARCH } = await import('../src/core/memory-names');
 const { skillTools } = await import('../src/skills/tools');
 const { webTools } = await import('../src/web/tools');
 
@@ -191,6 +193,17 @@ describe('an agent is held to its sites', () => {
       expect((await authorize(deps(page), web('web.search'), { query: 'platypus' }, ctx)).refused).toBeUndefined();
       expect((await authorize(deps(page), web('web.read'), { url: 'https://mail.test/x' }, ctx)).refused).toContain('mail.test');
     }
+  });
+  it('uses its memory from any page, a full-tab chat\'s (no URL) too: reads touch no site, saves are confirmed', async () => {
+    const memory = memoryTools();
+    expect(memory.map((t) => t.name).sort()).toEqual([MEMORY_DELETE, MEMORY_LIST, MEMORY_READ, MEMORY_SAVE, MEMORY_SEARCH].sort());
+    const reads = memory.filter((t) => t.effect === 'read');
+    expect(reads.map((t) => t.name).sort()).toEqual([MEMORY_LIST, MEMORY_READ, MEMORY_SEARCH].sort());
+    for (const page of ['https://mail.test/', '']) {
+      for (const t of reads) expect(await authorize(deps(page), t, { id: 'm-1', query: 'x' }, ctx)).toEqual({});
+    }
+    // Saving and deleting are confirmed every time, which holds them to no site either.
+    expect(memory.filter((t) => t.effect !== 'read').every((t) => t.alwaysAsk === true)).toBe(true);
   });
   it('leaves Default as it was: reads anywhere', async () => {
     const { agent: _agent, ...defaultDeps } = deps('https://mail.test/');

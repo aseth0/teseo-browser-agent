@@ -3,7 +3,7 @@
 // conversations are marked in the history, do not open in the side panel while a row has them, and go
 // on in a new row from the page's own History. Reopened, the page lists its rows again, stopped.
 // And the chat full-screen in a tab, which reuses the manager's chat mode.
-import { HELLO, HOST, PORT, T, stored, waitFor } from '../lib.mjs';
+import { BRIEF_ANSWER, HELLO, HOST, PORT, T, WORKER_BRIEF, stored, waitFor } from '../lib.mjs';
 import { AGENT_PROFILES, EXPECT, MODEL_OF, RUN, TURNS } from './tables.mjs';
 import { chooseAgent, editedSkillSaved, editSkillOnCard } from './helpers.mjs';
 
@@ -152,14 +152,19 @@ async function bossAllowed({ page, errors, ctx }, prompt) {
   await box.press('Enter');
   const card = chat().getByRole('alertdialog');
   await card.waitFor({ timeout: T.turn }).catch(() => errors.push('panel.start: no card'));
-  if (!(await card.innerText().catch(() => '')).includes('count to three')) errors.push(`panel.start card: ${await card.innerText().catch(() => '')}`);
+  const cardText = await card.innerText().catch(() => '');
+  if (!cardText.includes('count to three')) errors.push(`panel.start card: ${cardText}`);
   await card.getByRole('button', { name: 'Allow', exact: true }).click({ timeout: T.medium }).catch(() => errors.push('panel.start: could not allow'));
-  return { manager, chat };
+  return { manager, chat, cardText };
 }
 const lastAnswer = async (chat) => (await chat().locator('.msg.assistant').last().innerText().catch(() => '')).slice(0, 300);
 
 RUN['panel-tools'] = async ({ page, errors, ctx }) => {
-  const { manager, chat } = await bossAllowed({ page, errors, ctx }, 'get it done');
+  const { manager, chat, cardText } = await bossAllowed({ page, errors, ctx }, 'get it done');
+  // The card shows every field of the brief, by its label.
+  for (const [label, value] of [['Already known', WORKER_BRIEF.context], ['Do not', WORKER_BRIEF.constraints], ['Done when', WORKER_BRIEF.done], ['Send back', WORKER_BRIEF.report]]) {
+    if (!cardText.includes(label) || !cardText.includes(value)) errors.push(`panel.start card: no ${label}: ${cardText.slice(0, 400)}`);
+  }
   await chat().getByText('BOSS OK').waitFor({ timeout: T.turn }).catch(async () => errors.push(`boss: ${await lastAnswer(chat)}`));
   // Told by panel.wait: no notice after it (manager/notices GRACE_MS is 3 s).
   await manager.waitForTimeout(4500);
@@ -173,6 +178,10 @@ RUN['panel-tools'] = async ({ page, errors, ctx }) => {
   if (JSON.stringify(tree) !== '["tree-parent","tree-last"]') errors.push(`tree: ${JSON.stringify(tree)}`);
   await worker.getByRole('button').first().click({ timeout: T.medium }).catch(() => errors.push('no worker row to click'));
   await chat().getByText('WORKER DONE').waitFor({ timeout: T.medium }).catch(() => errors.push('worker: its chat has no WORKER DONE'));
+  // Its chat shows the brief as its message, without how it was told to answer.
+  const asked = await chat().locator('.msg.user').first().innerText().catch(() => '');
+  if (!asked.includes('count to three') || !asked.includes(WORKER_BRIEF.constraints) || !asked.includes('Do not') || asked.includes(BRIEF_ANSWER.trim().split('\n')[0]) || asked.includes('The agent'))
+    errors.push(`worker: its message: ${asked.slice(0, 400)}`);
   await page.bringToFront();
 };
 

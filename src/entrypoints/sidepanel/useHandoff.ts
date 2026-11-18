@@ -10,8 +10,9 @@ import { PANEL_TAB } from './usePageTarget';
 
 // What is handed to this chat under `key` (core/handoff), taken once: when the chat opens, or while it
 // is open. Only the side panel and the floating chat take them: never the agent manager, whose chats,
-// each opened on a tab as a tab's side panel is, would take that panel's; nor the chat full-screen in a
-// tab, nor Settings → Appearance's preview of the panel, which would take the window's panel's.
+// each opened on a tab as a tab's side panel is, would take that panel's; nor Settings → Appearance's
+// preview of the panel, which would take the window's panel's. The chat full-screen in a tab takes only
+// those for it (core/handoff `full`: where the page opens the chat there, as it cannot float).
 // `idle`: given, one waits in storage while it is false (a turn runs, the earlier turns are compacted);
 // `hold`: this chat cannot take one now (it reviews a recording it must not lose): the next waits in
 // storage until that ends.
@@ -24,11 +25,11 @@ export function useHandoff<P>(key: string, isPayload: (p: unknown) => p is P, ho
   });
   const { waitMs, idle, hold, tag } = how;
   useEffect(() => {
-    if (MANAGER || FULL || PREVIEW || hold) return;
+    if (MANAGER || PREVIEW || hold) return;
     const check = async () => {
       const h = await storageGet<unknown>('session', key);
       const tab = FLOATING ? (await floatingTab())?.id : undefined;
-      const next = handoffStep(h, isPayload, { tab, panelTab: PANEL_TAB, taken: taken.current, now: Date.now(), waitMs, idle: idleNow.current });
+      const next = handoffStep(h, isPayload, { tab, panelTab: PANEL_TAB, full: FULL, taken: taken.current, now: Date.now(), waitMs, idle: idleNow.current });
       if (next.step === 'none' || next.step === 'wait') return;
       if (next.step === 'take') taken.current = next.handoff.at;
       await browser.storage.session.remove(key);

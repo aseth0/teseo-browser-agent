@@ -116,17 +116,20 @@ export function indexTexts<T>(item: T, texts: [text: string, weight: number][]):
   return { item, freq, length, plain: fold(stripMarks(texts.map(([t]) => t).join('\n'))) };
 }
 
-// How a search matches: with `prefix` (the 🕘 search box), a word also finds the words it begins.
+// How a search matches: with `prefix` (the 🕘 search box), a word also finds the words it begins;
+// with `unseen` (auto-attach), the words no item has count against the match (scored).
 export interface MatchOptions {
   prefix?: boolean;
+  unseen?: number;
 }
 
 // The items with any of the query's words and all its quoted phrases, unsorted. How rare a word is
 // comes from `corpus` (all the items, when only some are scored). `match` is the score from 0 to 1
 // against having, once in an item of average length, every word of the query that some item of the
 // corpus has: how much of what was asked it covers, its rare words weighing more (words no item has
-// do not count against it).
-export function scored<T>(query: string, docs: Indexed<T>[], { corpus = docs, prefix = false }: MatchOptions & { corpus?: Indexed<T>[] } = {}): { item: T; score: number; match: number }[] {
+// do not count against it). With `unseen` (0 to 1; tools/match), they do: each as that part of a word
+// only one item has, so one shared word in a message of others no item knows is no full match.
+export function scored<T>(query: string, docs: Indexed<T>[], { corpus = docs, prefix = false, unseen = 0 }: MatchOptions & { corpus?: Indexed<T>[]; unseen?: number } = {}): { item: T; score: number; match: number }[] {
   const words = [...new Set(terms(query))];
   if (!words.length) return [];
   const phrases = phrasesOf(query);
@@ -139,7 +142,8 @@ export function scored<T>(query: string, docs: Indexed<T>[], { corpus = docs, pr
       return [w, n ? Math.log(1 + (all.length - n + 0.5) / (n + 0.5)) : 0];
     }),
   );
-  const full = words.reduce((sum, w) => sum + idf.get(w)!, 0); // each word once, at the average length
+  const rarest = Math.log(1 + (all.length - 0.5) / 1.5); // a word only one item has
+  const full = words.reduce((sum, w) => sum + (idf.get(w) || unseen * rarest), 0); // each word once, at the average length
   return matching
     .map((d) => {
       const score = words.reduce((sum, w) => {

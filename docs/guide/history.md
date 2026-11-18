@@ -33,7 +33,7 @@ take, and how long they are kept. Then its tabs:
   with such a retention asks first too); **Export all (JSON)**, **Import…** and **Delete all**.
 - **Matching**: **Auto-attach** (off) on its card attaches the saved conversations your message matches well enough,
   each cut to its limit in **Settings → Limits**. Its match is 60% by default (Broad, Moderate, Precise and Strict are
-  quick choices), **At most, per message** is 1 (up to 3), and **Among** chooses *All saved conversations* (the
+  quick choices; words of your message no saved conversation has count too, each half as much as a rare one), **At most, per message** is 1 (up to 3), and **Among** chooses *All saved conversations* (the
   default) or only the *Pinned conversations*: pin the few you want the model to draw on, and nothing else is
   attached by surprise. Under the card, **Try a message** shows for a message as you would send it how well each
   conversation matches and which would be attached. Under a message in the chat, a small clock pill says how many

@@ -17,10 +17,32 @@ export interface McpServerConfig {
   // you, and the scope to ask for. None: dynamic registration, and the scope the server says.
   oauth?: { clientId?: string; clientSecret?: string; scope?: string };
   onDemand?: boolean; // its tools offered once the model loads them (tools/load); not exported
+  // Its own choice of when its tools reach the model, over Settings → Tools → Matching (tools/match):
+  // 'always' (in every request), 'recommend' (recommended when your message matches them), 'matching'
+  // (only when it matches them); none: that setting's. Not exported. onDemand wins (an older build reads
+  // only that).
+  matching?: 'always' | 'recommend' | 'matching';
+  // What it is for, in your words and language (its panel in Settings → MCP servers): tool matching compares it
+  // with your message together with its tools, by words and by meaning (tools/match); never sent to the model.
+  // Not exported (the mcpServers format has no place for it).
+  about?: string;
   // How long a call of its tools may take; none: the MCP client's own limit (60 s). Not exported.
   toolTimeoutSeconds?: number;
   enabled: boolean;
 }
+
+// When a server's tools reach the model: as Settings → Tools → Matching says (the default; with All tools,
+// in every request, as before), always, recommended or only when your message matches them, or once the
+// model loads them (tools.load).
+export type Offer = 'follow' | 'always' | 'recommend' | 'matching' | 'demand';
+const OWN = ['always', 'recommend', 'matching'] as const;
+export const offerOf = (s: Pick<McpServerConfig, 'onDemand' | 'matching'>): Offer =>
+  s.onDemand ? 'demand' : s.matching && OWN.includes(s.matching) ? s.matching : 'follow';
+// The change that sets it (the server's editor and its panel in Settings → MCP servers).
+export const offerChange = (offer: Offer): Pick<McpServerConfig, 'onDemand' | 'matching'> => ({
+  onDemand: offer === 'demand' || undefined,
+  matching: offer === 'always' || offer === 'recommend' || offer === 'matching' ? offer : undefined,
+});
 
 // The gateway's own auth header (LiteLLM): its MCP endpoints do not read Authorization.
 export const LITELLM_KEY_HEADER = 'x-litellm-api-key';

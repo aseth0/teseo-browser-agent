@@ -29,6 +29,7 @@ export interface SessionDeps {
   insert: (text: string) => void;
   release: () => void; // the microphone off: the stream's tracks stopped
   onEnd: (end: SessionEnd) => void; // once stopped and every chunk's text is in
+  onStopping?: () => void; // as it stops (asked, or by itself: silence, a failed chunk), before onEnd
   now?: () => number;
   silenceStopMs?: number; // how long without sound stops it (none: a minute; Infinity: never)
   // The level a chunk must reach to be sent (none: SILENCE_LEVEL; 0: every chunk, while silence for
@@ -110,6 +111,7 @@ export function startSession(d: SessionDeps): Session {
     if (stopping) return;
     stopping = true;
     end = why;
+    d.onStopping?.();
     clearInterval(timer);
     current.stop();
     d.release();

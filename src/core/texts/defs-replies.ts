@@ -881,6 +881,15 @@ export const REPLY_TEXTS = {
   'error.panel_no_message': { group: 'replies', tool: 'panel.send', label: 'No message', when: 'the call gives no row or no message', text: 'Say which row (row) and what to tell it (message).' },
   'result.agent_no_answer': { group: 'replies', tool: 'agents.ask', label: 'No answer', when: 'the agent ended without writing an answer', text: '(no answer)' },
   'result.agent_step_limit': { group: 'replies', tool: 'agents.ask', label: 'Note: step limit', when: 'the agent stopped at its step limit', text: '(It stopped at its step limit before finishing.)' },
+  'result.agent_tools': {
+    group: 'replies',
+    tool: 'agents.ask',
+    label: 'Note: its tool calls',
+    when: 'the agent made more than one tool call: after its answer, outside the untrusted block (the extension counts them, not the agent)',
+    text: '(It made {calls} tool calls; {failed} failed.)',
+  },
+  'result.agent_tools_one': { group: 'replies', tool: 'agents.ask', label: 'Note: its one tool call', when: 'the agent made one tool call', text: '(It made 1 tool call; {failed} failed.)' },
+  'result.agent_no_tools': { group: 'replies', tool: 'agents.ask', label: 'Note: no tool calls', when: 'the agent made no tool call', text: '(It made no tool calls.)' },
   'result.agent_cut': { group: 'replies', tool: 'agents.ask', label: 'Note: reply cut', when: 'its reply was cut as it kept repeating itself', text: '(Its reply was cut: it kept repeating "{fragment}".)' },
 
   // tools.load (tools/load): its description, a line per group it loads.
@@ -922,6 +931,14 @@ export const REPLY_TEXTS = {
       'Runs a saved page template on a tab and returns its output, plus a diagnosis: which view matched the URL, and each ' +
       'select/one/attr/meta/schema call by view and line (how many elements matched, in how many loop iterations). Pass view ' +
       'to run one view whatever the URL. Use it to check a template whose data looks wrong, empty or incomplete.',
+  },
+  'tools.load_builtin': {
+    group: 'replies',
+    tool: 'tools.load',
+    label: 'Description: a group your message did not match',
+    when: 'Settings → Tools → Matching is "Only matching" and your message does not match this group (web, history, bookmarks, custom tools)',
+    note: '{label}: the group as Settings → Tools names it; {tools}: its tools.',
+    text: '{label} ({tools})',
   },
   'tools.load_mcp_one': { group: 'replies', tool: 'tools.load', label: 'Description: an MCP server with one tool', when: 'a server set "Its tools on demand" (Settings → MCP servers)', text: 'the tool of the MCP server {server} ({tools})' },
   'tools.load_mcp_many': { group: 'replies', tool: 'tools.load', label: 'Description: an MCP server with several tools', when: 'a server set "Its tools on demand" (Settings → MCP servers)', text: 'the {count} tools of the MCP server {server} ({tools})' },

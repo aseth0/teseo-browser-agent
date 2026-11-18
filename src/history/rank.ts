@@ -81,11 +81,11 @@ function docsOf(convs: Conversation[]): Doc[] {
   });
 }
 
-export function rank(query: string, convs: Conversation[], { corpus = convs, prefix = false }: MatchOptions & { corpus?: Conversation[] } = {}): { conv: Conversation; score: number; match: number }[] {
+export function rank(query: string, convs: Conversation[], { corpus = convs, prefix = false, unseen }: MatchOptions & { corpus?: Conversation[] } = {}): { conv: Conversation; score: number; match: number }[] {
   const docs = docsOf(convs);
   const all = corpus === convs ? docs : docsOf(corpus);
   forgetOthers(corpus);
-  return scored(query, docs, { corpus: all, prefix })
+  return scored(query, docs, { corpus: all, prefix, unseen })
     .map(({ item, score, match }) => ({ conv: item, score, match }))
     .sort((a, b) => b.score - a.score || b.conv.updatedAt - a.conv.updatedAt);
 }

@@ -2,6 +2,9 @@
 // (another agent, a script tool's steps), made of messages again (ui/chat/MessageView).
 import { useContext, useMemo, useState, type MouseEvent, type ReactNode } from 'react';
 import { ASK_WIRE } from '../../agents/ask';
+import { inBriefOrder } from '../../agents/brief';
+import { PANEL_START } from '../../agents/panel';
+import { toWireName } from '../../core/tool-registry';
 import { argumentDetails } from '../../core/argument-details';
 import { cutsIn, stripMarks } from '../../core/model-texts';
 import { dataUrlOf, type SubTrace } from '../../core/types';
@@ -19,6 +22,9 @@ import { MessageView } from './MessageView';
 import { toolJson } from './tool-json';
 import { memoryIdOf, ToolMemoryTitle } from './ToolMemoryTitle';
 import { toolResultsById, type ToolResultPart } from './turns';
+
+// The tools that take a brief (agents/brief): their arguments shown as fields in the schema's order.
+const BRIEF_TOOLS = [ASK_WIRE, toWireName(PANEL_START)];
 
 // A tool call with its arguments; the result is a nested dropdown inside it. Each shows on its own
 // from the switches in the row (args, result or error), the result also from its screenshot's thumbnail:
@@ -93,7 +99,7 @@ export function ToolCall({ id, name, args, result, running, trailing }: { id: st
           {trailing && <span className="layer-chips">{trailing}</span>}
         </summary>
         {shown.args && memoryId && <ToolMemoryTitle id={memoryId} inArgs />}
-        {shown.args && (display.toolArgs === 'fields' ? <ArgumentFields args={args} /> : <pre className="tool-args">{JSON.stringify(args, null, 2)}</pre>)}
+        {shown.args && (display.toolArgs === 'fields' ? <ArgumentFields args={BRIEF_TOOLS.includes(name) ? inBriefOrder(args) : args} /> : <pre className="tool-args">{JSON.stringify(args, null, 2)}</pre>)}
         {hasInside && <SubAgentRun callId={id} agentRun={name === ASK_WIRE} trace={result?.trace} running={running && !result} keepOpen={display.subAgentTrace === 'open'} />}
         {output &&
           (compact ? (

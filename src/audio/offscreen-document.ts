@@ -1,10 +1,11 @@
 // The background's one offscreen document (entrypoints/offscreen): the browser allows one per extension,
-// so it is created once, the first time a tab's audio is captured (background/audio-host) or something is
-// read aloud (background/speech-host), with both reasons. Chrome closes a document whose only reason is
-// AUDIO_PLAYBACK after 30 seconds without sound; USER_MEDIA sets no limit, and a document is closed only
-// once none of its reasons holds it (Chromium's offscreen lifetime enforcers), so it stays open: a capture
-// in progress is never cut. One created by an earlier build (USER_MEDIA only) plays as well. Should it be
-// closed anyway, the next reading opens it again.
+// so it is created once, the first time a tab's audio is captured (background/audio-host), something is
+// read aloud (background/speech-host) or the floating chat dictates (background/dictation-host), with
+// both reasons. Chrome closes a document whose only reason is AUDIO_PLAYBACK after 30 seconds without
+// sound; USER_MEDIA sets no limit, and a document is closed only once none of its reasons holds it
+// (Chromium's offscreen lifetime enforcers), so it stays open: a capture in progress is never cut. One
+// created by an earlier build (USER_MEDIA only) plays as well. Should it be closed anyway, the next
+// reading opens it again.
 import { browser } from 'wxt/browser';
 
 export const OFFSCREEN_PATH = '/offscreen.html';
@@ -19,7 +20,7 @@ export async function offscreenReady(): Promise<void> {
     .createDocument({
       url: OFFSCREEN_PATH,
       reasons: ['USER_MEDIA', 'AUDIO_PLAYBACK'],
-      justification: "Records a tab's audio, and reads text aloud, when you ask.",
+      justification: "Records a tab's audio or your dictation, and reads text aloud, when you ask.",
     })
     .finally(() => (creating = undefined));
   await creating;

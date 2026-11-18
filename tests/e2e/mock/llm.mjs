@@ -1,6 +1,6 @@
 // The "model": an OpenAI-compatible streaming server whose answers follow the model name each
 // scenario picks (real server variants and tool scripts).
-import { HELLO, HOST, PORT } from '../lib.mjs';
+import { BRIEF_ANSWER, HELLO, HOST, PORT, WORKER_BRIEF } from '../lib.mjs';
 import { leaks, mock } from './state.mjs';
 
 const sse = (res, chunks) => {
@@ -297,7 +297,7 @@ export function respond(body, res) {
       const step = (name, args) => sse(res, [delta({ tool_calls: [{ index: 0, id: `p${results.length}`, function: { name, arguments: JSON.stringify(args) } }] }), delta({}, 'tool_calls')]);
       if (!(body.tools ?? []).some((t) => t.function.name === 'panel__start')) return say(res, 'BOSS HAS NO PANEL TOOLS');
       if ((body.tools ?? []).some((t) => t.function.name === 'agents__ask')) return say(res, 'BOSS HAS AGENTS ASK TOO');
-      if (!results.length) return step('panel__start', { agent: 'worker', task: 'count to three', url: `http://localhost:${PORT}/deals` });
+      if (!results.length) return step('panel__start', { agent: 'worker', task: 'count to three', url: `http://localhost:${PORT}/deals`, ...WORKER_BRIEF });
       if (results.length === 1) return results[0].includes('Started worker in row') ? step('panel__wait', { wait_seconds: 60 }) : say(res, `BOSS START: ${results[0].slice(0, 300)}`);
       const ok = results[1].includes('· done') && results[1].includes('<untrusted_agent_answer agent="worker">') && results[1].includes('WORKER DONE');
       return say(res, ok ? 'BOSS OK' : `BOSS WAIT: ${results[1].slice(0, 400)}`);
@@ -313,7 +313,11 @@ export function respond(body, res) {
     }
     case 'panel-worker': { // started by panel-boss: its task as the first message, and none of the panel's tools
       if ((body.tools ?? []).some((t) => t.function.name.startsWith('panel__'))) return say(res, 'WORKER HAS PANEL TOOLS');
-      return say(res, lastUser.startsWith('The agent "boss" started you in the Agents Panel: count to three') ? 'WORKER DONE' : `WORKER SEES: ${lastUser.slice(0, 200)}`);
+      // The brief panel-boss sends, laid out in sections; panel-boss-async's task alone. Both end with how to answer
+      // (the page block may follow).
+      const start = 'The agent "boss" started you in the Agents Panel: count to three';
+      const full = `${start}\n\n## Already known\n${WORKER_BRIEF.context}\n\n## Do not\n${WORKER_BRIEF.constraints}\n\n## Done when\n${WORKER_BRIEF.done}\n\n## Send back\n${WORKER_BRIEF.report}`;
+      return say(res, lastUser.startsWith(full + BRIEF_ANSWER) || lastUser.startsWith(start + BRIEF_ANSWER) ? 'WORKER DONE' : `WORKER SEES: ${lastUser.slice(0, 400)}`);
     }
     case 'manager-slow': { // the agent manager: an answer that takes a while, for another agent to wait meanwhile
       res.writeHead(200, { 'Content-Type': 'text/event-stream' });
@@ -781,6 +785,54 @@ export function respond(body, res) {
       if (results.length === 1) return offered.includes('mcp__notes__echo') && !still ? callTool(res, 'mcp__notes__echo', { text: 'hi' }) : say(res, `MCP NOT LOADED: ${offered}`);
       return say(res, results[1].includes('<untrusted_mcp_content server="notes" tool="echo">') ? 'MCP ON DEMAND OK' : `MCP RESULT: ${results[1].slice(0, 200)}`);
     }
+    case 'tool-match-about': { // Only matching, by the server's own description: its tools offered, the web's held
+      const offered = (body.tools ?? []).map((t) => t.function.name);
+      const load = body.tools?.find((t) => t.function.name === 'tools__load')?.function.description ?? '';
+      const ok = offered.includes('mcp__notes__add_note') && !offered.some((n) => n.startsWith('web__')) && load.includes('- web: ') && !body.tools.some((t) => t.function.name.includes('about'));
+      return say(res, ok ? 'TOOL ABOUT OK' : `TOOL ABOUT MISSING: ${offered} / ${load.slice(0, 300)}`);
+    }
+    case 'tool-match-unsure': { // Only matching, a message that points at no tool: nothing held
+      const offered = (body.tools ?? []).map((t) => t.function.name);
+      const load = body.tools?.find((t) => t.function.name === 'tools__load')?.function.description ?? '';
+      const ok = offered.includes('mcp__notes__echo') && offered.some((n) => n.startsWith('web__')) && !load.includes('mcp:notes') && !load.includes('- web: ');
+      return say(res, ok ? 'TOOL UNSURE OK' : `TOOL UNSURE MISSING: ${offered} / ${load.slice(0, 300)}`);
+    }
+    case 'tool-match': { // Only matching, a message about the web: its tools offered, the notes server's listed in tools.load
+      const offered = (body.tools ?? []).map((t) => t.function.name);
+      const results = messages.filter((m) => m.role === 'tool').map(contentOf);
+      if (!results.length) {
+        const load = body.tools?.find((t) => t.function.name === 'tools__load')?.function.description ?? '';
+        const ok = load.includes('- mcp:notes: the 2 tools of the MCP server notes (echo, add_note)') && !load.includes('- web: ')
+          && !offered.some((n) => n.startsWith('mcp__notes__')) && offered.includes('web__search') && offered.includes('browser__find') && offered.includes('user__ask');
+        return ok ? callTool(res, 'tools__load', { groups: ['mcp:notes'] }) : say(res, `TOOL MATCH OFFERED: ${offered} / ${load.slice(0, 400)}`);
+      }
+      if (results.length === 1) return offered.includes('mcp__notes__echo') ? callTool(res, 'mcp__notes__echo', { text: 'hi' }) : say(res, `TOOL MATCH NOT LOADED: ${offered}`);
+      return say(res, results[1].includes('<untrusted_mcp_content server="notes" tool="echo">') ? 'TOOL MATCH OK' : `TOOL MATCH RESULT: ${results[1].slice(0, 200)}`);
+    }
+    case 'tool-meaning': { // Only matching, by meaning: the notes server offered for a message with none of its words
+      const offered = (body.tools ?? []).map((t) => t.function.name);
+      const load = body.tools?.find((t) => t.function.name === 'tools__load')?.function.description ?? '';
+      const ok = offered.includes('mcp__notes__add_note') && !offered.some((n) => n.startsWith('web__')) && load.includes('- web: ');
+      return say(res, ok ? 'TOOL MEANING OK' : `TOOL MEANING MISSING: ${offered} / ${load.slice(0, 300)}`);
+    }
+    case 'tool-match-server': { // All tools, the server Only when it matches: it alone waits in tools.load
+      const offered = (body.tools ?? []).map((t) => t.function.name);
+      const load = body.tools?.find((t) => t.function.name === 'tools__load')?.function.description ?? '';
+      const ok = !offered.some((n) => n.startsWith('mcp__notes__')) && offered.some((n) => n.startsWith('web__')) && load.includes('- mcp:notes: ') && !load.includes('- web: ');
+      return say(res, ok ? 'TOOL SERVER OK' : `TOOL SERVER MISSING: ${offered} / ${load.slice(0, 300)}`);
+    }
+    case 'tool-match-always': { // Only matching, the server Always offered: its tools go, the web's wait in tools.load
+      const offered = (body.tools ?? []).map((t) => t.function.name);
+      const load = body.tools?.find((t) => t.function.name === 'tools__load')?.function.description ?? '';
+      const ok = offered.includes('mcp__notes__echo') && !offered.some((n) => n.startsWith('web__')) && load.includes('- web: ') && !load.includes('mcp:notes');
+      return say(res, ok ? 'TOOL ALWAYS OK' : `TOOL ALWAYS MISSING: ${offered} / ${load.slice(0, 300)}`);
+    }
+    case 'tool-recommend': { // Recommended: every tool offered, the server's group named with the message, the tool it matches first
+      const offered = (body.tools ?? []).map((t) => t.function.name);
+      const ok = lastUser.includes('Tool groups that match this message:') && lastUser.includes('- MCP · notes: mcp__notes__add_note, mcp__notes__echo')
+        && offered.includes('mcp__notes__add_note') && offered.some((n) => n.startsWith('web__'));
+      return say(res, ok ? 'TOOL RECOMMEND OK' : `TOOL RECOMMEND MISSING: ${offered} / ${lastUser.slice(0, 400)}`);
+    }
     case 'user-ask': { // asks two questions, then says what came back
       if (!toolMsg) return callTool(res, 'user__ask', { questions: [
         { question: 'Which size?', header: 'Size', type: 'choice', options: [{ label: 'S' }, { label: 'M', description: 'regular fit' }] },
@@ -853,7 +905,8 @@ export function respond(body, res) {
         return ok ? callTool(res, 'agents__ask', { agent: 'mm', task: 'Find the buy button' }) : say(res, `SUB ASK: ${JSON.stringify(ask)?.slice(0, 300)}`);
       }
       const answer = contentOf(toolMsg);
-      return say(res, answer.includes('<untrusted_agent_answer agent="mm">') && answer.includes('MM FOUND') ? 'SUB OK' : `SUB ANSWER: ${answer.slice(0, 300)}`);
+      const ok = answer.includes('<untrusted_agent_answer agent="mm">') && answer.includes('MM FOUND') && answer.endsWith('</untrusted_agent_answer>\n(It made 1 tool call; 0 failed.)');
+      return say(res, ok ? 'SUB OK' : `SUB ANSWER: ${answer.slice(0, 300)}`);
     }
     case 'agent-save': { // Builder lists what exists, then saves an agent; the user reviews it and allows it
       const results = messages.filter((m) => m.role === 'tool').map(contentOf);
@@ -874,7 +927,7 @@ export function respond(body, res) {
       if (!toolMsg) {
         const first = contentOf(messages[1]);
         const tools = (body.tools ?? []).map((t) => t.function.name).join();
-        if (messages.length !== 2 || first !== 'The agent "jira" asks you: Find the buy button' || tools !== 'browser__find,tools__read_more') return say(res, `MM SEES: ${messages.length} ${first} | ${tools}`);
+        if (messages.length !== 2 || first !== `The agent "jira" asks you: Find the buy button${BRIEF_ANSWER}` || tools !== 'browser__find,tools__read_more') return say(res, `MM SEES: ${messages.length} ${first} | ${tools}`);
         return callTool(res, 'browser__find', { query: 'Buy' });
       }
       return say(res, contentOf(toolMsg).includes('[ref_') ? 'MM FOUND the button' : `MM FIND: ${contentOf(toolMsg).slice(0, 200)}`);

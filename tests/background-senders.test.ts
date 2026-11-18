@@ -34,7 +34,7 @@ listenSummarize();
 listenWatches();
 
 const PANEL = { url: `${EXTENSION}sidepanel.html` };
-const FLOATING_CHAT = { url: `${EXTENSION}sidepanel.html?floating`, tab: { id: 7 }, frameId: 3 }; // in a page's frame
+const FLOATING_CHAT = { url: `${EXTENSION}floating.html`, tab: { id: 7 }, frameId: 3 }; // in a page's frame
 const PAGE_TOP = { url: 'https://example.com/', tab: { id: 7 }, frameId: 0 };
 const PAGE_FRAME = { url: 'https://ads.example.com/', tab: { id: 7 }, frameId: 2 };
 const PAGE_DISGUISED = { url: `https://example.com/?${EXTENSION}`, tab: { id: 7 }, frameId: 0 };

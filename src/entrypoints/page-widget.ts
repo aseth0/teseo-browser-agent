@@ -109,11 +109,18 @@ function startWidget(site: string, place: WidgetPlace) {
   function retire() {
     if (retired) return;
     retired = true;
-    lifecycle.stop();
-    chat.close(false);
-    repaintUntil = 0;
-    gone.abort();
-    window.__browserAgentWidget = false; // a new copy may start
+    // Cut off, a call into the extension may throw: whatever does, this copy still leaves the page and lets
+    // the new one start (left there, its bubble is dead and its chat's frame is the old extension's).
+    try {
+      lifecycle.stop();
+      chat.close(false);
+    } finally {
+      repaintUntil = 0;
+      gone.abort();
+      s.host?.remove();
+      s.host = undefined;
+      window.__browserAgentWidget = false; // a new copy may start
+    }
   }
   // Shown or hidden on the site, as its place now says. Hidden: nothing of the bubble runs any more;
   // the chat floating here, if any, stays shown until it is closed. Shown again: it starts afresh.
@@ -164,6 +171,7 @@ function startWidget(site: string, place: WidgetPlace) {
   onGone(onRuntime(WIDGET_FLOAT, async (msg) => {
     await lifecycle.settled();
     if (!s.host && !chat.host()) return { floated: false }; // no widget on this page
+    if (s.noFloating) return { floated: false }; // the chat cannot float here (Firefox): never framed
     if (msg.toggle) chat.toggle();
     else void chat.show(); // a conversation moved here comes to it as a handoff
     return { floated: true };

@@ -52,6 +52,11 @@ your browser profile. Nothing is synced to a cloud account. Credentials are kept
 but are not encrypted at rest: anyone with access to your browser profile can read them, as with the browser's own
 saved data.
 
+A web page can tell that Teseo is installed, as with most extensions: the chat it opens floating on a page is
+loaded from the extension's fixed address, which any page can try. That page is the only one a web page can load,
+and loaded by the page itself, framed or in a tab, it stays empty: the page can neither see nor use the chat, its
+conversations or its settings. Every other page and file of Teseo is out of its reach.
+
 ## Retention and deletion
 
 Data stays in your browser until you delete it. You can delete conversations, memory items and logs in the

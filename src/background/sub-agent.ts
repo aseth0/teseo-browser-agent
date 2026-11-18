@@ -8,6 +8,7 @@ import { excludedTools } from '../context/request';
 import { runAgentLoop } from '../core/agent-loop';
 import { withOnDemand } from '../tools/load';
 import { markValue, text } from '../core/model-texts';
+import { callPhaseId } from '../core/phases';
 import { fragmentShown } from '../core/repetition';
 import type { Message, ToolResult } from '../core/types';
 import { providerAccess } from '../page/access';
@@ -41,6 +42,9 @@ export async function runSubAgent(run: RunScope, { asked, caller, task, callId, 
     return { type: 'text', text: `The agent "${sub.name}" could not run: no access to its provider's site, ${providerAccess(target.cfg).site}.`, isError: true };
   }
   const label = agentLabel(sub);
+  // Its phases go under the call that asked it, which then says what it did.
+  const parent = callId === undefined ? undefined : callPhaseId(callId);
+  const phases = run.phases.under(parent);
   const setup = prepareAgent(run, sub, depth, target);
   const task0: Message = { role: 'user', parts: [{ type: 'text', text: text('agent.task', { caller: caller?.name ?? DEFAULT_AGENT_NAME, task }) }] };
   const messages: Message[] = [];
@@ -48,11 +52,11 @@ export async function runSubAgent(run: RunScope, { asked, caller, task, callId, 
   let failed: string | undefined;
   // With browser tools, its own tab, closed once it is done. The page's own tools (WebMCP) are then
   // those of its tab (from the first refresh), not the user's.
-  const ownTab = setup.registry.list().some((t) => t.source === 'browser') ? await openOwnTab(run) : undefined;
+  const ownTab = setup.registry.list().some((t) => t.source === 'browser') ? await phases.time({ kind: 'setup', label: 'Opening its own tab' }, () => openOwnTab(run), () => '') : undefined;
   try {
     const base = loopOptions(run, sub, setup, target, excludedTools(setup.seen, setup.skills), 'sub-agent', ownTab === undefined ? undefined : { tabId: ownTab, listedUrl: undefined });
     const registry = ownTab === undefined ? base.tools.registry : base.tools.registry.without(base.tools.registry.list().filter((t) => t.source === 'webmcp').map((t) => t.name));
-    const options = { ...base, tools: { ...base.tools, registry } };
+    const options = { ...base, tools: { ...base.tools, registry }, hooks: { ...base.hooks, phases } };
     // Groups offered once it loads them (prepareAgent): the tools that create things for Browser, as for
     // Default, and the servers' set so.
     const { groups } = setup;
@@ -79,6 +83,7 @@ export async function runSubAgent(run: RunScope, { asked, caller, task, callId, 
     }
   }
   const trace = { agent: label, messages: [task0, ...messages] };
+  if (parent) run.phases.note(parent, `${label} · ${target.model} · ${messages.filter((m) => m.role === 'assistant').length} model calls · ${messages.flatMap((m) => m.parts).filter((p) => p.type === 'tool_call').length} tool calls${failed ? ' · failed' : ''}`);
   if (failed) return { type: 'text', text: `The agent "${sub.name}" failed: ${failed}`, isError: true, trace };
   const cut = messages.findLast((m) => m.cut)?.cut; // as it kept repeating this (core/repetition)
   const answer = [
@@ -86,5 +91,14 @@ export async function runSubAgent(run: RunScope, { asked, caller, task, callId, 
     ...(stepped !== false ? [text('result.agent_step_limit')] : []),
     ...(cut ? [text('result.agent_cut', { fragment: fragmentShown(cut) })] : []),
   ].join('\n');
-  return { type: 'text', text: text('result.agent_answer', { agent: sub.name, answer: markValue(answer, 'tool') }), trace };
+  return { type: 'text', text: `${text('result.agent_answer', { agent: sub.name, answer: markValue(answer, 'tool') })}\n${toolsNote(messages)}`, trace };
+}
+
+// How many tool calls it made, and how many failed: counted here, so the caller can tell an answer
+// that says it checked from one that did.
+export function toolsNote(messages: Message[]): string {
+  const parts = messages.flatMap((m) => m.parts);
+  const calls = parts.filter((p) => p.type === 'tool_call').length;
+  const failed = String(parts.filter((p) => p.type === 'tool_result' && p.isError).length);
+  return calls === 0 ? text('result.agent_no_tools') : calls === 1 ? text('result.agent_tools_one', { failed }) : text('result.agent_tools', { calls: String(calls), failed });
 }

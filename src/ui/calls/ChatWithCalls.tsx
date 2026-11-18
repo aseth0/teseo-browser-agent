@@ -1,5 +1,6 @@
 import { Fragment, useMemo, useState, type ReactNode } from 'react';
 import type { Message } from '../../core/types';
+import { TurnPhases } from '../chat/TurnPhases';
 import { ChatHistory, type ToolResultPart } from '../ChatMessages';
 import { TECH_ICON } from '../icons';
 import { answerTo, bubbleOf, type CallView } from './calls';
@@ -79,7 +80,15 @@ export function ChatWithCalls(props: {
       </>
     );
   };
+  // Under your message: the phases of its turns, once they ended (the running one's are in the chat's
+  // line meanwhile: sidepanel/ChatStatusLines).
+  const phasesUnder = (m: Message) => (m.phases?.length ? <TurnPhases key={`phases-${indexOf.get(m)}`} phases={m.phases} running={false} /> : null);
   const below = (ms: Message[]) => {
+    const user = ms.length === 1 && ms[0]!.role === 'user' ? phasesUnder(ms[0]!) : null;
+    const layers = layersBelow(ms);
+    return user || layers ? <>{user}{layers}</> : null;
+  };
+  const layersBelow = (ms: Message[]) => {
     const at = withLayers(ms);
     if (!at.length || !isShown(at[0]!)) return null;
     return at.flatMap((i) =>

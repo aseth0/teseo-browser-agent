@@ -1,4 +1,4 @@
-// sidepanel.html?floating: the chat floating on a page, in the page widget's iframe (its "Open the
+// floating.html: the chat floating on a page, in the page widget's iframe (its "Open the
 // chat here"). Its page is the tab it floats in, as the browser says (tabs.getCurrent), never what
 // its URL says.
 import { useEffect, useRef, useState } from 'react';

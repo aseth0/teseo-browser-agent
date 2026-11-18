@@ -4,6 +4,10 @@
 // of the extension's own requests only (initiator: this extension), added before connecting.
 import { browser } from 'wxt/browser';
 
+// The host this extension's requests come from: its id in Chrome, this installation's UUID in Firefox
+// (where runtime.id is the add-on's id, "name@owner": not a domain, and the rule is refused whole).
+const ownHost = () => new URL(browser.runtime.getURL('/')).hostname;
+
 const FIRST_RULE = 1_000_000; // above any other rule this extension may add
 
 // The host's rule id: the same from every context (Settings and the background), so adding it twice
@@ -23,7 +27,7 @@ export async function withoutOrigin(url: string): Promise<void> {
       id,
       priority: 1,
       action: { type: 'modifyHeaders', requestHeaders: [{ header: 'origin', operation: 'remove' }] },
-      condition: { requestDomains: [host], initiatorDomains: [browser.runtime.id], resourceTypes: ['xmlhttprequest', 'other'] },
+      condition: { requestDomains: [host], initiatorDomains: [ownHost()], resourceTypes: ['xmlhttprequest', 'other'] },
     }],
   });
 }

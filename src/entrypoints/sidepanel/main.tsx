@@ -1,17 +1,5 @@
-import { createRoot } from 'react-dom/client';
-import { App } from './App';
-import { ErrorBoundary } from '../../ui/ErrorBoundary';
-import { applyAppearance } from '../../ui/appearance';
-import '../../ui/style.css';
-import { listenKeysSetHere } from '../../shortcuts/listen';
+// The chat's page everywhere but floating on a page (that is floating.html): framed by a web page, nothing
+// of it loads (ticket-gate); else the chat (chat-main).
+import { startPanel } from './ticket-gate';
 
-// The system theme until the settings load (they may choose another).
-applyAppearance(undefined);
-// The keys set in Settings → Shortcuts work here too.
-listenKeysSetHere();
-
-createRoot(document.getElementById('root')!).render(
-  <ErrorBoundary>
-    <App />
-  </ErrorBoundary>,
-);
+void startPanel(() => import('./chat-main')).catch((e: unknown) => console.error('[chat]', e));

@@ -11,8 +11,16 @@ import { withPlansDismissed } from '../tools/user/shapes';
 import { stepAttachItems } from '../context/step-attach';
 import { turnContext } from '../context/turn';
 import { runAgentLoop } from '../core/agent-loop';
+import { toWireName } from '../core/tool-registry';
 import { keep } from '../core/kept-results';
-import { withOnDemand } from '../tools/load';
+import { phaseRecorder } from '../core/phases';
+import { withOnDemand, type OnDemandGroup } from '../tools/load';
+import { turnToolMatch, toolMatchNote } from '../tools/match-turn';
+import { matchesAny } from '../tools/match';
+import { indexToolsLater } from '../tools/tool-index';
+import { autoInjectOn } from '../context/auto-inject';
+import { meaningOffFor } from '../context/meaning-off';
+import { MEANING_FAILED_NOTICE } from '../memory/query-meaning';
 import { appendContext, keepSystemMemory } from '../core/messages';
 import { memoryChanges } from '../memory/prompt';
 import { seenWhole } from '../context/compaction';
@@ -53,13 +61,24 @@ export async function runAgent(msg: RunMessage, { toolsFor, signal, send, questi
     const breaks = Array.isArray(k.breaks) ? k.breaks.map(Number).filter(Number.isFinite) : undefined;
     keep(msg.conversationId, { id: String(k.id), text: String(k.text), source: String(k.source), limit: k.limit === 'tabAudio' ? 'tabAudio' : 'attachedFile', next: Number(k.next) || 0, ...(breaks && { breaks }) });
   }
+  // The turn's phases (core/phases), sent as they go: those the panel measured before it (compacting),
+  // the wait for the worker, then the run's own.
+  const phases = phaseRecorder((phase) => send({ type: 'phase', phase }));
+  for (const p of Array.isArray(msg.lead) ? msg.lead : []) send({ type: 'phase', phase: p });
+  if (typeof msg.sentAt === 'number' && startedAt >= msg.sentAt) phases.add({ kind: 'start', label: 'Starting the agent', at: msg.sentAt, ms: startedAt - msg.sentAt });
+  const setup = phases.start({ kind: 'setup', label: 'Setting up', at: startedAt });
   // This run's questions: once it stops, answered no without asking.
   const askAccess = (access: AccessRequest) => questions.ask((id) => ({ type: 'access', id, ...access }), false, signal);
   const settings = await settingsNow();
   const cfg = settings.providers.find((p) => p.id === msg.providerId);
-  if (!cfg) return send({ type: 'error', error: 'Provider not configured' });
+  if (!cfg) {
+    setup.end('provider not configured');
+    return send({ type: 'error', error: 'Provider not configured' });
+  }
+  setup.note(`${cfg.name} · ${msg.model}`);
   // The provider's site is granted at runtime (Test connection in Settings, or here, once).
   if (!(await reachOrAsk(cfg, askAccess))) {
+    setup.end('no access to the provider');
     return send({ type: 'error', error: `No access to ${providerAccess(cfg).site}: allow it to use the provider "${cfg.name}", or test it in Settings → Providers.` });
   }
 
@@ -68,10 +87,20 @@ export async function runAgent(msg: RunMessage, { toolsFor, signal, send, questi
   let history = msg.history;
   const { tabId } = msg;
   const listedUrl = tabId === undefined ? undefined : await tabUrl(tabId); // the page whose tools come next
-  const { registry: all, mcpErrors } = await toolsFor(tabId, settings, { url: listedUrl, signal });
-  for (const e of mcpErrors) send({ type: 'notice', text: e.signIn ? `${e.error} Its tools are not offered until then.` : `MCP server "${e.server}" could not be reached, its tools are not offered: ${e.error}` });
+  setup.end();
+  const listing = phases.start({ kind: 'tools', label: 'Listing the tools' });
+  const { registry: all, mcpErrors } = await toolsFor(tabId, settings, { url: listedUrl, signal, chat: true }).finally(() => listing.end());
+  // A server that could not be reached is not said in the chat (the MCP menu marks it, and Layers'
+  // phase counts it), unless the model calls one of its tools: then why, once per server.
+  const saidUnreached = new Set<string>();
+  const unreachedCall = (name: string) => {
+    const e = mcpErrors.find((x) => name.startsWith(`mcp.${x.server}.`) || name.startsWith(toWireName(`mcp.${x.server}.`)));
+    if (!e || saidUnreached.has(e.server)) return;
+    saidUnreached.add(e.server);
+    send({ type: 'notice', text: e.signIn ? `${e.error} Its tools are not offered until then.` : `MCP server "${e.server}" could not be reached, its tools are not offered: ${e.error}` });
+  };
   const run: RunScope = {
-    msg, settings, all, agents, allSkills, allTemplates, allMemory, listedUrl, askAccess, signal, send, questions, interact, dismissedPlans,
+    msg, settings, all, agents, allSkills, allTemplates, allMemory, listedUrl, askAccess, signal, send, questions, interact, dismissedPlans, phases,
     logMode: settings.logs?.actions ?? DEFAULT_LOG_MODE,
     // What the user allowed for this conversation comes before the site policies.
     inConversation: msg.conversationId === undefined ? undefined : conversationPolicies(msg.conversationId),
@@ -93,6 +122,7 @@ export async function runAgent(msg: RunMessage, { toolsFor, signal, send, questi
     send({ type: 'system-memory', memory: main.built });
   }
   let mentionedTools: string[] = []; // $tool: offered even if off, and asked for
+  let held: OnDemandGroup[] = []; // the tool groups the message did not match, for tools.load (Only matching)
   // EmptyAgent gets your message as you wrote it: no page, no mentions, nothing attached.
   const last = history.at(-1);
   if (last?.role === 'user' && !isEmptyAgent(agent)) {
@@ -105,13 +135,31 @@ export async function runAgent(msg: RunMessage, { toolsFor, signal, send, questi
       : skipped === 'unreadable' || tabId === undefined ? text('context.no_page_unreadable')
       : !agentGetsPage ? text('context.no_page_agent', { agent: agent.name })
       : undefined;
+    const thisTurn = {}; // the message's vector is asked once for memory and the tool groups
+    const preparing = phases.start({ kind: 'context', label: 'Preparing your message' });
     const turn = await turnContext(
-      { history, tabId, url: listedUrl, includePage: msg.includePage && agentGetsPage, noSelection: msg.noSelection, noPage: noPageReason(), userTab: msg.userTab, conversationId: msg.conversationId, skip: msg.skip },
-      { settings: seen, skills, templates, memory, memoryOpts: main.memoryOpts, toolNames: registry.list().map((t) => t.name), requestAccess: askAccess, send },
-    );
+      { history, tabId, url: listedUrl, includePage: msg.includePage && agentGetsPage, noSelection: msg.noSelection, noPage: noPageReason(), userTab: msg.userTab, conversationId: msg.conversationId, skip: msg.skip, turn: thisTurn },
+      { settings: seen, skills, templates, memory, memoryOpts: main.memoryOpts, toolNames: registry.list().map((t) => t.name), requestAccess: askAccess, send, phases: phases.under(preparing.id) },
+    ).finally(() => preparing.end());
     mentionedTools = turn.mentionedTools;
+    // Settings → Tools → Matching: the tool groups the message matches (tools/match), recommended with it
+    // or the others held for tools.load.
+    const offeredNow = registry.without(excludedTools(seen, skills).filter((n) => !mentionedTools.includes(n))).list();
+    // Asked only once a mode matches: the default waits on nothing.
+    const meaningOn = async () => autoInjectOn(settings, 'memoryMeaning', msg.skip) && !(await meaningOffFor(msg.conversationId));
+    const matching = () => turnToolMatch({ settings, tools: offeredNow, history, mentioned: mentionedTools, onDemand: main.groups, meaningOn, turn: thisTurn });
+    // A phase of its own only when something is matched (the default matches nothing).
+    const tools = matchesAny(settings) ? await phases.under(preparing.id).time({ kind: 'tools', label: 'Matching the tools' }, matching, toolMatchNote) : await matching();
+    if (tools.failed) send({ type: 'notice', text: MEANING_FAILED_NOTICE });
+    // Tools not indexed yet went by words: indexed now, off this message's path (tools/tool-index).
+    if (tools.toIndex) indexToolsLater(settings, tools.toIndex);
+    if (tools.match) send({ type: 'tool-match', match: tools.match });
+    held = tools.held;
     // What changed in memory since the kept one, first.
-    const items = [...(main.kept && main.memoryOpts ? memoryChanges(memory, main.kept, main.memoryOpts, seenWhole(history)) : []), ...turn.items];
+    const changes = main.kept && main.memoryOpts ? memoryChanges(memory, main.kept, main.memoryOpts, seenWhole(history)) : [];
+    if (changes.length) phases.under(preparing.id).add({ kind: 'context', label: 'Memory changed since', detail: `${changes.length} attached`, ms: 0 });
+    const items = [...changes, ...turn.items, ...(tools.item ? [tools.item] : [])];
+    preparing.note(items.length ? `${items.length} attached` : 'nothing attached');
     if (items.length) {
       history = appendContext(history, items);
       send({ type: 'context', items });
@@ -122,8 +170,12 @@ export async function runAgent(msg: RunMessage, { toolsFor, signal, send, questi
   const base = loopOptions(run, agent, main, target, excluded, 'chat');
   // Groups offered once the model loads them (prepareAgent): the tools that create things for Browser
   // (Settings → Tools), the servers' set so (Settings → MCP servers).
-  const opts = withOnDemand(base, history, mentionedTools, main.groups);
+  // And the tool groups your message did not match, with Only matching (tools/match).
+  const opts = withOnDemand(base, history, mentionedTools, [...main.groups, ...held]);
   const offersPlan = base.tools.registry.list().some((t) => t.name === 'user.plan');
+  // How many tools the model is offered (more may come once it loads a group), and the servers left out.
+  const offered = opts.tools.registry.list().length;
+  listing.note(`${offered} offered${mcpErrors.length ? ` · ${mcpErrors.length} MCP ${mcpErrors.length === 1 ? 'server' : 'servers'} unreachable` : ''}`);
   const loop = runAgentLoop(
     history,
     {
@@ -136,7 +188,10 @@ export async function runAgent(msg: RunMessage, { toolsFor, signal, send, questi
         const plan = stepPlanReminder(withPlansDismissed(messages, dismissedPlans), offersPlan);
         return [...(await stepAttachItems(reply, messages, seen, memory, msg.skip)), ...(plan ? [plan] : [])];
       } },
-      hooks: { ...opts.hooks, onSub: (callId, label, event) => send({ type: 'sub', callId, agent: label, event }), onResult: (result) => send({ type: 'tool-result', result }) },
+      hooks: { ...opts.hooks, phases, log: (call) => {
+        opts.hooks?.log?.(call);
+        if (call.refused === 'unknown tool') unreachedCall(call.tool);
+      }, onSub: (callId, label, event) => send({ type: 'sub', callId, agent: label, event }), onResult: (result) => send({ type: 'tool-result', result }) },
       startedAt,
     },
     signal,

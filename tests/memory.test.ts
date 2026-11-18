@@ -80,12 +80,20 @@ describe('the items of the open site, by what you wrote', () => {
     const box = site('m-box', 'Box', 'The search box is at the top.');
     const others = [...['one', 'two', 'three', 'four'].map((n) => item(`m-${n}`, { text: `A search for ${n}` })), item('m-fly', { text: 'Flights to Lisbon' })];
     const typed = 'search flights';
-    // Among the site's items alone, the only word they know would be a full match.
-    expect(siteMemoryMatches([box], [box], typed, HOST)[0]!.match).toBe(1);
-    expect(siteMemoryMatches([box], [box, ...others], typed, HOST)[0]!.match).toBeLessThan(0.6);
+    // Among the site's items alone, the only word they know would match far more.
+    const alone = siteMemoryMatches([box], [box], typed, HOST)[0]!.match;
+    expect(alone).toBeGreaterThanOrEqual(0.6);
+    expect(siteMemoryMatches([box], [box, ...others], typed, HOST)[0]!.match).toBeLessThan(alone / 2);
     expect(said(memorySiteItems([box, ...others], HOST, [], match(typed)))).not.toContain('at the top');
     // And it uses the match it is given.
     expect(said(memorySiteItems([box, ...others], HOST, [], match(typed, { threshold: 10 })))).toContain('at the top');
+  });
+
+  it('a message mostly of words no item has: the one in common is no full match', () => {
+    const typed = 'Necesito que revises los filters de la tienda y me digas qué recomiendas para hoy';
+    expect(siteMemoryMatches(items.slice(0, 3), items, typed, HOST)[0]!.match).toBeLessThan(0.6);
+    expect(said(memorySiteItems(items, HOST, [], match(typed)))).not.toContain('side menu');
+    expect(said(memorySiteItems(items, HOST, [], match('the filters, side menu')))).toContain('side menu');
   });
 
   it('an index line goes once, and the item whole once a later message matches it', () => {

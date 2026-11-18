@@ -1,6 +1,8 @@
 // A server's editor: where it is, how it lets you in (headers, a provider's key, or signing in when it
 // asks), and how its tools are offered; beside them, a test of what is set here (unsaved), its tools as
 // the model sees them, and the checks.
+import type { ToolMatchMode } from '../../tools/match';
+import { offerChange, offerOf, type Offer } from '../../mcp/config';
 import { useState } from 'react';
 import { errorText } from '../../core/errors';
 import { CHARS_PER_TOKEN } from '../../context/budget';
@@ -27,7 +29,24 @@ const accessOf = (s: McpServerConfig): Access => (s.providerId ? 'provider' : ha
 
 type Tried = { tools: { name: string; description?: string; inputSchema?: unknown }[]; transport: string } | { error: string; signIn: boolean };
 
-export function ServerEditor(props: { server: McpServerConfig; servers: McpServerConfig[]; providers: ProviderConfig[]; isNew: boolean; onSave: (s: McpServerConfig) => void; onClose: () => void }) {
+// The choices of when a server's tools reach the model (mcp/config offerOf), the default named after
+// Settings → Tools → Matching's mode as it is set (`mode`).
+const MODE_NAMES: Record<ToolMatchMode, string> = { all: 'All tools', recommend: 'Recommended', matching: 'Only matching' };
+const HINTS: Record<Exclude<Offer, 'follow'>, string> = {
+  always: 'Its tools in every request, whatever your message matches',
+  recommend: 'Its tools in every request, and named with your message when it matches them, for the model to prefer them',
+  matching: 'Its tools offered only when your message matches them; else listed in tools.load, for the model to load them if needed',
+  demand: 'Offered once the model loads them (tools.load), not all of them in every request. For servers with many tools',
+};
+export const offerChoices = (mode: ToolMatchMode): { id: Offer; label: string; hint: string }[] => [
+  { id: 'follow', label: `Same as Tools → Matching (${MODE_NAMES[mode]})`, hint: `As Settings → Tools → Matching is set: ${mode === 'all' ? HINTS.always : HINTS[mode].replace(/^Its/, 'its')}` },
+  { id: 'always', label: 'Always offered', hint: HINTS.always },
+  { id: 'recommend', label: 'Recommended when it matches', hint: HINTS.recommend },
+  { id: 'matching', label: 'Only when it matches', hint: HINTS.matching },
+  { id: 'demand', label: 'On demand', hint: HINTS.demand },
+];
+
+export function ServerEditor(props: { server: McpServerConfig; servers: McpServerConfig[]; providers: ProviderConfig[]; isNew: boolean; matchMode?: ToolMatchMode; onSave: (s: McpServerConfig) => void; onClose: () => void }) {
   const [draft, setDraft] = useState(props.server);
   const [access, setAccess] = useState<Access>(() => accessOf(props.server));
   const [headers, setHeaders] = useState(JSON.stringify(props.server.headers ?? {}, null, 2));
@@ -125,8 +144,14 @@ export function ServerEditor(props: { server: McpServerConfig; servers: McpServe
           <NumberedStep n={3} title="How its tools are offered">
             <ul className="switch-rows" aria-label="How its tools are offered">
               <li>
-                <div><strong>Its tools on demand</strong><span className="hint">Offered once the model loads them (tools.load), not all of them in every request. For servers with many tools</span></div>
-                <Switch checked={draft.onDemand ?? false} label="Its tools on demand" onChange={(on) => setDraft({ ...draft, onDemand: on || undefined })} />
+                <fieldset className="mcp-offer" aria-label="When its tools reach the model">
+                  {offerChoices(props.matchMode ?? 'all').map((o) => (
+                    <label key={o.id} className="check">
+                      <input type="radio" name="mcp-offer" checked={offerOf(draft) === o.id} onChange={() => setDraft({ ...draft, ...offerChange(o.id) })} />
+                      <span><strong>{o.label}</strong><span className="hint">{o.hint}</span></span>
+                    </label>
+                  ))}
+                </fieldset>
               </li>
               <li>
                 <div><strong>Trust its read-only hints</strong><span className="hint">The tools it marks read-only run without asking. Off, every tool follows its policy: the hints come from the server itself</span></div>

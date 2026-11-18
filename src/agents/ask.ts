@@ -8,6 +8,7 @@ import type { AgentProfile } from './profiles';
 import { text } from '../core/model-texts';
 import { toWireName } from '../core/tool-registry';
 import { fields, optString } from '../tools/define';
+import { BRIEF_PROPERTIES, briefOf, briefText, TASK_PROPERTY } from './brief';
 
 export const ASK_TOOL = 'agents.ask';
 export const ASK_WIRE = toWireName(ASK_TOOL);
@@ -18,14 +19,16 @@ export const MAX_DEPTH = 3;
 
 const DESCRIPTION =
   'Asks another agent to do a task, and returns its answer. Each agent works with its own tools, sites and instructions, ' +
-  'and does not see this conversation: put in the task everything it needs. Agents you may ask:\n' +
+  'and does not see this conversation: put in the task and context everything it needs. It answers with the result, what it did, ' +
+  'and what it could not do or verify. Agents you may ask:\n' +
   AGENT_LIST;
 
 const schema = (names: string[]): JSONSchema => ({
   type: 'object',
   properties: {
     agent: { type: 'string', enum: names, description: "The agent's name, one of those listed." },
-    task: { type: 'string', description: 'What it should do or find out, with every detail it needs: it sees nothing else.' },
+    task: TASK_PROPERTY,
+    ...BRIEF_PROPERTIES,
   },
   required: ['agent', 'task'],
 });
@@ -44,7 +47,8 @@ export const askTool = (): Tool => ({
   run: async () => ({ type: 'text', text: 'No other agent can be asked from here.', isError: true }),
 });
 
-// The tool for one run: the agents it may ask, and how it asks them.
+// The tool for one run: the agents it may ask, and how it asks them (task: the brief as the other
+// agent gets it, agents/brief).
 export function askToolFor(callable: AgentProfile[], ask: (agent: AgentProfile, task: string, callId: string | undefined) => Promise<ToolResult>): Tool {
   return {
     ...askTool(),
@@ -52,11 +56,11 @@ export function askToolFor(callable: AgentProfile[], ask: (agent: AgentProfile, 
     fillDescription: (d) => fillAskDescription(d, callable),
     run: async (args, ctx) => {
       const name = optString(fields(args).agent);
-      const task = optString(fields(args).task);
       const agent = callable.find((a) => a.name === name);
       if (!agent) return { type: 'text', text: text('error.agent_not_askable', { agent_name: String(name), agents: callable.map((a) => a.name).join(', ') }), isError: true };
-      if (!task?.trim()) return { type: 'text', text: text('error.agent_no_task'), isError: true };
-      return ask(agent, task.trim(), ctx.callId);
+      const brief = briefOf(args);
+      if (!brief) return { type: 'text', text: text('error.agent_no_task'), isError: true };
+      return ask(agent, briefText(brief), ctx.callId);
     },
   };
 }

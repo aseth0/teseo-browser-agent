@@ -1,10 +1,13 @@
-// The MCP servers' tools for the agent, from the background: each enabled server is connected the
-// first time its tools are needed and kept connected; a server that fails is tried again once
-// FAILED_BACKOFF_MS have passed (Settings → MCP servers' Test tries at once).
+// The MCP servers' tools for the agent, from the background: each enabled server is connected when a
+// conversation starts (connect), before its first message, or the first time its tools are listed, and
+// kept connected. A chat's message waits only for a server reached before in this browser's session
+// (the worker started again); one that failed is left out at once, and tried again only when a new
+// conversation starts, after a reset (a sign-in) or when its settings change.
 // Its tools are mcp.<server>.<tool>; their descriptions, schemas and results come from the server:
 // the descriptions go to the model introduced as the server's, the results inside an untrusted block,
 // and none of them can open or close an untrusted block (their tags are neutralized).
 import type { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { browser } from 'wxt/browser';
 import { markValue, neutralizeTags, stripMarks, text } from '../core/model-texts';
 import { TOOL_NAME } from '../core/tool-registry';
 import type { Tool, ToolResult } from '../core/types';
@@ -85,26 +88,115 @@ interface McpServerError {
   signIn?: boolean;
 }
 
-// A run waits this long for a server to connect, then goes without its tools (the connection goes on).
+// A server has this long to connect: then it has failed, and a run waiting for it goes without its
+// tools (the connection goes on: should it connect after all, its tools are offered from then on).
 const RUN_CONNECT_MS = 15_000;
-// A server that failed (or did not connect in time for a run) is not tried again for this long: its
-// tools are not offered, and its error is said again.
-const FAILED_BACKOFF_MS = 30_000;
+
+// A server's last failure. Remembered for the browser's session too (FAILED_KEY), so that a worker
+// started again does not hold a message for a server already known not to answer.
+interface Failure {
+  at: number;
+  error: string;
+  signIn?: true;
+}
+const FAILED_KEY = 'mcpFailed';
+// The servers that connected in this browser's session (by failureId): the only ones a chat's message
+// waits for, when the worker started again and has to connect anew.
+const REACHED_KEY = 'mcpReached';
+// What a remembered failure is kept under: not the connection's key itself, which has the headers.
+const failureId = (key: string) => {
+  let h = 5381;
+  for (let i = 0; i < key.length; i++) h = ((h * 33) ^ key.charCodeAt(i)) >>> 0;
+  return `${key.length}.${h.toString(36)}`;
+};
+const TOO_SLOW = `it did not connect within ${RUN_CONNECT_MS / 1000} s`;
+const isFailure = (v: unknown): v is Failure => !!v && typeof v === 'object' && typeof (v as Failure).at === 'number' && typeof (v as Failure).error === 'string';
 
 // Settles undefined once `signal` aborts.
 const aborted = (signal: AbortSignal) => new Promise<undefined>((resolve) => (signal.aborted ? resolve(undefined) : signal.addEventListener('abort', () => resolve(undefined), { once: true })));
 
 export class McpManager {
   private connections = new Map<string, Promise<Connected>>(); // by url and headers
-  private failed = new Map<string, { at: number; error: unknown }>(); // by url and headers: the last failure
+  private started = new Map<string, number>(); // by url and headers: when its connection began
+  private failed = new Map<string, Failure>(); // by url and headers: the last failure
+  private reached = new Set<string>(); // by failureId: those that connected in this browser's session
+  // The failures remembered from before this worker started (by failureId): read once, as it starts.
+  private before: Record<string, Failure> | undefined;
+  private reading: Promise<void>;
+
+  // `onBack`: a server that had failed connected (the panels list the tools again).
+  constructor(private onBack: () => void = () => undefined) {
+    this.reading = (async () => {
+      try {
+        const got = await browser.storage.session.get([FAILED_KEY, REACHED_KEY]);
+        const reached: unknown = got[REACHED_KEY];
+        if (Array.isArray(reached)) for (const id of reached) if (typeof id === 'string') this.reached.add(id);
+        this.before ??= Object.fromEntries(Object.entries((got[FAILED_KEY] ?? {}) as Record<string, unknown>).filter((e): e is [string, Failure] => isFailure(e[1])));
+      } catch {
+        this.before ??= {};
+      }
+    })();
+  }
+
+  // The last failure of a connection: this worker's, else the one remembered from before it started
+  // (while it has not tried the server itself).
+  private lastFailure(key: string): Failure | undefined {
+    const own = this.failed.get(key);
+    if (own || this.connections.has(key)) return own;
+    const remembered = this.before?.[failureId(key)];
+    if (remembered) this.failed.set(key, remembered); // this worker's from now on
+    return remembered;
+  }
+
+  private fail(key: string, e: unknown): void {
+    this.failed.set(key, { at: Date.now(), error: errorText(e), ...signInFlag(e) });
+    this.reached.delete(failureId(key));
+    this.remember();
+  }
+
+  // It connected: waited for from now on, and back if it had failed.
+  private connected(key: string): void {
+    const back = this.failed.delete(key);
+    const id = failureId(key);
+    if (!back && this.reached.has(id)) return;
+    this.reached.add(id);
+    this.remember();
+    if (back) this.onBack();
+  }
+
+  // This worker's failures replace the remembered ones: a server it reached is no longer one of them.
+  private remember(): void {
+    const all = Object.fromEntries([...this.failed].map(([key, f]) => [failureId(key), f]));
+    this.before = {};
+    try {
+      void browser.storage.session.set({ [FAILED_KEY]: all, [REACHED_KEY]: [...this.reached] }).catch(() => undefined);
+    } catch {
+      // no storage here (a test): only this worker remembers
+    }
+  }
+
+  // A new conversation starts: every enabled server not connected is connected, before its first
+  // message, and one that failed is tried again (made anew if its connection was taking too long).
+  async connect(servers: McpServerConfig[], providers: ProviderConfig[]): Promise<void> {
+    if (!this.before) await this.reading;
+    for (const server of servers.filter((s) => s.enabled)) {
+      const headers = serverHeaders(server, providers);
+      const key = connectionKey(server, headers);
+      if (this.lastFailure(key) && this.connections.has(key)) this.drop(key);
+      void this.connection(server, headers).catch(() => undefined);
+    }
+  }
 
   // The tools of the enabled servers, and the servers that could not be reached. With `waitMs`,
   // the servers still connecting after it are left out and `pending` settles once they are done;
-  // without it (a run), one not connected within RUN_CONNECT_MS is an error. `signal`: a run's Stop,
-  // after which none is waited for.
-  async tools(servers: McpServerConfig[], providers: ProviderConfig[], waitMs?: number, signal?: AbortSignal): Promise<{ tools: Tool[]; errors: McpServerError[]; pending?: Promise<unknown> }> {
+  // without it (a run), one not connected within RUN_CONNECT_MS of its connection's start is an error.
+  // `signal`: a run's Stop, after which none is waited for. `chat`: a chat's message, which waits only
+  // for a server reached before in this session; one still connecting for the first time is left out.
+  // A server whose last try failed is never waited for nor tried again here: it is an error at once.
+  async tools(servers: McpServerConfig[], providers: ProviderConfig[], waitMs?: number, signal?: AbortSignal, chat = false): Promise<{ tools: Tool[]; errors: McpServerError[]; pending?: Promise<unknown> }> {
     const errors: McpServerError[] = [];
     const slow: Promise<unknown>[] = [];
+    if (!this.before) await this.reading;
     const lists = await Promise.all(
       servers
         .filter((s) => s.enabled)
@@ -112,21 +204,26 @@ export class McpManager {
           const headers = serverHeaders(server, providers);
           const key = connectionKey(server, headers);
           try {
-            const recent = this.failed.get(key);
-            if (recent && Date.now() - recent.at < FAILED_BACKOFF_MS) throw recent.error;
+            const recent = this.lastFailure(key);
+            if (recent) {
+              errors.push({ server: server.name, error: recent.error, ...(recent.signIn && { signIn: true }) });
+              return [];
+            }
+            const holds = !chat || this.reached.has(failureId(key));
             const connection = this.connection(server, headers);
+            const left = Math.max(0, (this.started.get(key) ?? 0) + RUN_CONNECT_MS - Date.now());
             let timer: ReturnType<typeof setTimeout> | undefined;
-            const late = new Promise<'late'>((resolve) => (timer = setTimeout(() => resolve('late'), waitMs ?? RUN_CONNECT_MS)));
+            const late = new Promise<'late'>((resolve) => (timer = setTimeout(() => resolve('late'), waitMs ?? (holds ? left : 0))));
             const ready = await Promise.race([connection, late, ...(signal ? [aborted(signal)] : [])]).finally(() => clearTimeout(timer));
             if (!ready) return []; // stopped
             if (ready === 'late' && waitMs !== undefined) {
               slow.push(connection.catch(() => undefined));
               return [];
             }
+            if (ready === 'late' && !holds) throw new Error('it is still connecting');
             if (ready === 'late') {
-              const error = new Error(`it did not connect within ${RUN_CONNECT_MS / 1000} s`);
-              if (this.connections.get(key) === connection) this.failed.set(key, { at: Date.now(), error });
-              throw error;
+              if (this.connections.get(key) === connection) this.fail(key, new Error(TOO_SLOW));
+              throw new Error(TOO_SLOW);
             }
             return ready.tools.map((t) => this.tool(server, t, headers));
           } catch (e) {
@@ -142,6 +239,7 @@ export class McpManager {
   reset(): void {
     for (const key of [...this.connections.keys()]) this.drop(key);
     this.failed.clear();
+    this.remember();
   }
 
   // Drops the connections no server of these settings uses (removed, or its URL, headers or sign-in changed):
@@ -149,11 +247,16 @@ export class McpManager {
   keepOnly(servers: McpServerConfig[], providers: ProviderConfig[]): void {
     const used = new Set(servers.filter((s) => s.enabled).map((s) => connectionKey(s, serverHeaders(s, providers))));
     for (const key of [...this.connections.keys()]) if (!used.has(key)) this.drop(key);
+    // Nor is their failure kept: a server turned on again is tried again.
+    let forgot = false;
+    for (const key of [...this.failed.keys()]) if (!used.has(key)) forgot = this.failed.delete(key) || forgot;
+    if (forgot) this.remember();
   }
 
   private drop(key: string): void {
     void this.connections.get(key)?.then(({ client }) => client.close()).catch(() => undefined);
     this.connections.delete(key);
+    this.started.delete(key);
   }
 
   // Each new connection goes to the server's logs (Settings → MCP servers).
@@ -163,21 +266,27 @@ export class McpManager {
     if (!c) {
       const started = Date.now();
       c = connectAndList(server, headers);
+      // One that takes too long has failed, for whoever asks next.
+      const slow = setTimeout(() => this.connections.get(key) === c && this.fail(key, new Error(TOO_SLOW)), RUN_CONNECT_MS);
       c.then(
         ({ tools, transport }) => {
-          if (this.connections.get(key) === c) this.failed.delete(key);
+          clearTimeout(slow);
+          if (this.connections.get(key) === c) this.connected(key);
           return logMcp({ at: Date.now(), server: server.name, kind: 'connect', ok: true, detail: `${tools.length} tools (${transport})`, ms: Date.now() - started, tools: tools.map((t) => t.name) });
         },
         (e: unknown) => {
-          // Tried again once the backoff is over (not one made since a reset).
+          clearTimeout(slow);
+          // Not one made since a reset.
           if (this.connections.get(key) === c) {
             this.connections.delete(key);
-            this.failed.set(key, { at: Date.now(), error: e });
+            this.started.delete(key);
+            this.fail(key, e);
           }
           void logMcp({ at: Date.now(), server: server.name, kind: 'connect', ok: false, detail: errorText(e), ms: Date.now() - started, ...signInFlag(e) });
         },
       );
       this.connections.set(key, c);
+      this.started.set(key, started);
     }
     return c;
   }

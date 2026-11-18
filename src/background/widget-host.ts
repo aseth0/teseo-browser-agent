@@ -4,6 +4,8 @@
 // page's request is checked against the page it really comes from.
 import { browser } from 'wxt/browser';
 import { openSidePanel } from '../core/side-panel';
+import { floatingChatAvailable } from '../core/build';
+import { openFullChat } from '../browser/open-manager';
 import { serialized } from '../storage/serial';
 import { agentStore } from '../agents/profiles';
 import { bestEffort } from '../core/errors';
@@ -16,7 +18,7 @@ import { actionOwner, actionsFor, answersInJson, askedPrompt, filledPrompt, onLo
 import { withPageText } from './widget-page-text';
 import { hasSteps } from '../widget/steps';
 import { ACTIONS_KEY, CHAT_HANDOFF, FLOAT_COMMAND, FLOATING_PREFIX, WIDGET_ACTIONS, WIDGET_CHATS, WIDGET_COMMAND, WIDGET_FLOAT, WIDGET_FLOATING, WIDGET_OPEN_CHAT, WIDGET_PLACE, WIDGET_PLACES, WIDGET_STICKY, WIDGET_TO_PANEL, WIDGET_TOGGLE, STICKY_UNPIN, type ConversationPayload, type WidgetPlace, type FloatingChat, type OpenChatAction, type WidgetActionsReply } from '../widget/protocol';
-import { handoff, type HandoffTo } from '../core/handoff';
+import { handoff, handoffTo, type HandoffTo } from '../core/handoff';
 import { actionStore, bubbleEverywhere, syncWidgetScript, wakeWidget } from '../widget/store';
 import { floatOnTab } from '../widget/float';
 import { grantedOneByOne } from '../page/granted';
@@ -114,6 +116,8 @@ export function hostWidget(stopFloating: (tabId: number) => void) {
     if (command !== WIDGET_COMMAND && command !== FLOAT_COMMAND) return;
     void browser.tabs.query({ active: true, lastFocusedWindow: true }).then(async ([tab]) => {
       if (tab?.id === undefined) return;
+      // Where the chat cannot float (Firefox: core/build), full screen in a tab instead.
+      if (command === FLOAT_COMMAND && !floatingChatAvailable()) return void (await openFullChat());
       if (command === FLOAT_COMMAND) return void (await floatOnTab(tab.id, { type: WIDGET_FLOAT, toggle: true }));
       if (await hiddenOn(tab.url)) await changePlace(widgetSite(tab.url), { hidden: false });
       else await bestEffort(sendTab(tab.id, { type: WIDGET_TOGGLE }), 'command');
@@ -134,7 +138,7 @@ export function hostWidget(stopFloating: (tabId: number) => void) {
             };
           }),
           ...(bubbleEverywhere(settings) && { always: true }),
-          ...(floating && { floating: true }),
+          ...(floating && floatingChatAvailable() && { floating: true }), // never where it cannot float (Firefox)
         };
       },
       (e): WidgetActionsReply => {
@@ -162,6 +166,15 @@ export function hostWidget(stopFloating: (tabId: number) => void) {
     // on with waits for the panel, also when it could not be opened (the user opens it). With the
     // chat floating on that tab, it goes there instead; with the chat's pin off, to the tab's panel.
     const { chat, action, floating } = msg;
+    // Where the chat cannot float (Firefox), the page opens it full screen in a tab, with what it carries:
+    // the frame would lack the APIs the chat needs, and the browser's sidebar opens only from a click in
+    // the extension's own pages (the toolbar button's popup), never from a page's.
+    if (!floatingChatAvailable()) {
+      const to = handoffTo({ full: true });
+      if (chat) void handOff(chat, to);
+      if (action) void sendFromAction(pageUrl(sender), tab.id, action, to).catch((e) => console.error('[widget]', e));
+      return openFullChat().then(() => ({ opened: true }), (e: unknown) => (console.error('[widget]', e), { opened: false }));
+    }
     const follows = panelFollowsNow();
     const { panel, to } = chatTarget(tab.id, !!floating, follows);
     const opened = panel ? openSidePanel(tab, follows, panelShownIn(tab.windowId), 'widget-open-chat').then(() => ({ opened: true }), () => ({ opened: false })) : Promise.resolve({ opened: true });

@@ -33,7 +33,8 @@ editor, lets the tools that the server itself says only read run without asking.
 
 ## If it goes wrong
 
-- ***MCP server "tasks" could not be reached***: your message goes on without it. Open it in Settings and click **Test connection**; its
+- **The MCP button shows a warning and "No tools from tasks"**: the server was not reached, and your messages go on
+  without it. Open it in Settings and click **Test connection**; its
   **Connection logs**, in the same panel, show each attempt.
 - ***…needs you to sign in***: the sign-in expired. Click **Sign in** on its line again.
 - ***Not signed in*** after the sign-in window: the service wants a client of its own. Under **Sign in, if it asks** in

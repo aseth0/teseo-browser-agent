@@ -37,7 +37,7 @@ export const PLAYGROUND_RESULTS = 8;
 // How long after the last key the results with meaning are asked for.
 const REFINE_DELAY_MS = 600;
 
-const bandOf = (v: number) => MATCH_LEVELS.findLast((b) => v >= b.from) ?? MATCH_LEVELS[0]!;
+export const bandOf = (v: number) => MATCH_LEVELS.findLast((b) => v >= b.from) ?? MATCH_LEVELS[0]!;
 
 interface ControlsProps {
   auto: MatchAttach;
@@ -52,7 +52,7 @@ interface ControlsProps {
 
 // The bar of a match needed and, under it, its named ranges as wide as their part of it: a click sets
 // a range's usual value.
-function MatchRange({ threshold, label, onChange }: { threshold: number; label: string; onChange: (change: { threshold: number }) => void }) {
+export function MatchRange({ threshold, label, onChange }: { threshold: number; label: string; onChange: (change: { threshold: number }) => void }) {
   return (
     <>
       <input type="range" min={MIN} max={100} step={5} value={threshold} aria-label={label} onChange={(e) => onChange({ threshold: Number(e.target.value) })} />
@@ -126,7 +126,7 @@ interface PlaygroundProps {
   nouns: [one: string, many: string];
   searchLabel: string;
   // The results for a message, best first, and the ids the chat would attach with it.
-  search: (query: string) => Promise<{ hits: AutoHit[]; picked: string[] }>;
+  search: (query: string) => Promise<{ hits: AutoHit[]; picked: string[]; note?: string }>;
   // Where meaning counts too (memory): the % it needs, and the results with it, asked for once the typing
   // stops, as they call a provider. `note`: why they come by words only.
   meaningThreshold?: number;
@@ -137,6 +137,8 @@ interface PlaygroundProps {
   searchExtra?: ReactNode;
   hint?: ReactNode;
   disabled?: boolean;
+  // What the line under the results says for how many would go (none: Auto-attach's).
+  summary?: (count: number) => string;
 }
 
 // One score against what it needs: labelled where there are two. No value: not indexed.
@@ -152,7 +154,7 @@ function Meter({ label, value, needed, title }: { label?: string; value?: number
 
 // A message tried as you would send it: what it matches, against the match needed, and what would go.
 export function AttachPlayground(props: PlaygroundProps) {
-  const { auto, defaults, nouns, searchLabel, search, refresh, searchExtra, hint, disabled, meaningThreshold, refine } = props;
+  const { auto, defaults, nouns, searchLabel, search, refresh, searchExtra, hint, disabled, meaningThreshold, refine, summary } = props;
   const threshold = auto.threshold ?? defaults.threshold;
   const [query, setQuery] = useState('');
   const [found, setFound] = useState<{ hits: AutoHit[]; picked: Set<string> }>();
@@ -168,7 +170,7 @@ export function AttachPlayground(props: PlaygroundProps) {
     let current = true;
     const timer = setTimeout(() => {
       runSearch(query).then(
-        ({ hits, picked }) => current && (setFound({ hits, picked: new Set(picked) }), setError('')),
+        ({ hits, picked, note }) => current && (setFound({ hits, picked: new Set(picked) }), setError(''), setNote(note)),
         (e: unknown) => current && setError(errorText(e)),
       );
     }, 150);
@@ -212,7 +214,7 @@ export function AttachPlayground(props: PlaygroundProps) {
                 <div className="playground-head">
                   <strong>{hit.title}</strong>
                   {!both && <span className="badge" title="How much of your message it covers, the rare words weighing more">{pct}% match</span>}
-                  {found.picked.has(hit.id) && <span className="badge accent" title={`Auto-attach is on, at ${threshold}%`}>would be attached</span>}
+                  {found.picked.has(hit.id) && <span className="badge accent" title={`On, at ${threshold}%`}>{summary ? 'matches' : 'would be attached'}</span>}
                   {hit.never && <span className="badge warn" title="Auto-attach leaves it out, whatever its match">never on its own: {hit.never}</span>}
                   {hit.badges}
                 </div>
@@ -231,7 +233,8 @@ export function AttachPlayground(props: PlaygroundProps) {
         })}
         {found && (
           <p className="hint auto-attach-sum">
-            {!auto.enabled ? 'Auto-attach is off: nothing would be attached.'
+            {summary ? summary(count)
+              : !auto.enabled ? 'Auto-attach is off: nothing would be attached.'
               : `This message would get ${count || 'no'} ${count === 1 ? nouns[0] : nouns[1]}. In a chat, one already attached there, or mentioned, does not go again.`}
           </p>
         )}

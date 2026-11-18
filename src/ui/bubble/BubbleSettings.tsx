@@ -5,6 +5,9 @@ import { onPermissionsChanged } from '../permissions-changed';
 import { useEffect, useState } from 'react';
 import { browser } from 'wxt/browser';
 import type { Settings } from '../../storage/settings';
+import { chatOpensIn } from '../../storage/settings-select';
+import { feature } from '../../core/build';
+import { FeatureMark, FeatureNote } from '../FeatureNotice';
 import type { Appearance, ChatWindow } from '../../storage/settings-types';
 import { forgetChatPlaces, loadPlaces, onPlacesChanged, updatePlace, type WidgetPlaces } from '../../widget/places';
 import { WIDGET_COMMAND } from '../../widget/protocol';
@@ -39,7 +42,6 @@ export function BubbleSection({ settings, onChange }: Props) {
   // On the look as it is when it applies: an SVG fetched meanwhile keeps what changed during the wait.
   const setLook = (patch: Partial<Appearance>) => onChange((s) => ({ ...s, appearance: { ...s.appearance, ...patch } }));
   const look = settings.appearance ?? {};
-  const win = settings.chatWindow ?? {};
   const hidden = useHiddenSites();
   const face = look.bubbleFace === 'shape' ? 'A shape' : look.bubbleFace === 'svg' ? 'Your SVG' : 'An icon';
   return (
@@ -51,7 +53,7 @@ export function BubbleSection({ settings, onChange }: Props) {
       <StatStrip stats={[
         { label: 'Shows on', value: <span className="stat-text">{!shown ? 'Nowhere' : everywhere ? 'Every website' : 'Its actions’ pages'}</span>, sub: hidden.length ? `Hidden on ${hidden.length} ${hidden.length === 1 ? 'site' : 'sites'}` : 'Hidden on no site' },
         { label: 'Looks like', value: <span className="stat-text">{face}</span>, sub: look.bubbleColor ? 'In its own color' : 'In the theme’s accent' },
-        { label: 'Opens the chat', value: <span className="stat-text">{win.opens === 'floating' ? 'Floating' : 'In the side panel'}</span>, sub: win.opens === 'floating' ? `${win.side === 'left' ? 'Left' : 'Right'}, ${win.width ?? FLOAT_DEFAULTS.width} px wide` : 'Its bubble and its actions' },
+        opensStat(settings),
       ]} />
       <SectionTabs label="Bubble" tabs={[
         { id: 'look', label: 'Look', render: () => <BubbleLookOptions look={look} setLook={setLook} /> },
@@ -96,6 +98,14 @@ export function BubbleSection({ settings, onChange }: Props) {
 
 // Where the page widget opens the chat, and how the floating chat first shows on a site.
 const FLOAT_DEFAULTS = { width: 380, height: 560 };
+// The figure: where the bubble opens the chat. Where the chat cannot float (Firefox: core/build), full
+// screen in a tab, whatever was saved (background/widget-host).
+function opensStat(settings: Settings) {
+  const win = settings.chatWindow ?? {};
+  if (!feature('floatingChat').available) return { label: 'Opens the chat', value: <span className="stat-text">Full screen</span>, sub: 'In a tab: this browser has no floating chat' };
+  const floating = chatOpensIn(settings) === 'floating';
+  return { label: 'Opens the chat', value: <span className="stat-text">{floating ? 'Floating' : 'In the side panel'}</span>, sub: floating ? `${win.side === 'left' ? 'Left' : 'Right'}, ${win.width ?? FLOAT_DEFAULTS.width} px wide` : 'Its bubble and its actions' };
+}
 const OPENS: DrawnOption<NonNullable<ChatWindow['opens']>>[] = [
   { id: 'panel', label: 'In the side panel', drawing: <SidePanelDrawing /> },
   { id: 'floating', label: 'Floating on the page', drawing: <FloatingDrawing /> },
@@ -108,11 +118,24 @@ const HEIGHTS: DrawnOption<'px' | 'full'>[] = [
   { id: 'px', label: 'Fixed', drawing: <FloatingDrawing /> },
   { id: 'full', label: 'Whole window', drawing: <FloatingDrawing full /> },
 ];
-function ChatWindowOptions({ settings, onChange }: Props) {
+export function ChatWindowOptions({ settings, onChange }: Props) {
   const win = settings.chatWindow ?? {};
   const set = (change: Partial<ChatWindow>) => onChange({ chatWindow: { ...win, ...change } });
   const [forgotten, setForgotten] = useState(false);
   const full = win.height === 'full';
+  // Where the chat cannot float (Firefox): its option greyed with the mark, the reason under the choice, and
+  // nothing about its size; the page opens the chat full screen in a tab (the side panel cannot open from it).
+  const floating = feature('floatingChat');
+  if (!floating.available) {
+    const options = OPENS.map((o) => (o.id === 'floating' ? { ...o, off: <FeatureMark feature={floating} /> } : o));
+    return (
+      <div className="bubble-chat">
+        <DrawnChoice legend={'Its bubble, its actions that open the chat, and a card\'s "Open in the chat" open it'} name="chat-opens" size="small" viewBox={WINDOW_VIEW_BOX} options={options} value={chatOpensIn(settings)} onChange={(opens) => set({ opens })} />
+        <FeatureNote id="floatingChat" />
+        <p className="hint">In this browser they open the chat full screen in a tab: its sidebar opens only from the toolbar button.</p>
+      </div>
+    );
+  }
   return (
     <div className="bubble-chat">
       <DrawnChoice legend={'Its bubble, its actions that open the chat, and a card\'s "Open in the chat" open it'} name="chat-opens" size="small" viewBox={WINDOW_VIEW_BOX} options={OPENS} value={win.opens ?? 'panel'} onChange={(opens) => set({ opens })} />

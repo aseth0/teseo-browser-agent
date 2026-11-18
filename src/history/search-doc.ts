@@ -62,8 +62,8 @@ export function asSearchDoc(v: unknown): SearchDoc | undefined {
 export function rankDocs<T extends Pick<ConversationMeta, 'updatedAt'>>(
   query: string,
   docs: { item: T; doc: SearchDoc }[],
-  { prefix = false }: MatchOptions = {},
+  { prefix = false, unseen }: MatchOptions = {},
 ): { item: T; score: number; match: number }[] {
   const indexed: Indexed<T>[] = docs.map(({ item, doc }) => ({ item, freq: new Map(termsOf(doc)), length: doc.length, plain: '' }));
-  return scored(query, indexed, { prefix }).sort((a, b) => b.score - a.score || b.item.updatedAt - a.item.updatedAt);
+  return scored(query, indexed, { prefix, unseen }).sort((a, b) => b.score - a.score || b.item.updatedAt - a.item.updatedAt);
 }

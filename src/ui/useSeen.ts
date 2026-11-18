@@ -1,4 +1,4 @@
-// Floating on a page (sidepanel.html?floating), the page owns the frame the chat is in: it could
+// Floating on a page (floating.html), the page owns the frame the chat is in: it could
 // make it see-through, cover it or move it, and steer a click onto "Allow" (clickjacking). The
 // browser says whether the frame is really seen (IntersectionObserver v2, trackVisibility): the
 // buttons that allow something work only while it has been, whole, for a moment. In the side panel,

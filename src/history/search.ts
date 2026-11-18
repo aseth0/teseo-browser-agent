@@ -27,8 +27,8 @@ export interface SavedRanking {
 
 // The saved conversations with any of the query's words (and all its quoted phrases), best first; how
 // rare a word is from all of them but `except` (the one asking). `prefix`: words also find the words
-// they begin (the 🕘 search box).
-export async function rankSaved(query: string, { except, prefix }: MatchOptions & { except?: string } = {}): Promise<SavedRanking> {
+// they begin (the 🕘 search box); `unseen`: the query's words none has count against the match (auto-attach).
+export async function rankSaved(query: string, { except, ...options }: MatchOptions & { except?: string } = {}): Promise<SavedRanking> {
   const loaded = new Map<string, Conversation>();
   if (!terms(query).length) return { ranked: [], loaded, rebuilt: Promise.resolve() };
   const metas = (await listConversations()).filter((c) => c.id !== except);
@@ -56,8 +56,8 @@ export async function rankSaved(query: string, { except, prefix }: MatchOptions 
   }
   const rebuilt = built.length ? writeSearchDocs(built.slice(0, REBUILD_MAX), REBUILD_BATCH).catch((e: unknown) => console.error('[history search]', e)) : Promise.resolve();
   const ranked = phrases
-    ? rank(query, metas.flatMap((m) => loaded.get(m.id) ?? []), { prefix }).map(({ conv, score, match }) => ({ meta: conv, score, match }))
-    : rankDocs(query, metas.flatMap((m) => (docs.has(m.id) ? [{ item: m, doc: docs.get(m.id)! }] : [])), { prefix }).map(({ item, score, match }) => ({ meta: item, score, match }));
+    ? rank(query, metas.flatMap((m) => loaded.get(m.id) ?? []), options).map(({ conv, score, match }) => ({ meta: conv, score, match }))
+    : rankDocs(query, metas.flatMap((m) => (docs.has(m.id) ? [{ item: m, doc: docs.get(m.id)! }] : [])), options).map(({ item, score, match }) => ({ meta: item, score, match }));
   return { ranked, loaded, rebuilt };
 }
 

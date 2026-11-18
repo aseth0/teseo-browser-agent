@@ -81,11 +81,12 @@ const noFolder = (id: string) => new Error(`No folder with id ${id} among the bo
 
 // The bookmarks (not folders) best matching the query, by title (weighing more), URL and folder.
 // `match`: how much of the query each covers (search/bm25). Whole words, as auto-attach compares a
-// message; with `prefix` (a search: the panel's, bookmarks.search), words also find those they begin.
-export async function rankBookmarks(settings: Settings, query: string, limit: number, { prefix = false }: MatchOptions = {}): Promise<{ bookmark: Bookmark; match: number }[]> {
+// message; with `prefix` (a search: the panel's, bookmarks.search), words also find those they begin;
+// with `unseen` (auto-attach), the message's words no bookmark has count against the match.
+export async function rankBookmarks(settings: Settings, query: string, limit: number, options: MatchOptions = {}): Promise<{ bookmark: Bookmark; match: number }[]> {
   const links = (await allBookmarks(settings)).filter((b) => b.url);
   const docs = links.map((b) => indexTexts(b, [[b.title, 3], [urlWords(b.url!), 1], [b.path, 1]]));
-  return scored(query, docs, { prefix })
+  return scored(query, docs, options)
     .sort((a, b) => b.score - a.score || (b.item.dateAdded ?? 0) - (a.item.dateAdded ?? 0))
     .slice(0, limit)
     .map((r) => ({ bookmark: r.item, match: r.match }));

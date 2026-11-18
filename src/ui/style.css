@@ -194,7 +194,22 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
    are transcribed; the box marked meanwhile, and the lines under it. */
 .icon-button.dictate.recording, .icon-button.dictate.starting { color: var(--danger); animation: pulse 1s infinite alternate; }
 .icon-button.dictate.finishing { color: var(--warn); }
-.composer.dictating textarea { border-style: dashed; border-color: var(--warn); }
+/* While it dictates (DictationStrip): the box framed in red, its strip inside on top; amber while it finishes. */
+.composer-box { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.composer.dictation-recording .composer-box, .composer.dictation-finishing .composer-box { border: 2px solid var(--danger); border-radius: 8px; padding: 4px; gap: 4px; }
+.composer.dictation-finishing .composer-box { border-color: var(--warn); }
+.composer.dictation-recording .composer-box textarea, .composer.dictation-finishing .composer-box textarea { border-color: transparent; }
+.dictation-strip { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 2px 4px 2px 8px; white-space: nowrap; font-size: var(--fs-sm); font-weight: 600; color: var(--danger); }
+.dictation-strip.finishing { color: color-mix(in srgb, var(--warn) 70%, var(--fg)); }
+.dictation-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: currentColor; animation: pulse 1s infinite alternate; }
+.dictation-time { flex: none; font-variant-numeric: tabular-nums; }
+.dictation-waves { flex: none; display: flex; align-items: center; gap: 2px; width: 62px; height: 16px; }
+.dictation-waves b { flex: 1; min-height: 1px; border-radius: 1px; background: currentColor; }
+/* The words just in, cut from the left when they do not fit (bdi keeps their own order). */
+.dictation-heard { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; direction: rtl; text-align: left; font-weight: normal; color: var(--fg); }
+.dictation-heard.waiting { color: var(--muted); }
+.dictation-strip.finishing .dictation-heard { direction: ltr; color: inherit; font-weight: 600; }
+.dictation-strip button { flex: none; padding: 1px 10px; border-radius: 999px; color: inherit; border-color: currentColor; }
 .dictation-line { margin: 0 12px 4px; }
 .dictation-line button { margin-left: 8px; }
 .mic-page { max-width: 560px; margin: 48px auto; padding: 0 16px; }
@@ -582,6 +597,15 @@ td.mentions-help-items { padding: 2px 0 8px; text-align: center; }
 .error-text { color: var(--danger); }
 /* Settings → MCP servers → From a provider: the servers it offers, ticked and added together; an added one marked. */
 .mcp-from-provider { display: grid; gap: 8px; margin: 0 0 10px; }
+.tool-index { display: grid; gap: 6px; margin-top: 8px; }
+.tool-index progress { width: 100%; height: 6px; }
+.tool-index button { justify-self: start; }
+.mcp-about { flex-wrap: wrap; }
+.mcp-about textarea { flex: 1 1 100%; min-height: 3em; }
+.mcp-offer { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; width: 100%; }
+.mcp-offer label.check { display: flex; gap: 8px; align-items: flex-start; margin: 0; }
+.mcp-offer label.check input { width: auto; margin-top: 3px; }
+.mcp-offer label.check > span { display: flex; flex-direction: column; }
 .mcp-offered { list-style: none; padding: 0; margin: 0; border: 1px solid var(--border); border-radius: 8px; }
 .mcp-offered li { display: flex; gap: 8px; align-items: center; justify-content: space-between; padding: 7px 10px; }
 .mcp-offered li + li { border-top: 1px solid var(--border); }
@@ -1488,6 +1512,8 @@ a.msg-auto-text:hover { text-decoration: underline; }
 /* A bookmark's host after its title: muted; the title gives way first. */
 .msg-auto-host { flex: 0 0 auto; min-width: 0; max-width: 45%; margin-right: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: var(--fs-xs); }
 .msg-auto-pct { flex: none; color: var(--muted); }
+.msg-auto-entry:has(.msg-auto-note) { flex-wrap: wrap; row-gap: 0; }
+.msg-auto-note { flex-basis: 100%; color: var(--muted); font-size: 0.92em; }
 
 /* The agent manager (entrypoints/manager): its list of agents, a divider, the chat of the one selected. */
 /* One top row across the page: its head over the list, and beside it the top bar of the chat shown (another
@@ -1565,6 +1591,9 @@ button.audio-time:not(:disabled):hover { color: var(--accent-text); }
 .popup-tile { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 9px 4px 7px; font-size: var(--fs-sm); color: var(--fg); }
 .popup-tile:hover:not(:disabled) { border-color: var(--accent); }
 .popup-tile.default { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.popup-tile.off { cursor: help; color: var(--muted); }
+.popup-tile:hover:not(:disabled).off { border-color: var(--border); }
+.popup-tile.off .badge.feature-mark { margin-left: 0; font-size: 9px; }
 .popup-tile.default::after { content: 'default'; position: absolute; top: -7px; right: 6px; padding: 0 5px; border-radius: 6px; font-size: 9px; background: var(--accent); color: var(--on-accent); }
 .popup kbd { font: var(--fs-2xs) var(--font-code); color: var(--muted); border: 1px solid var(--border); border-radius: 4px; padding: 0 3px; background: var(--bg); }
 .popup-rows { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
@@ -1644,6 +1673,11 @@ button.audio-time:not(:disabled):hover { color: var(--accent-text); }
 .drawn-option-drawing { display: block; width: 100%; max-width: 260px; color: var(--muted); border: 1px solid var(--border); border-radius: 6px; }
 .drawn-option:hover .drawn-option-drawing { border-color: var(--muted); }
 .drawn-option:has(:checked) .drawn-option-drawing { color: var(--accent); border-color: var(--accent); }
+/* An option the build lacks (core/build): greyed, its mark after its name, never chosen. */
+.drawn-option.off { cursor: default; color: var(--muted); }
+.drawn-option.off .drawn-option-drawing { opacity: .55; }
+.drawn-option.off:hover .drawn-option-drawing { border-color: var(--border); }
+.drawn-option-name .badge.feature-mark { margin-left: 0; }
 .learned-table th { text-align: left; font-weight: 600; padding: 2px 8px 2px 0; }
 .learned-table td { padding: 2px 8px 2px 0; }
 
@@ -1703,3 +1737,16 @@ div.feature-row.tool-line { display: flex; border: none; border-radius: 0; paddi
 .feature-row-end { display: flex; align-items: center; gap: 10px; flex: none; }
 .feature-row-reason { flex: 1 0 100%; margin: 0; font-size: var(--fs-sm); color: var(--muted); }
 .about-links { display: flex; flex-wrap: wrap; gap: 16px; margin: 12px 0; }
+/* A turn's phases in Layers (ui/chat/TurnPhases), and the one going on in the chat's line. */
+.turn-phases { font-size: var(--fs-sm); color: var(--muted); border-left: 2px solid var(--border); padding: 2px 0 2px 8px; margin: 2px 0 6px; }
+.turn-phases-head { border: none; background: none; padding: 0; color: var(--muted); font-size: var(--fs-sm); text-align: left; cursor: pointer; }
+.turn-phases ul { list-style: none; margin: 0; padding: 0; }
+.phase-row { display: flex; gap: 6px; align-items: baseline; min-width: 0; }
+.phase-label { color: var(--fg); white-space: nowrap; }
+.phase-detail { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.phase-row .phase-time { margin-left: auto; }
+.phase-time { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.phase-bar { height: 3px; margin: 1px 0 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.phase-bar span { display: block; height: 100%; background: var(--accent); opacity: 0.7; }
+.phase.going > .phase-row .phase-label { font-weight: 600; }
+.phase-confirm > .phase-bar span, .phase-wait > .phase-bar span { opacity: 0.4; }

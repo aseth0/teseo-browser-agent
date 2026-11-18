@@ -54,8 +54,15 @@ An agent with **Can ask** gets a tool to hand a task to any agent with **Can be 
 - gets the task as its only message, without the conversation;
 - works in a background tab of its own.
 
-Only its final answer comes back, as untrusted content; the chat shows its run as it goes. Agents can nest up to
-three levels deep.
+The task comes as a **brief**: what to do (`task`, the only field required) and, when the caller fills them, what is
+already known (`context`), what it must not do (`constraints`), when it is done (`done`) and what to send back
+(`report`). The asked agent gets each field given in a section of its own (*Already known*, *Do not*, *Done when*,
+*Send back*), then is told to end its answer with what it did and what it could not do or verify. Each of these
+texts can be edited in **Options → Prompt preview**.
+
+Only its final answer comes back, as untrusted content, followed by how many tool calls it made and how many failed
+(counted by Teseo, not written by the agent); the chat shows its run as it goes. Agents can nest up to three levels
+deep.
 
 If the asked agent runs out of rounds of tool calls before it finishes, a card asks you: **Continue** lets it go on
 where it was, with as many rounds again; **Stop** (or stopping the chat) gives the caller what it has, with a note

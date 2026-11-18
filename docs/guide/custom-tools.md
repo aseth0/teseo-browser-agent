@@ -129,7 +129,9 @@ tool you have, preset, is not run from Settings, where its confirmation and the 
 shows the call it makes with the values you type (its fixed values and wrapping put in), and **Copy $name** gives
 the mention to run it from the chat once saved. Tools can be
 exported and imported as JSON, all of them or those you choose with **Select** (header values and `{{secret:…}}` values only if
-you tick *Include header values*), and organized in groups with labels ([Backups](settings.md#backups)). Imported tools arrive
+you tick *Include header values*), and organized in groups with labels ([Backups](settings.md#backups)). A group is also what
+[Settings → Tools → Matching](tools.md#matching-which-tools-reach-the-model) matches: the tools without one are
+matched together. Imported tools arrive
 switched off: their descriptions reach the model, so check them first. An import that would replace a tool from a
 source says so and leaves it unticked: ticked, the tool becomes yours and that source no longer updates it.
 

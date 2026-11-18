@@ -70,7 +70,8 @@ Local servers (`localhost`) too: granting them at install would cover every port
 local service without asking.
 
 The **microphone** is not a permission of the extension's manifest. The side panel cannot show the browser's
-prompt for it, so **Allow microphone** opens a tab that asks for it once, for [voice dictation](voice.md).
+prompt for it, so **Allow microphone** opens a tab that asks for it once, for [voice dictation](voice.md). The chat
+floating on a page does not ask the site: it records in the extension's offscreen document with that same permission.
 
 ## Prompt injection
 

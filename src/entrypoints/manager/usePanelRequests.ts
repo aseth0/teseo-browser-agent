@@ -44,7 +44,7 @@ export function usePanelRequests(rows: Row[], dispatch: Dispatch<RowsAction>, fr
     return browser.tabs.create({ url: msg.url, active: false }).then((tab) => {
       if (tab.id === undefined) throw new Error('The browser gave the new tab no id');
       const key = childKey();
-      const row = { key, tabId: tab.id, agentName: msg.agentName, title: msg.message.shown, parent: msg.parent, pending: [msg.message] };
+      const row = { key, tabId: tab.id, agentName: msg.agentName, title: msg.message.title ?? msg.message.shown, parent: msg.parent, pending: [msg.message] };
       dispatch({ type: 'add', row: { ...row, ...(msg.agentId && { agentId: msg.agentId }), ...(parentName && { parentName }) } });
       return { row: key };
     });

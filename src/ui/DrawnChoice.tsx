@@ -3,10 +3,12 @@
 // the chosen one in the accent. Without a `legend`, the group around it says what it chooses.
 import type { ReactNode } from 'react';
 
+// `off`: it cannot be chosen (a build lacks it: core/build), greyed, its mark after its name.
 export interface DrawnOption<T extends string> {
   id: T;
   label: string;
   drawing: ReactNode;
+  off?: ReactNode;
 }
 
 interface Props<T extends string> {
@@ -25,11 +27,12 @@ export function DrawnChoice<T extends string>({ legend, name, viewBox, options, 
   return (
     <fieldset className={size ? `drawn-choice ${size}` : 'drawn-choice'}>
       {legend && <legend>{legend}</legend>}
-      {options.map(({ id, label, drawing }) => (
-        <label key={id} className="drawn-option">
+      {options.map(({ id, label, drawing, off }) => (
+        <label key={id} className={off ? 'drawn-option off' : 'drawn-option'}>
           <span className="drawn-option-name">
-            <input type="radio" name={name} checked={value === id} onChange={() => onChange(id)} />
+            <input type="radio" name={name} checked={value === id} disabled={!!off} onChange={() => onChange(id)} />
             {label}
+            {off}
           </span>
           <svg className="drawn-option-drawing" viewBox={viewBox} fill="currentColor" aria-hidden="true">{drawing}</svg>
         </label>

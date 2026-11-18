@@ -97,6 +97,12 @@ still counts. Tests: `tests/once-seen.test.ts`; e2e `compaction` checks the full
      naming the site matches nothing ("com" would find "come"). Rarity comes from all the agent's items
      (`scored`'s `corpus`): among a site's few, any shared word would be a full match. An empty text
      matches nothing.
+   - Every auto-attach (this, memory, bookmarks, history; with a message or between steps) and the
+     playgrounds that show it score with `scored`'s `unseen` at `ATTACH_UNSEEN` (0.5,
+     `storage/settings-types`): each typed word no item has counts in the full match as half the idf of
+     a word only one item has, so one shared word in a long message is no full match. The model's
+     searches (`memory__search`, `history.search`, `bookmarks.search`) and the search boxes leave it
+     at 0: a query finds by any of its words.
    - An item that went only by title and whose text changed goes no line again: the index line is the same.
 
    Switch off or no `memory.read`: every item whole, latest first, at most `siteMemoryItems` per
@@ -118,6 +124,45 @@ still counts. Tests: `tests/once-seen.test.ts`; e2e `compaction` checks the full
     `pageElements` = 300) fitted by `fitBlocks` into `pageBudget` = 1500 tokens, wrapped in
     `page.block`. Without the page: `context.no_page`. When you are on another tab than the chat's
     (the window's side panel): `context.user_elsewhere`, that tab's id, title and URL.
+
+11. **Tool matching** (`tools/match-turn.ts`, after `turnContext` in `background/agent-run.ts`; chat's agent
+    only), off unless Settings → Tools → Matching (`settings.tools.match.mode`) is `recommend` or `matching`, or
+    an MCP server has its own `matching` 'recommend' or 'matching' (`matchesAny`). `tools/match.ts`:
+    - `matchGroups`: the filterable groups (`web`, `history`, `bookmarks`, `custom`, `custom:<section>`,
+      `mcp:<server>`; not a server on demand, `onDemandServers`; `custom_tools.*` and `actions.*` left out). Each
+      group's mode is its server's own `matching` ('always' = all, 'recommend', 'matching'), else the setting's
+      (`groupModes`); groups at 'all' are not matched.
+    - `scoreGroups` matches each tool (the group's label and the tool's name weighing 2, its description 1; BM25
+      with `unseen` 0.5: the typed words no tool has count half against the match), and a group goes by its best
+      tool, the matching tools kept best first (`ToolMatch.groups[].tools`, the recommendation's order). By
+      meaning (`tools/match-meaning.ts`): Memory's semantic target, the message's vector (shared with memory's
+      through `embedQuery` and the turn object) against each tool's, a group by its closest tool,
+      judged relative to all the tools' scores for the message (`meaningCuts`: the best must stand
+      `MEANING_STAND_OUT` 2 spreads above their mean; then a group passes within `MEANING_LEVELS[tools.match.level]`
+      spreads of it for 'matching' (offer-more 1.5, the default; balanced 1; hold-more 0.5; an earlier build's
+      `meaningLevel` strict read as hold-more), `MEANING_RECOMMEND_WITHIN` 0.5 for 'recommend'; a server's own
+      `about` (`serverAbouts`) is matched as one more tool of its group (`aboutName`, never offered); nothing stands out: 'matching'
+      groups `unsure`, offered, nothing recommended; fewer than `MEANING_MIN_TOOLS` 5 tools indexed: by words);
+      within 2 s, else by words with a notice. The
+      tools' vectors (`tools/tool-index.ts`: tool name as words without its server's name, and description, masked, after the
+      document prefix; by tool name in their own database `browser-agent-tool-vectors`) are never asked for on a
+      message's path: `syncToolIndex` embeds the missing ones in batches of 32, started by the run once the
+      message is matched (`indexToolsLater`, from `toIndex`) and by Settings → Tools → Matching, which counts
+      them and shows `toolIndexStatus` (storage.local).
+    - `decideToolMatch` decides against `reference`, every group offered (`matchGroups(…, { every: true })`, the
+      browser's too; meaning indexes them all): by words (`scoreGroups` drops `COMMON` words of the message first)
+      with `wordCuts` (the best tool must reach `threshold`, 40 by default; then a group within `WORDS_WITHIN` 0.5 of
+      it for 'matching', 0.85 for 'recommend'), or by meaning (`meaningCuts`). Neither points at any tool (`unsure`):
+      'matching' groups are offered (outcome `unsure`), nothing is recommended; `wordsOnly` when no meaning was used. The decision (`ToolMatch`,
+      event `tool-match`, kept as `Message.toolMatch`) says per group its `mode` and `matched`, `used` (one of its
+      tools was called, `usedGroups`), `earlier` (stays from an earlier message; not after `unsure`), `loaded`,
+      `mentioned`, `unsure`, `held` or `unmatched`, plus the groups always offered: what
+      the chat shows as a 🔧 pill under the message (`ui/chat/AttachedChips` `toolMatchGroups`), and the Layers
+      view as the phase *Matching the tools* (`toolMatchNote`, under *Preparing your message*,
+      only when something is matched).
+    - The 'recommend' groups that matched go in `tools.recommended` (source `tool-match:`); the `held` ones go to
+      `withOnDemand` as groups on demand (`tools.load_builtin` lines, or the server's), and the previews rebuild
+      them from the kept decision (`heldFor`).
 
 Sources (what each part is, used by dedupe and the Layers view): `core/sources.ts`, labels in
 `context/pieces.ts`. Auto-inject switches and per-conversation skip: `context/auto-inject.ts`.
@@ -176,7 +221,8 @@ cut, which their note (`result.cut_from`) gives.
 
 ### 1.7 Sub-agents (`background/sub-agent.ts`)
 Same `prepareAgent` + `loopOptions` (so in-run shortening and dedupe apply), one message
-(`agent.task`), no page block, no step attach. The caller gets only `result.agent_answer`; the
+(`agent.task`, its `{task}` the brief: `brief.*`, agents/brief), no page block, no step attach. The caller gets
+only `result.agent_answer`, then `result.agent_tools` (its tool calls, counted); the
 whole run is kept as `trace` (shown to the user, not sent). No compaction (see gaps).
 
 ## 2. Size caps
@@ -284,7 +330,7 @@ the turn ends. The message gets `cut`; your next message goes with `user.repetit
 `context.already_attached`, `compaction.summary_request`,
 `memory.site_block/site_index_block/auto_block/step_block`, `user.stopped`, `user.interrupted`, `recording.block`,
 `file.block`, `pdf.page/scanned/not_kept`, `template.data`, `skill.site_block`, `skill.reminder`,
-`skill.values`, `context.no_page*`, `agent.task`.
+`skill.values`, `context.no_page*`, `agent.task`, `brief.*`.
 `defs-system.ts`: `system.*`, `system.compaction`.
 `defs-replies.ts`: `result.truncated`, `result.snapshot_truncated`, `result.screenshot`,
 `history.auto_note`, `bookmark.auto_note/step_note`, `history.mention_note`, `result.agent_answer`.
@@ -296,7 +342,7 @@ the turn ends. The message gets `cut`; your next message goes with `user.repetit
    instead, loaded once per conversation (from the history). The page's own tools (WebMCP) go last
    (`background/tool-catalog.ts`), so navigating breaks only the tail. `skillsInstructions` lists
    every general skill in the system prompt but, for Browser with that group on demand, the skills
-   that guide it (`heldSkills`); `templates.run` goes without its draft views until then. An MCP server set "Its tools on demand"
+   that guide it (`heldSkills`); `templates.run` goes without its draft views until then. An MCP server set "On demand"
    (Settings → MCP servers, off by default) goes as a `mcp:<server>` line of `tools.load` for every
    agent, its tools offered once loaded.
 2. **No summary inside a run.** Compaction (with its summary) only runs in the panel before a message.

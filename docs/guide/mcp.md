@@ -9,7 +9,7 @@ and how many run without asking), then two tabs, **Servers** and **Texts**.
 
 Each server is a line: its switch, name and address, its status (a green dot and how many tools, *Sign in needed*,
 the error, or *Not tested yet*), how it lets you in (or **Sign in**), and its policy. Clicking it opens it in a panel
-on the right: **Test connection**, **Edit** and **Remove**, signing in or out, on and its policy, its tools, and its
+on the right: **Test connection**, **Edit** and **Remove**, signing in or out, on, its policy and when its tools are offered, its tools, and its
 connection logs. Escape or ✕ closes it.
 
 **＋ By URL** opens the editor, its steps on the left:
@@ -21,8 +21,24 @@ connection logs. Escape or ✕ closes it.
    - **A provider's key**: the provider chosen, its key filling `{{apiKey}}` in the headers;
    - **Sign in, if it asks**: OAuth when the server wants it; an optional Client ID, Client secret and Scope for one
      that does not register the extension itself, and other headers if it needs them.
-3. **How its tools are offered**: **Its tools on demand** (the model loads them only when it needs them), **Trust its
-   read-only hints** (off by default, below) and the **Tool timeout** (1 to 3600 seconds; empty: 60).
+3. **How its tools are offered**: when they reach the model, one of five:
+   - **Same as Tools → Matching** (the default; with the mode set, e.g. *Same as Tools → Matching (All tools)*): as
+     [Settings → Tools → Matching](tools.md#matching-which-tools-reach-the-model) is set. With *All tools*, in every
+     request, as before.
+   - **Always offered**: in every request, whatever your message matches.
+   - **Recommended when it matches**: in every request, and named with your message when it matches its tools.
+   - **Only when it matches**: offered when your message matches its tools; else listed in `tools.load`.
+   - **On demand**: the model loads them only when it needs them (`tools.load`).
+
+   The last four are the server's own, whatever Settings → Tools → Matching says.
+
+   Then **Trust its read-only hints** (off by default, below) and the **Tool timeout** (1 to 3600 seconds; empty: 60).
+   A server's line says *on demand*, *recommended when it matches*, *only when it matches*, or, while Matching is not
+   *All tools*, *always offered*.
+   Its panel's **Offered** changes it at once, without the editor. Its panel also has **What it is for**
+   (optional, empty by default): what you use it for, in your words and language (*tasks, reminders, projects*).
+   [Tool matching](tools.md#matching-which-tools-reach-the-model) compares it with your message along with its
+   tools, by words and by meaning; it is never sent to the model, and not exported.
 
 On the right, **Test it** connects with what is set there, unsaved, and lists the tools; **As the model sees them**
 gives their names and about how many tokens they take; **Checks** says what must be fixed before **Save**.
@@ -47,9 +63,15 @@ for every server, with the [action log](action-log.md).
 client asks the server to cancel it. A server that goes on anyway may refuse another call until the first one ends.
 Give a server whose tools are slow a longer timeout; it applies to all the server's tools, and **Stop** still cuts a call.
 
-**A server that does not answer.** A turn waits 15 seconds for a server to connect, then goes on without its tools
-(the connection keeps trying). A server that failed, or did not connect in that time, is not tried again for 30
-seconds: its tools are left out and its error is said again. **Test connection** tries at once. A call that failed is
+**A server that does not answer.** The servers are connected when a conversation starts, before its first message,
+and no message of the chat waits for one that has not connected yet: it goes without that server's tools, which are
+offered once it is in. A server that fails, or takes more than 15 seconds to connect, is left out and tried again
+when you start a new conversation. A message waits (up to those 15 seconds) only for a server that had already
+connected since the browser started, when the extension has to connect to it again; actions and tools that run on
+their own wait for every server. The chat does not say that a server was not reached: the MCP
+button under the message box marks the servers it has no tools from, and **Layers** counts them in the turn's
+*Listing the tools* step. Only when the model calls a tool of such a server does a notice say why it was not
+reached. **Test connection** tries at once. A call that failed is
 made again on a new connection only when it surely did nothing: the server forgot the session, or a tool that only
 reads (with **Trust its read-only hints**) lost its connection. Never after the server's own error or a timeout.
 

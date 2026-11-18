@@ -16,6 +16,19 @@ import { readVectors } from './vector-db';
 export const QUERY_TIMEOUT_MS = 2000; // a message waits at most this long
 export const MEANING_FAILED_NOTICE = 'Matched by words only: the embeddings provider did not answer.';
 
+// A message's vector, asked once for memory and the tool groups (tools/match-meaning): asked again in
+// the same `turn` (an object the run makes for it) for the same text to the same model, the first ask's
+// promise, so the second one sends nothing. Without a turn, always asked.
+const asked = new WeakMap<object, { key: string; vector: Promise<number[]> }>();
+export function embedQuery(provider: Parameters<typeof embedTexts>[0] & { id: string }, model: string, input: string, turn?: object): Promise<number[]> {
+  const key = JSON.stringify([provider.id, provider.baseURL, model, input]);
+  const before = turn && asked.get(turn);
+  if (before?.key === key) return before.vector;
+  const vector = embedTexts(provider, model, [input], AbortSignal.timeout(QUERY_TIMEOUT_MS)).then(([v]) => v!);
+  if (turn) asked.set(turn, { key, vector });
+  return vector;
+}
+
 // The items of this message that could pass by meaning: with none, nothing is asked for.
 export function meaningCandidates(items: MemoryItem[], host: string | undefined, on: (kind: AutoInjectKind) => boolean, reads: boolean): MemoryItem[] {
   const auto = on('memoryAuto');
@@ -23,7 +36,7 @@ export function meaningCandidates(items: MemoryItem[], host: string | undefined,
   return items.filter((m) => indexable(m) && ((auto && autoAttachable(m)) || (site && onDomain(m, host))));
 }
 
-export async function queryMeaning(settings: Settings, text: string, candidates: MemoryItem[]): Promise<{ meaning?: MeaningMatch; failed?: boolean }> {
+export async function queryMeaning(settings: Settings, text: string, candidates: MemoryItem[], turn?: object): Promise<{ meaning?: MeaningMatch; failed?: boolean }> {
   const target = semanticTarget(settings);
   if (!target || !text.trim() || !candidates.length) return {};
   const { provider, model, threshold, semantic } = target;
@@ -43,11 +56,11 @@ export async function queryMeaning(settings: Settings, text: string, candidates:
     const records = usable.filter((r) => !!r);
     if (!records.length) return {};
     const input = (semantic.queryPrefix ?? '') + mask(stripMarks(text));
-    const [vector] = await embedTexts(provider, model, [input], AbortSignal.timeout(QUERY_TIMEOUT_MS));
+    const vector = await embedQuery(provider, model, input, turn);
     // Of other dimensions, as if not indexed: scoring them would only say 0.
-    const comparable = records.filter((r) => r.vector.length === vector!.length);
+    const comparable = records.filter((r) => r.vector.length === vector.length);
     if (!comparable.length) return { failed: true };
-    return { meaning: { threshold, scores: new Map(comparable.map((r) => [r.itemId, Math.max(0, cosine(vector!, r.vector))])) } };
+    return { meaning: { threshold, scores: new Map(comparable.map((r) => [r.itemId, Math.max(0, cosine(vector, r.vector))])) } };
   } catch {
     return { failed: true };
   }

@@ -90,6 +90,10 @@ export interface MatchAttach {
 }
 // The match needed by default, and how many per message: a section's default and most (its defaults).
 export const MATCH_THRESHOLD = 60;
+// What each word of a message no item has counts against an auto-attach's match (search/bm25 scored
+// `unseen`): half a word only one item has, so one word in common with a message of others is no full
+// match. The model's searches and the search boxes leave it out: a query finds by any of its words.
+export const ATTACH_UNSEEN = 0.5;
 export interface AttachDefaults {
   threshold: number;
   max: number;
@@ -113,6 +117,18 @@ export interface SemanticSettings {
 // Saved conversations (history/auto): among which.
 export interface AutoAttach extends MatchAttach {
   scope?: 'pinned' | 'all'; // default: all of them
+}
+
+// Settings → Tools → Matching (tools/match): which groups of tools reach the model. 'all' (none: the
+// default): every tool, as before; 'recommend': every tool, and the groups the message matches named
+// with it; 'matching': only the groups it matches, the others through tools.load. `threshold`: the match
+// needed, in % (none: TOOL_MATCH_THRESHOLD).
+export interface ToolMatchSettings {
+  mode?: 'all' | 'recommend' | 'matching';
+  threshold?: number;
+  // How many groups Only matching holds by meaning (none: 'offer-more'; tools/match MEANING_LEVELS).
+  level?: 'offer-more' | 'balanced' | 'hold-more';
+  meaningLevel?: 'broad' | 'moderate' | 'strict'; // an earlier build's, read as the nearest level (tools/match toolMeaningLevel); not written
 }
 
 // What can be mentioned in a message (on by default), and whether a mentioned tool is forced.
@@ -254,7 +270,7 @@ export interface Settings {
   popup?: PopupView; // Settings → Appearance → Popup
   thinking?: Record<string, ThinkingLevel>; // per provider and model: see thinkingLevel()
   disabledTools?: string[]; // tool names (e.g. "browser.click") not offered to the model
-  tools?: { createOnDemand?: boolean }; // Settings → Tools: the tools that create things offered once the model loads them (tools/load); on by default
+  tools?: { createOnDemand?: boolean; match?: ToolMatchSettings }; // Settings → Tools: the tools that create things offered once the model loads them (tools/load), on by default; match: which tool groups reach the model (tools/match)
   promptTexts?: Record<string, string>; // overrides of the fixed texts sent to the model (core/model-texts)
   mentions?: Mentions;
   mcpServers?: McpServerConfig[]; // Settings → MCP servers

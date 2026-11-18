@@ -8,7 +8,7 @@ import type { WatchSettings } from '../watches/store';
 import type { SettingsEdit } from '../storage/settings-edit';
 import type { CaptureKind } from '../capture/protocol';
 import type { PanelMessage, PanelRow } from '../manager/protocol';
-import type { AccessRequest, ActionDetail, AutoAttachCheck, JSONSchema, Message, Part, SystemMemory, ThinkingLevel, Tool, UserReply, UserRequest, WindowSource } from './types';
+import type { AccessRequest, ActionDetail, AutoAttachCheck, JSONSchema, Message, Part, SystemMemory, ThinkingLevel, Tool, ToolMatch, TurnPhase, UserReply, UserRequest, WindowSource } from './types';
 
 export const PORT_NAME = 'agent';
 
@@ -34,6 +34,9 @@ export interface SummarizeRequest {
 }
 export type ListToolsReply = { tools: ToolInfo[] } | { error: string };
 export type SummarizeReply = { summary: string } | { error: string };
+// From the panel, as a conversation starts: the MCP servers are connected before its first message,
+// and those that had failed are tried again (mcp/manager connect).
+export const MCP_CONNECT = 'browser-agent:mcp-connect';
 // Broadcast by the background when the catalog has more tools (an MCP server finished connecting).
 export const TOOLS_CHANGED = 'browser-agent:tools-changed';
 
@@ -95,6 +98,7 @@ export type CoreMessage =
   | ListToolsRequest
   | SummarizeRequest
   | { type: typeof TOOLS_CHANGED }
+  | { type: typeof MCP_CONNECT }
   | { type: typeof WATCH_START; settings: WatchSettings }
   | { type: typeof WATCH_CANCEL; id: string }
   | { type: typeof OPEN_WINDOW_PANEL; tabId: number; windowId: number }
@@ -114,6 +118,7 @@ export interface CoreReplies {
   [LIST_TOOLS]: ListToolsReply;
   [SUMMARIZE]: SummarizeReply;
   [TOOLS_CHANGED]: void;
+  [MCP_CONNECT]: void;
   [WATCH_START]: { ok: true } | { error: string };
   [WATCH_CANCEL]: void;
   [OPEN_WINDOW_PANEL]: { opened: boolean };
@@ -152,7 +157,7 @@ export type PanelToBackground =
   // kept: the files attached to the last message that were cut, whole, for tools.read_more (core/kept-results).
   // userTab: the tab the user is on, when it is not tabId (the window's side panel).
   // runId: the panel's number for this run, sent back on every event of it (RunTagged); none: an older panel.
-  | { type: 'run'; runId?: number; history: Message[]; providerId: string; model: string; tabId?: number; includePage: boolean; noSelection?: boolean; thinking?: ThinkingLevel; conversationId?: string; agentId?: string; skip?: AutoInjectKind[]; contextWindow?: number; contextWindowSource?: WindowSource; wordBlacklist?: boolean; kept?: KeptText[]; userTab?: { tabId: number; title?: string; url?: string }; panelRow?: string } // panelRow: the Agents Panel's row the user started, whose chat runs (agents/panel)
+  | { type: 'run'; runId?: number; history: Message[]; providerId: string; model: string; tabId?: number; includePage: boolean; noSelection?: boolean; thinking?: ThinkingLevel; conversationId?: string; agentId?: string; skip?: AutoInjectKind[]; contextWindow?: number; contextWindowSource?: WindowSource; wordBlacklist?: boolean; kept?: KeptText[]; userTab?: { tabId: number; title?: string; url?: string }; panelRow?: string; sentAt?: number; lead?: TurnPhase[] } // panelRow: the Agents Panel's row the user started, whose chat runs (agents/panel); sentAt: when the panel sent it (Date.now()); lead: the turn's phases the panel measured before it (core/phases)
   | { type: 'stop' }
   // Sent periodically while a run is active: each message resets the MV3 service worker's
   // ~30 s idle timer, which otherwise kills it while waiting for a confirmation or a slow model.
@@ -191,8 +196,12 @@ export type BackgroundToPanel =
   | { type: 'system-memory'; memory: SystemMemory }
   // What the agent is doing before the model answers (e.g. "Reading ::todoist/today…").
   | { type: 'status'; text: string }
+  // A phase of the turn as it starts, changes or ends (core/phases), for the chat and Layers.
+  | { type: 'phase'; phase: TurnPhase }
   // What the auto-attach of saved conversations found for the last user message (for the views).
   | { type: 'auto-attach'; check: AutoAttachCheck }
+  // Which tool groups the last user message matched and was offered (tools/match; kept in it).
+  | { type: 'tool-match'; match: ToolMatch }
   // A write action waits for the user's decision (answered with 'confirm-reply').
   // problem and edited: asked again, the values the user edited could not be saved (policy/engine).
   | { type: 'confirm'; id: string; summary: string; details?: ActionDetail[]; host: string; agent?: string; problem?: string; edited?: Record<string, string> } // agent: who asks, when not Browser

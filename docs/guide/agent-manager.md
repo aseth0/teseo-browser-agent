@@ -40,8 +40,9 @@ The agent of a row you start may start others, each in a row of its own under it
 parallel on a new tab, as an orchestrator hands out work. It is given three tools, in place of `agents.ask` (see the
 [tool reference](tool-reference.md)):
 
-- **`panel.start`** starts an agent with a task on a page. A card asks you first, every time, with the agent, the page
-  and the task.
+- **`panel.start`** starts an agent with a task on a page, as a brief, as `agents.ask` does
+  ([Agents asking agents](agents.md#agents-asking-agents)). A card asks you first, every time, with the agent, the
+  page, the task and each field of the brief given. The row is titled by the task; its chat shows the whole brief.
 - **`panel.wait`** waits until they have answered (or only checks), and gets their answers.
 - **`panel.send`** gives one of them another message.
 

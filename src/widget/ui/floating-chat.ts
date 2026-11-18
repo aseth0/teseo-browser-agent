@@ -1,7 +1,7 @@
 // The chat floating on this page ("Open the chat here"): the side panel's page in an iframe, its
 // page this tab. Moved by its bar, resized from any edge, its place kept per site. Its conversation
 // goes to the side panel (◨, between turns), which the background opens inside the click, and the
-// chat closes. Folded (–) it stays as it is, the bubble's item brings it back; closed (✕) it goes,
+// chat closes. Folded (–) it stays as it is (but for a dictation, which stops), the bubble's item brings it back; closed (✕) it goes,
 // its conversation kept in the history. Maximized (⤢, or a double click on its bar) it fills the
 // page, neither moved nor resized, until restored; its place on the site stays as it was. The background remembers it is
 // open in this tab, to open it again after a reload. Its pin (📌) keeps its conversation in the
@@ -12,7 +12,7 @@ import { bestEffort } from '../../core/errors';
 import { sendRuntime } from '../../core/runtime';
 import { Pin } from 'lucide';
 import { iconSvg } from '../bubble-icons';
-import { WIDGET_FLOATING, WIDGET_OPEN_CHAT, WIDGET_STICKY, WIDGET_TO_PANEL, type ChatState, type OpenChatAction } from '../protocol';
+import { FRAME_TICKET, FRAME_TICKET_PARAM, WIDGET_FLOATING, WIDGET_FOLDED, WIDGET_OPEN_CHAT, WIDGET_STICKY, WIDGET_TO_PANEL, type ChatState, type OpenChatAction } from '../protocol';
 import { el, keepKeys, pin, trustedButton, widgetHost } from './dom';
 import { clamp, resizeHandle, RESIZE_EDGES, type Box, type Edge } from './pointer';
 import { floats, type WidgetHost, type WidgetState } from './state';
@@ -103,21 +103,41 @@ export function createFloatingChat(s: WidgetState, { render, savePlace }: Widget
     const reply = await bestEffort(sendRuntime({ type: WIDGET_TO_PANEL }), 'widget');
     if (reply?.opened && reply.moved) closeChat();
   };
+  // Where the chat cannot float (s.noFloating: Firefox frames it without the APIs it needs), never framed:
+  // the background opens it full screen in a tab instead (background/widget-host).
   const showChat = async () => {
+    if (s.noFloating) return void toChat({});
     folded = false;
     unseen = false;
     if (s.place.hidden) await savePlace({ hidden: false }); // asked for: the widget shows again here
-    if (!chatHost) buildChat();
+    if (!chatHost) await (opening ??= openFrame().finally(() => (opening = undefined)));
+    if (!chatHost) return; // no ticket: no frame
     render();
     await bestEffort(sendRuntime({ type: WIDGET_FLOATING, open: true }), 'widget');
+  };
+  // Folded: hidden on the page, so its dictation stops (WIDGET_FOLDED).
+  const fold = () => {
+    folded = true;
+    render();
+    void sendRuntime({ type: WIDGET_FOLDED }).catch(() => undefined);
   };
   // Folded when shown; else shown (⌥⇧F, and the bubble when the chat floats).
   const toggleChat = () => {
     if (!chatHost || folded) return void showChat();
-    folded = true;
-    render();
+    fold();
+  };
+  // The chat's frame, built once the background gave a ticket for this tab (background/frame-tickets):
+  // without one, the chat's page shows nothing. One asked at a time: two shows at once build one frame;
+  // closed meanwhile (`closes` counts), none.
+  let opening: Promise<void> | undefined;
+  let closes = 0;
+  const openFrame = async () => {
+    const before = closes;
+    const reply = await bestEffort(sendRuntime({ type: FRAME_TICKET }), 'widget');
+    if (reply?.ticket && !chatHost && closes === before) buildChat(reply.ticket);
   };
   const closeChat = (tell = true) => {
+    closes++;
     if (!chatHost) return;
     chatHost.remove();
     chatHost = undefined;
@@ -127,7 +147,7 @@ export function createFloatingChat(s: WidgetState, { render, savePlace }: Widget
     if (tell) void bestEffort(sendRuntime({ type: WIDGET_FLOATING, open: false }), 'widget');
     onClose();
   };
-  const buildChat = () => {
+  const buildChat = (ticket: string) => {
     chatHost = widgetHost();
     pin(chatHost, { position: 'fixed', 'z-index': '2147483647' });
     const root = chatHost.attachShadow({ mode: 'closed' });
@@ -149,10 +169,11 @@ export function createFloatingChat(s: WidgetState, { render, savePlace }: Widget
     const bar = el('div', { className: 'floating-bar' }, el('span', { textContent: '✦ Teseo' }),
       pinButton,
       toPanel,
-      button('–', 'Fold it (the bubble brings it back)', () => ((folded = true), render())),
+      button('–', 'Fold it (the bubble brings it back)', fold),
       size,
       button('✕', 'Close it (the conversation stays in the history)', () => closeChat()));
-    chatFrame = el('iframe', { src: `${browser.runtime.getURL('/sidepanel.html')}?floating`, title: 'Teseo chat' });
+    // The ticket in the fragment: never in a request, nor in a referrer.
+    chatFrame = el('iframe', { src: `${browser.runtime.getURL('/floating.html')}#${FRAME_TICKET_PARAM}=${ticket}`, title: 'Teseo chat' });
     chatFrame.allow = 'clipboard-write'; // its Copy buttons
     const panel = el('div', { className: 'floating' }, bar, chatFrame, ...RESIZE_EDGES.map(chatHandle));
     root.append(el('style', { textContent: STYLE }), panel);
@@ -164,8 +185,9 @@ export function createFloatingChat(s: WidgetState, { render, savePlace }: Widget
   // To the chat floating here (shown again if folded, opened if the settings say the chat floats);
   // else to the side panel, opened.
   // `where`: here (floating) or in the side panel; none: where the chat is, else as the settings say.
+  // Where it cannot float, never here: the background opens the chat full screen in a tab.
   const toChat = async (what: { chat?: string; action?: OpenChatAction }, where?: 'here' | 'panel') => {
-    const floating = where ? where === 'here' : !!chatHost || floats(s);
+    const floating = !s.noFloating && (where ? where === 'here' : !!chatHost || floats(s));
     if (floating) void showChat();
     return bestEffort(sendRuntime({ type: WIDGET_OPEN_CHAT, ...what, ...(floating && { floating }) }), 'widget');
   };

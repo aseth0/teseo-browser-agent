@@ -178,7 +178,7 @@ Action
    does with an answer. No tool, no boxes, on a click only. Prompts of actions with the model now
    take the values read from the page too. The design was: `chrome.sidePanel.open` from the card,
    or "Open the side panel" with the prompt ready.
-5. **Open chat here.** 5a ✅ Built: "💬 Open the chat here" in the bubble opens `sidepanel.html?floating`
+5. **Open chat here.** 5a ✅ Built: "💬 Open the chat here" in the bubble opens `floating.html`
    in the widget (its own closed shadow root), its page the tab it floats in as `tabs.getCurrent()`
    says (never its URL). Moved by its bar, resized from any edge, place and size kept per site;
    folded (–) or closed (✕). The background keeps, per tab, that it is open and its conversation
@@ -186,7 +186,9 @@ Action
    confirmation and access cards works only after the frame has been in full view for 0.5 s
    (`useSeen`: threshold 0 on the document, so any part covered counts; the widget's resize handles
    lie outside the frame, since even a see-through element over it counts). Checked in Chromium:
-   the frame loads with `use_dynamic_url`, the static URL is refused to pages, the page sees no
+   the frame loads from the extension's fixed URL (`use_dynamic_url` was dropped: Vivaldi refused
+   the frame under it), a page framing or opening that URL by itself gets an empty document (no
+   one-time ticket: `background/frame-tickets`), `sidepanel.html` gets the browser's "blocked" page, the page sees no
    frame (`window.length` 0 inside the closed root), and opacity, `filter`, transforms and covers,
    whole or a corner, read as not seen. Known limit: the turn runs while the chat's port is open,
    so a reload or a link the agent follows in that tab stops it (the conversation reopens, the turn
@@ -212,7 +214,7 @@ Action
    The whole chat, every feature of the side panel, floating on the page instead
    of beside it: from the bubble (an item under the actions, and a keyboard shortcut), on any page
    the widget shows on.
-   - **What it is.** The side panel's own page (`sidepanel.html?floating&tab=<id>`) in an iframe
+   - **What it is.** The side panel's chat app, in a page of its own (`floating.html`), in an iframe
      inside the widget's closed shadow root: the same React app, settings, conversations, agents,
      tools and confirmations, nothing rebuilt. Its page is the tab it floats in (not "the active
      tab" as for the side panel). Movable by its title bar, resized from any edge (as the card),
@@ -220,10 +222,15 @@ Action
      Going on with a conversation of the side panel, or moving it there ("Open in the side panel"),
      goes through the history: a conversation is never live in two places at once.
    - **Risks, and what answers them.**
-     - *The page sees the extension.* The chat's page and files must be
-       `web_accessible_resources` for an iframe to load them: a page could tell the extension is
-       installed. `use_dynamic_url` (a URL that changes each session) keeps them from being
-       fingerprinted; only the widget asks for them.
+     - *The page sees the extension.* The frame's page must be in `web_accessible_resources` for an
+       iframe to load it: a page can tell the extension is installed (accepted, as for most
+       extensions). First built with `use_dynamic_url` (a URL that changes each session), which
+       Vivaldi refuses to frame; now under the fixed URL, as a page of its own (`floating.html`, the
+       only one listed; its files load from its own origin unlisted), guarded by a one-time ticket:
+       the widget asks the background for one for its tab and passes it in the frame's URL fragment,
+       and the page shows nothing until the background has redeemed it (issued for the frame's tab,
+       unused, unexpired, and only for that page in a frame). A page framing or opening it by itself
+       gets an empty document; the side panel's page stays out of its reach.
      - *Clickjacking.* The page owns the iframe's host element: it could make it see-through, or
        cover it, and steer a click onto "Allow". The chat inside the iframe checks it is really seen
        (IntersectionObserver v2, `trackVisibility`): the confirmation and access cards' buttons work
@@ -234,7 +241,7 @@ Action
      - *Where not.* Pages the widget cannot reach (chrome://, the Web Store, sites without access)
        keep the side panel.
    - **Checked before building:** that Vivaldi and Chrome let an extension page load in an iframe
-     on any site with `use_dynamic_url`, that `trackVisibility` reports the cases above (opacity,
+     on any site (later, Vivaldi 8.3 refused it under `use_dynamic_url`: a page of its own under the fixed URL, with its ticket, replaced it), that `trackVisibility` reports the cases above (opacity,
      covered, transformed), and the panel's layout in a small resizable frame.
 
 ## Example actions

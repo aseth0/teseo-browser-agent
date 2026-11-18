@@ -35,6 +35,15 @@ export const FLOATING_PREFIX = 'floating:';
 export interface FloatingChat {
   conversationId?: string;
 }
+// The chat floating on a page opens only with a ticket (background/frame-tickets). { type: FRAME_TICKET }
+// → { ticket? }: from the widget, before it builds the chat's frame, a ticket for its tab, passed to the
+// frame in its URL's fragment (FRAME_TICKET_PARAM). { type: FRAME_REDEEM, ticket } → { shown }: from the
+// chat's page in a page's frame, before anything of it starts: whether the ticket was issued for the
+// frame's tab, unused and unexpired; spent either way. Kept in storage.session (FRAME_TICKETS).
+export const FRAME_TICKET = 'browser-agent:frame-ticket';
+export const FRAME_REDEEM = 'browser-agent:frame-redeem';
+export const FRAME_TICKETS = 'floatingTickets';
+export const FRAME_TICKET_PARAM = 'ticket';
 // To the widget of a tab, from the extension: { type: WIDGET_FLOAT, toggle? } → { floated: boolean }
 // floats the chat there (again, to show the conversation its FLOATING_PREFIX key names now), or with
 // `toggle` (the keyboard shortcut) folds it when shown.
@@ -53,6 +62,9 @@ export const FLOAT_COMMAND = 'float-chat';
 // a temporary one); `sticky`: it shows the pinned conversation (the bar's pin on); `stickable`: its
 // conversation can be pinned now (saved in the history, between turns).
 export const WIDGET_CHAT_STATE = 'browser-agent:widget-chat-state';
+// { type: WIDGET_FOLDED } from the widget, as it folds the floating chat: the chat on that tab stops
+// dictating (sidepanel/useDictation), as nothing on the page shows the microphone on.
+export const WIDGET_FOLDED = 'browser-agent:widget-folded';
 // { type: WIDGET_STICKY, on } → { sticky: boolean }: the pin on the floating chat's bar. On: the
 // conversation the chat floating on the sender's tab shows (its FLOATING_PREFIX key), when saved,
 // becomes the pinned one; off: none is. Answered with whether one is pinned now.
@@ -131,12 +143,15 @@ export type WidgetMessage =
   | { type: typeof WIDGET_REPAINT }
   | { type: typeof WIDGET_HIDE; hidden: boolean }
   | { type: typeof WIDGET_CHAT_STATE; state: ChatState; movable: boolean; sticky?: boolean; stickable?: boolean }
+  | { type: typeof WIDGET_FOLDED }
   | { type: typeof WIDGET_STICKY; on: boolean }
   | { type: typeof STICKY_UNPIN; conversationId: string }
   | { type: typeof WIDGET_TO_PANEL }
   | { type: typeof WIDGET_PLACE; site: string; patch: WidgetPlace }
   | { type: typeof FLOATING_TO_PANEL; tab: number; to: HandoffTo; opened: boolean }
-  | { type: typeof WIDGET_TOGGLE };
+  | { type: typeof WIDGET_TOGGLE }
+  | { type: typeof FRAME_TICKET }
+  | { type: typeof FRAME_REDEEM; ticket: string };
 export interface WidgetReplies {
   [WIDGET_ACTIONS]: WidgetActionsReply;
   [WIDGET_OPEN_CHAT]: { opened: boolean };
@@ -145,12 +160,15 @@ export interface WidgetReplies {
   [WIDGET_REPAINT]: void;
   [WIDGET_HIDE]: void;
   [WIDGET_CHAT_STATE]: void;
+  [WIDGET_FOLDED]: void;
   [WIDGET_STICKY]: { sticky: boolean };
   [STICKY_UNPIN]: Record<string, never>;
   [WIDGET_TO_PANEL]: { opened: boolean; moved: boolean };
   [WIDGET_PLACE]: WidgetPlace;
   [FLOATING_TO_PANEL]: { moved: boolean };
   [WIDGET_TOGGLE]: void;
+  [FRAME_TICKET]: { ticket?: string };
+  [FRAME_REDEEM]: { shown: boolean };
 }
 
 // The storage key of the actions (widget/store), which the widget watches too.

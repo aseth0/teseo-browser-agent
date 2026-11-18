@@ -17,6 +17,7 @@ const initialMock = () => ({
   chatRequests: 0, // requests to /chat/completions
   speech: [], // the pieces asked to be read aloud (POST /audio/speech): its JSON body, and whether it was cut off (aborted)
   speechDelayMs: 300, // how long each piece takes, as a voice model on a CPU does
+  embedded: [], // the texts sent to /embeddings, one array per request
 });
 export const mock = initialMock();
 // The authorization server's state (mock/server oauth()).

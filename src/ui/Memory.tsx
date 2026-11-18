@@ -7,7 +7,7 @@ import { agentNameById, agentStore, type AgentProfile } from '../agents/profiles
 import { DEFAULT_AGENT_ID, DEFAULT_AGENT_NAME } from '../agents/builtins';
 import { exportMemory, importMemory } from '../memory/io';
 import { MAX_TITLE, memoryFor, memoryLabel, memoryStore, memoryTitle, newMemoryItem, onDomain, type MemoryItem } from '../memory/store';
-import { domainsFrom, MEMORY_AUTO_DEFAULTS, memoryMatches, memoryProblems, searchMemory, withMeaning, type MeaningMatch } from '../memory/items';
+import { domainsFrom, memoryAttachMatches, MEMORY_AUTO_DEFAULTS, memoryMatches, memoryProblems, searchMemory, withMeaning, type MeaningMatch } from '../memory/items';
 import { MEANING_FAILED_NOTICE } from '../memory/query-meaning';
 import { indexable, semanticTarget } from '../memory/semantic';
 import { memoryBudget, memoryPicks } from '../memory/prompt';
@@ -216,7 +216,9 @@ function MemoryTry({ settings, items, agents }: Pick<Props, 'settings'> & { item
   const candidates = theirs.filter(indexable);
   // What the chat would do with it (memory/prompt): by words at once, with meaning once it is known.
   const resultsWith = (query: string, meaning: MeaningMatch | undefined) => {
-    const ranked = withMeaning(memoryMatches(theirs, query), theirs, meaning);
+    const ranked = withMeaning(memoryAttachMatches(theirs, query), theirs, meaning);
+    // memory__search's match, the query's words no item has not counting (memory/items searchMemoryAbove).
+    const searched = new Map(memoryMatches(theirs, query).map((r) => [r.item.id, r.match]));
     return {
       picked: memoryPicks(ranked, [], auto, meaning).map((r) => r.item.id),
       hits: ranked.slice(0, PLAYGROUND_RESULTS).map(({ item, match, meaning: closeness }) => {
@@ -230,7 +232,7 @@ function MemoryTry({ settings, items, agents }: Pick<Props, 'settings'> & { item
           badges: (
             <>
               <ToneChip tone={r.tone} title={r.about}>{r.label}</ToneChip>
-              {match * 100 < minMatch && <span className="badge warn" title={`memory__search needs ${minMatch}% (Model's search, above)`}>below {minMatch}%: the model's search leaves it out</span>}
+              {(searched.get(item.id) ?? 0) * 100 < minMatch && <span className="badge warn" title={`memory__search needs ${minMatch}% (Model's search, above)`}>below {minMatch}%: the model's search leaves it out</span>}
             </>
           ),
           detail: <Snippet text={item.text} query={query} prefix={false} cut={false} />,

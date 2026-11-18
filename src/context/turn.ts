@@ -30,6 +30,7 @@ import { buildPageContext, readPageValues } from './pipeline';
 import { runPageTemplates } from '../templates/run';
 import { seenWhole } from './compaction';
 import { historyOn, mentionsOn, type MentionKind } from '../storage/settings-select';
+import { noPhases, type PhaseRecorder } from '../core/phases';
 
 interface TurnInput {
   history: Message[]; // ending with the user's message
@@ -41,6 +42,7 @@ interface TurnInput {
   userTab?: { tabId: number; title?: string; url?: string }; // the tab the user is on, another than tabId (context.user_elsewhere)
   conversationId?: string;
   skip?: AutoInjectKind[]; // left out of this conversation (the chat's menu; context/auto-inject)
+  turn?: object; // this turn, as an object: the message's vector is asked once for it, for memory and the tool groups (memory/query-meaning embedQuery)
 }
 
 interface TurnDeps {
@@ -52,12 +54,19 @@ interface TurnDeps {
   toolNames: string[]; // the tools that can be mentioned
   requestAccess: (access: AccessRequest) => Promise<boolean>;
   send: (event: Extract<BackgroundToPanel, { type: 'status' | 'auto-attach' | 'notice' }>) => void; // to the panel
+  phases?: PhaseRecorder; // each source that attached something, timed (core/phases)
 }
+
+// A source's phase detail: how many it attached; none, and it is left out.
+const attached = (n: number) => (n ? `${n} attached` : undefined);
 
 // The items, and the tools mentioned: offered even if off, and asked for.
 export async function turnContext(input: TurnInput, deps: TurnDeps): Promise<{ items: ContextItem[]; mentionedTools: string[] }> {
   const { history, tabId, url, conversationId } = input;
   const { settings, skills, templates } = deps;
+  const phases = deps.phases ?? noPhases;
+  const step = <T,>(label: string, fn: () => Promise<T> | T, detail: (r: T) => string | undefined) => phases.time({ kind: 'context', label }, fn, detail);
+  const counted = (label: string, fn: () => Promise<ContextItem[]> | ContextItem[]) => step(label, fn, (r) => attached(r.length));
   const mentions = (kind: MentionKind) => mentionsOn(settings, kind);
   const on = (kind: AutoInjectKind) => autoInjectOn(settings, kind, input.skip);
   // What you wrote (not what goes with it).
@@ -70,28 +79,28 @@ export async function turnContext(input: TurnInput, deps: TurnDeps): Promise<{ i
   // left it out: asked here, as the choice may not have reached the panel yet (context/meaning-off).
   const memory = deps.memory ?? [];
   const asks = on('memoryMeaning') && !(await meaningOffFor(conversationId));
-  const { meaning, failed } = asks ? await queryMeaning(settings, typed, meaningCandidates(memory, hostOf(url), on, !!deps.memoryOpts?.reads)) : {};
+  const { meaning, failed } = asks ? await step('Memory by meaning', () => queryMeaning(settings, typed, meaningCandidates(memory, hostOf(url), on, !!deps.memoryOpts?.reads), input.turn), (r) => (r.failed ? 'could not be asked' : 'asked')) : {};
   if (failed) deps.send({ type: 'notice', text: MEANING_FAILED_NOTICE });
-  const site = siteContextItems({ settings, skills, templates, memory, memoryOpts: deps.memoryOpts, url, typed, history: seen, skip: input.skip, meaning });
+  const site = await step('Site skills and memory', () => siteContextItems({ settings, skills, templates, memory, memoryOpts: deps.memoryOpts, url, typed, history: seen, skip: input.skip, meaning }), (r) => attached(r.items.length));
   const active = site.skills;
   const items: ContextItem[] = site.items;
   // The sites mentioned in the message (::site/view), wherever they are open, even without "Page".
-  const mentioned = await readMentions(mentions('templates') ? parseMentions(typed, templates) : [], {
+  const mentioned = await step('Sites mentioned', () => readMentions(mentions('templates') ? parseMentions(typed, templates) : [], {
     activeTabId: tabId,
     web: settings.webSearch,
     requestAccess: deps.requestAccess,
     onStatus: (status) => deps.send({ type: 'status', text: status }),
-  });
+  }), (r) => attached(r.items.length));
   items.push(...mentioned.items);
   // The skills (/skill) and tools ($tool) mentioned in it.
-  if (mentions('skills')) items.push(...skillMentionItems(typed, skills, new Set(active.map((s) => s.name))));
+  if (mentions('skills')) items.push(...(await counted('Skills mentioned', () => skillMentionItems(typed, skills, new Set(active.map((s) => s.name))))));
   // The saved conversations (#title) mentioned in it.
-  if (mentions('history') && historyOn(settings)) items.push(...(await historyMentionItems(typed, conversationId)));
+  if (mentions('history') && historyOn(settings)) items.push(...(await counted('Saved conversations mentioned', () => historyMentionItems(typed, conversationId))));
   // The bookmarks (b::title) mentioned in it, and those it matches, on their own (Settings → Bookmarks → Auto-attach).
-  if (mentions('bookmarks')) items.push(...(await bookmarkMentionItems(typed, settings)));
-  if (on('bookmarkAuto')) items.push(...(await bookmarkAutoItems(typed, seen, settings)));
+  if (mentions('bookmarks')) items.push(...(await counted('Bookmarks mentioned', () => bookmarkMentionItems(typed, settings))));
+  if (on('bookmarkAuto')) items.push(...(await counted('Bookmarks matched', () => bookmarkAutoItems(typed, seen, settings))));
   // And those your message matches well enough, on their own (Settings → History → Auto-attach).
-  const auto = on('historyAuto') ? await autoAttachItems(typed, seen, settings.history?.autoAttach ?? {}, conversationId) : { items: [] };
+  const auto = on('historyAuto') ? await step('Saved conversations matched', () => autoAttachItems(typed, seen, settings.history?.autoAttach ?? {}, conversationId), (r) => attached(r.items.length)) : { items: [] };
   items.push(...auto.items);
   if (auto.check) deps.send({ type: 'auto-attach', check: auto.check });
   let mentionedTools: string[] = [];
@@ -104,12 +113,15 @@ export async function turnContext(input: TurnInput, deps: TurnDeps): Promise<{ i
     // The values its site skills ask for, the output of its site templates (except those just read
     // from this tab as mentions), then the page itself.
     const pageTemplates = site.templates.filter((t) => !mentioned.fromActiveTab.has(t.id));
-    const [values, results] = await Promise.all([readPageValues(tabId, skillVariables(active)), runPageTemplates(tabId, pageTemplates, url)]);
+    const variables = skillVariables(active);
+    const [values, results] = await step('Site skill values and templates', () => Promise.all([readPageValues(tabId, variables), runPageTemplates(tabId, pageTemplates, url)]),
+      () => (variables.length || pageTemplates.length ? [variables.length && `${variables.length} values`, pageTemplates.length && `${pageTemplates.length} templates`].filter(Boolean).join(', ') : undefined));
     const fromTemplates = templateItems(pageTemplates, results);
     // Unread, not missing: so the model does not take it that the page has none of them.
     const valueOf = values.error === undefined ? valueTextOf(values.values) : () => `the page could not be read (${values.error})`;
     items.push(...siteSkillValueItems(active, valueOf), ...fromTemplates.items);
-    items.push({ kind: 'page', text: await buildPageContext(tabId, { replacedBy: mentioned.replacedBy ?? fromTemplates.replacedBy, noSelection: input.noSelection }), source: PAGE_SOURCE });
+    const page = await step('Reading the page', () => buildPageContext(tabId, { replacedBy: mentioned.replacedBy ?? fromTemplates.replacedBy, noSelection: input.noSelection }), (t) => `about ${Math.round(t.length / 4).toLocaleString('en-US')} tokens`);
+    items.push({ kind: 'page', text: page, source: PAGE_SOURCE });
   } else if (input.noPage) {
     // Said, so the model does not imagine one.
     items.push({ kind: 'page', text: text('context.no_page', { reason: input.noPage }), source: NO_PAGE_SOURCE });

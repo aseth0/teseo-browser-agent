@@ -423,13 +423,46 @@ export const USER_TEXTS = {
     group: 'user',
     label: 'A task for another agent',
     when: 'an agent asks another (agents__ask): the first message the other gets',
+    note: '{task}: the task, then the sections of the brief the call fills, then how to shape the answer (the texts below).',
     text: 'The agent "{caller}" asks you: {task}',
   },
   'panel.task': {
     group: 'user',
     label: 'A task in the Agents Panel',
     when: 'a chat of the Agents Panel starts another agent (panel__start): the first message the other gets',
+    note: '{task}: the task, then the sections of the brief the call fills, then how to shape the answer (the texts below).',
     text: 'The agent "{caller}" started you in the Agents Panel: {task}',
+  },
+  // The brief's sections, after its task, each when the call fills it (agents/brief).
+  'brief.context': {
+    group: 'user',
+    label: 'Brief: already known',
+    when: 'an agents__ask or panel__start call gives context',
+    text: '\n\n## Already known\n{context}',
+  },
+  'brief.constraints': {
+    group: 'user',
+    label: 'Brief: do not',
+    when: 'an agents__ask or panel__start call gives constraints',
+    text: '\n\n## Do not\n{constraints}',
+  },
+  'brief.done': {
+    group: 'user',
+    label: 'Brief: done when',
+    when: 'an agents__ask or panel__start call gives done',
+    text: '\n\n## Done when\n{done}',
+  },
+  'brief.report': {
+    group: 'user',
+    label: 'Brief: send back',
+    when: 'an agents__ask or panel__start call gives report',
+    text: '\n\n## Send back\n{report}',
+  },
+  'brief.answer': {
+    group: 'user',
+    label: 'Brief: how to answer',
+    when: 'an agent asks another (agents__ask, panel__start): last in the task',
+    text: '\n\nEnd your answer with two short lines:\nDid: what you did.\nNot done or not verified: what you could not do or check, or "nothing".',
   },
   'panel.message': {
     group: 'user',
@@ -456,6 +489,14 @@ export const USER_TEXTS = {
     note: 'Attached to your message. A mentioned tool is offered for that message even if it is off.',
     text: 'The user asks you to use {tool_names} for this message.',
   },
+  'tools.recommended': {
+    group: 'user',
+    label: 'Tools recommended',
+    when: 'Settings → Tools → Matching is "Recommended" and your message matches some tool groups',
+    note: 'Attached to your message. {groups}: a line per group that matches (the text below), best first.',
+    text: 'Tool groups that match this message:\n{groups}\nPrefer their tools for this task; the others stay available.',
+  },
+  'tools.recommended_group': { group: 'user', label: 'Tools recommended: a group', note: '{label}: the group as Settings → Tools names it; {tools}: its tools.', text: '- {label}: {tools}' },
   'skill.references': {
     group: 'user',
     label: 'Skill: reference files',

@@ -42,6 +42,8 @@ describe('who may ask whom', () => {
   });
 });
 
+const ANSWER = '\n\nEnd your answer with two short lines:\nDid: what you did.\nNot done or not verified: what you could not do or check, or "nothing".';
+
 describe('agents.ask', () => {
   it('lists those it may ask, by name, in its description and its schema', () => {
     const tool = askToolFor([mm, wiki], async () => ({ type: 'text', text: '' }));
@@ -54,7 +56,21 @@ describe('agents.ask', () => {
     const ask = vi.fn(async () => ({ type: 'text' as const, text: 'answer' }));
     const tool = askToolFor([mm], ask);
     expect(await tool.run({ agent: 'mattermost', task: ' find the channel ' }, ctx)).toEqual({ type: 'text', text: 'answer' });
-    expect(ask).toHaveBeenCalledWith(mm, 'find the channel', 'c7');
+    expect(ask).toHaveBeenCalledWith(mm, `find the channel${ANSWER}`, 'c7');
+  });
+  it('lays out a full brief in sections, in their order, whatever order the call gives them', async () => {
+    const ask = vi.fn(async () => ({ type: 'text' as const, text: 'answer' }));
+    await askToolFor([mm], ask).run({ report: 'the link', done: 'one channel', agent: 'mattermost', constraints: 'post nothing', task: 'find the channel', context: 'not #general' }, ctx);
+    expect(ask).toHaveBeenCalledWith(
+      mm,
+      `find the channel\n\n## Already known\nnot #general\n\n## Do not\npost nothing\n\n## Done when\none channel\n\n## Send back\nthe link${ANSWER}`,
+      'c7',
+    );
+  });
+  it('offers the brief fields after the agent and the task, only those two required', () => {
+    const schema = askToolFor([mm], vi.fn()).inputSchema as { properties: Record<string, unknown>; required: string[] };
+    expect(Object.keys(schema.properties)).toEqual(['agent', 'task', 'context', 'constraints', 'done', 'report']);
+    expect(schema.required).toEqual(['agent', 'task']);
   });
   it('refuses an agent it may not ask, or no task', async () => {
     const ask = vi.fn();

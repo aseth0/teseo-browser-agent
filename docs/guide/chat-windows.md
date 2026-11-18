@@ -34,7 +34,7 @@ browser's shortcuts page**). **Settings → Shortcuts** can also give each actio
 | Shortcut | Does |
 |---|---|
 | **Alt+Shift+A** | Opens the side panel |
-| **Alt+Shift+F** | Opens or folds the chat floating on this page |
+| **Alt+Shift+F** | Opens or folds the chat floating on this page (in Firefox, which has none: opens the chat full screen in a tab) |
 | **Alt+Shift+W** | Shows or hides the [page widget](page-widget.md) on this site |
 | **Alt+Shift+S** | Screenshots the visible part of the page into the chat |
 | *not set* | Screenshots a section of the page, or the whole page, into the chat: set a key for them on the shortcuts page, or in Settings |
@@ -129,10 +129,20 @@ in each of them, so a conversation from another page is never a surprise. Click 
 the positions saved per site. The same section chooses whether the bubble and its actions open the chat in the side
 panel (the default) or floating.
 
-The floating chat has no 🎤 dictation (the page decides who may use the microphone), no pin and no *Open in a tab*.
+The floating chat has no pin and no *Open in a tab*. Its 🎤 [dictation](voice.md) records with the microphone you
+allowed the extension, on any site; folding the chat stops it.
 
 On a site not enabled yet, **Page** asks for the site and then opens the chat. If it still cannot open it, the popup
 says why: *The bubble is off on this site*. Browser pages cannot host it: there the tile is greyed out.
+
+Firefox has no floating chat ([what each version has](settings.md#what-each-version-has)): it gives an extension's
+page framed by a web page none of the APIs the chat needs. There the **Page** tile shows greyed with the
+**unavailable** mark (point at it for why), **Settings → Bubble → Opening the chat** shows *Floating on the page* the
+same way, and a saved *floating* counts as not chosen. What opens the chat from a page opens it
+[full screen in a tab](#full-screen-in-a-tab) instead, since Firefox opens its sidebar only from a click in the
+extension's own pages (the toolbar popup's **Panel**): the bubble and its 💬 **Chat**, an action that opens the chat
+(its message is sent there), a card's **Open in the chat** (its conversation goes on there) and **Alt+Shift+F**. The
+side panel has no **Float on this page** there.
 
 ## Moving a conversation
 

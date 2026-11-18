@@ -1,28 +1,15 @@
-// sidepanel.html?floating: the chat floating on a page, in the page widget's iframe. Whether this page
-// is that chat, and the tab it floats in: for the side panel (entrypoints/sidepanel/floating) and the
-// ui/ hooks that behave differently there (useSeen).
+// Which chat this page is: floating on a page (floating.html, in the page widget's iframe) and the tab it
+// floats in, or one of sidepanel.html's (as its query says). For the side panel (entrypoints/sidepanel/
+// floating) and the ui/ hooks that behave differently there (useSeen).
 import { browser, type Browser } from 'wxt/browser';
 
 const params = new URLSearchParams(location.search);
 
-// Whether this page is in a frame whose parent is not the extension: a page's. Every ancestor's origin
-// where the browser lists them (location.ancestorOrigins); else the parent's, which a page's denies.
-export function framedByPage(win: Pick<Window, 'top' | 'parent'> & { location: Pick<Location, 'origin'> & { ancestorOrigins?: DOMStringList } }): boolean {
-  if (win.top === win) return false;
-  const own = win.location.origin;
-  const ancestors = win.location.ancestorOrigins;
-  if (ancestors) return Array.from(ancestors).some((origin) => origin !== own);
-  try {
-    return win.parent.location.origin !== own;
-  } catch {
-    return true;
-  }
-}
-
-// Floating: so its URL says, or a page frames it (whatever its URL says, it never gets the side
-// panel's UI, which trusts that it is seen and offers the site's policy). The extension's own pages
-// that frame it (the agent manager's chats, the Appearance preview) leave it as it is.
-export const FLOATING = params.has('floating') || framedByPage(window);
+// Floating: its own page, floating.html, which starts only in a web page's frame with the widget's
+// ticket (sidepanel/ticket-gate). It never gets the side panel's UI, which trusts that it is seen and
+// offers the site's policy. sidepanel.html never floats, whatever its URL says: no web page can frame
+// it (not web-accessible), and framed by one it would not start.
+export const FLOATING = location.pathname === '/floating.html';
 // sidepanel.html?tab=<id>&manager&agent=<id>: one of the chats of the agent manager's page (an iframe
 // there), working on that tab, with that agent (none: Default) as its own (sidepanel/manager-chat).
 export const MANAGER = params.has('manager');

@@ -96,7 +96,11 @@ own panel and the [agent manager](agent-manager.md)'s chats keep their tab.
 - **↑** on the first line of the message box brings back your earlier messages of the conversation; **↓** goes forward
   to your draft. Edit one and send it again.
 
-**While the agent works**, the button reads **Stop**. Enter **queues** what you type (up to 3 messages, text only): each
+**While the agent works**, the line under the conversation names what it is doing and for how long (*Reading the
+page… 1.2 s*, *Waiting for the first token… 3.4 s*, a tool's name while it runs) until the answer streams in. In
+[Layers](layers.md#phases-of-the-turn) the line lists every phase of the turn instead, each with its time.
+
+While it works the button reads **Stop**. Enter **queues** what you type (up to 3 messages, text only): each
 is sent when a turn ends. In the *Queued* strip, click one to edit it, ▶ to stop the agent and send it now, or ✕ to
 remove it. **Ctrl+Enter** (⌘+Enter on a Mac) stops the agent and sends the box at once. Queued messages come back to
 the box if the run is stopped or fails.

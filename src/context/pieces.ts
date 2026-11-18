@@ -25,6 +25,7 @@ import {
   slugOf,
   TEMPLATE_SOURCE,
   TOOL_MENTION_SOURCE,
+  toolMatchOf,
 } from './sources';
 
 type TextPart = Extract<Part, { type: 'text' }>;
@@ -35,6 +36,8 @@ export function pieceLabel(p: TextPart): string {
   const after = (prefix: string) => s.slice(prefix.length);
   if (s.startsWith(SKILL_MENTION_SOURCE)) return `Skill mention /${after(SKILL_MENTION_SOURCE)}`;
   if (s.startsWith(TOOL_MENTION_SOURCE)) return `Tool mention ${after(TOOL_MENTION_SOURCE).split(',').map((t) => `$${t}`).join(' ')}`;
+  const recommended = toolMatchOf(s);
+  if (recommended) return `Tools recommended · ${recommended.join(', ')}`;
   if (s.startsWith(MENTION_SOURCE)) return `Mention ::${after(MENTION_SOURCE)}`;
   if (s.startsWith(MENTION_FAILED_SOURCE)) return `Mention ::${after(MENTION_FAILED_SOURCE)} (not read)`;
   const auto = historyAutoOf(s);

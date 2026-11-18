@@ -202,6 +202,112 @@ BEFORE['mcp-on-demand'] = async (page) => {
     await chrome.storage.local.set({ settings });
   });
 };
+// Settings → Tools → Matching (tools/match), with the same server: Only matching leaves it and the web's
+// tools out of a message that matches neither, listed in tools.load, which loads it; Recommended offers
+// every tool and names the server's group with a message about notes.
+const withToolMatch = (mode) => async (page) => {
+  await BEFORE.mcp(page);
+  await page.evaluate(async (mode) => {
+    const { settings } = await chrome.storage.local.get('settings');
+    settings.tools = { ...settings.tools, match: { mode } };
+    await chrome.storage.local.set({ settings });
+  }, mode);
+};
+BEFORE['tool-match'] = withToolMatch('matching');
+MESSAGES['tool-match'] = 'search the web for a cheap lamp';
+// Only matching, for a message that points at no tool: nothing held (it fails towards offering).
+BEFORE['tool-match-unsure'] = withToolMatch('matching');
+MESSAGES['tool-match-unsure'] = 'hello there';
+EXPECT['tool-match-unsure'] = 'TOOL UNSURE OK';
+// By meaning (Memory's Semantic search, the mock's /embeddings): Settings → Tools → Matching indexes the
+// tools once opened and shows it; a Spanish message with no word of the notes server's matches it by meaning,
+// its tools are offered and the web's held.
+BEFORE['tool-meaning'] = async (page) => {
+  await page.evaluate(async () => {
+    const { settings } = await chrome.storage.local.get('settings');
+    settings.memory = { ...settings.memory, semantic: { enabled: true, providerId: 'env', model: 'embed' } };
+    await chrome.storage.local.set({ settings });
+  });
+  await withToolMatch('matching')(page);
+  const options = await page.context().newPage();
+  await options.goto(page.url().replace('sidepanel.html', 'options.html#tools'));
+  await options.getByRole('tab', { name: 'Matching' }).click();
+  const status = options.getByLabel('Tools indexed');
+  await status.getByText(/^(\d+) of \1 tools indexed$/).waitFor({ timeout: T.long });
+  if (!mock.embedded.some((texts) => texts.some((t) => t.startsWith('add note\n')))) throw new Error(`embedded: ${JSON.stringify(mock.embedded).slice(0, 300)}`);
+  // Tried there: by meaning, the notes server first.
+  await options.getByLabel('Try a message against the tool groups').fill('escribe en mis apuntes');
+  const notes = options.locator('.playground-hit', { hasText: 'MCP · notes' });
+  await notes.locator('.playground-score', { hasText: 'Meaning' }).getByText('100%').waitFor({ timeout: T.medium });
+  if (!(await notes.getByText('matches', { exact: true }).count())) throw new Error(`notes not picked: ${await notes.innerText()}`);
+  if (process.env.E2E_SHOTS) await options.screenshot({ path: `${process.env.E2E_SHOTS}/tool-meaning-settings.png`, fullPage: true });
+  await options.close();
+};
+MESSAGES['tool-meaning'] = 'escribe en mis apuntes';
+EXPECT['tool-meaning'] = 'TOOL MEANING OK';
+// A server's own description, typed in its panel: a Spanish message with none of its tools' words matches it
+// by words (no embeddings model); the web's tools, which it does not match, are held.
+BEFORE['tool-match-about'] = async (page) => {
+  await withToolMatch('matching')(page);
+  const options = await page.context().newPage();
+  await options.goto(page.url().replace('sidepanel.html', 'options.html#mcp'));
+  await mcpPanel(options, 'notes');
+  const about = options.getByLabel('notes: what it is for');
+  await about.fill('apuntes, ideas, cosas que quiero recordar');
+  await about.blur();
+  if (!(await waitFor(async () => (await options.evaluate(async () => (await chrome.storage.local.get('settings')).settings.mcpServers[0].about)) === 'apuntes, ideas, cosas que quiero recordar', T.short))) throw new Error('the description was not saved');
+  await options.close();
+};
+MESSAGES['tool-match-about'] = 'guarda esto en mis apuntes';
+EXPECT['tool-match-about'] = 'TOOL ABOUT OK';
+// The setting left at All tools, the server set Only when it matches in its panel: it alone is held,
+// for a message that does not match it; the web's tools go.
+BEFORE['tool-match-server'] = async (page) => {
+  await BEFORE.mcp(page);
+  const options = await page.context().newPage();
+  await options.goto(page.url().replace('sidepanel.html', 'options.html#mcp'));
+  await mcpPanel(options, 'notes');
+  const offered = options.getByLabel('notes: when its tools are offered');
+  const choices = (await offered.locator('option').allInnerTexts()).join('|');
+  if (choices !== 'Same as Tools → Matching (All tools)|Always offered|Recommended when it matches|Only when it matches|On demand') throw new Error(`choices: ${choices}`);
+  await offered.selectOption('matching');
+  await options.locator('.mcp-server', { hasText: 'only when it matches' }).waitFor({ timeout: T.short });
+  await options.close();
+};
+MESSAGES['tool-match-server'] = 'search the web for a cheap lamp';
+EXPECT['tool-match-server'] = 'TOOL SERVER OK';
+// The same, the server set Always offered in its panel (Settings → MCP servers): its tools go, the web's
+// are held; its line says so.
+BEFORE['tool-match-always'] = async (page) => {
+  await withToolMatch('matching')(page);
+  const options = await page.context().newPage();
+  await options.goto(page.url().replace('sidepanel.html', 'options.html#mcp'));
+  await mcpPanel(options, 'notes');
+  const offered = options.getByLabel('notes: when its tools are offered');
+  if ((await offered.inputValue()) !== 'follow') throw new Error(`offered: ${await offered.inputValue()}`);
+  await offered.selectOption('always');
+  await options.locator('.mcp-server', { hasText: 'always offered' }).waitFor({ timeout: T.short });
+  const saved = await options.evaluate(async () => (await chrome.storage.local.get('settings')).settings.mcpServers[0]);
+  if (saved.matching !== 'always' || saved.onDemand) throw new Error(`saved: ${JSON.stringify(saved)}`);
+  await options.close();
+};
+MESSAGES['tool-match-always'] = 'take a screenshot of the page';
+EXPECT['tool-match-always'] = 'TOOL ALWAYS OK';
+// The pill under the message says what matching did (ui/chat/AttachedChips toolMatchGroups).
+const toolPill = (expected) => async (page) => {
+  const pill = page.locator('.msg-auto-pill', { hasText: expected });
+  await pill.waitFor({ timeout: T.medium });
+  await pill.click();
+  await page.getByRole('list', { name: /^Tool matching/ }).getByText('MCP · notes').waitFor({ timeout: T.short })
+    .catch(async (e) => { throw new Error(`${e.message.split('\n')[0]} / lists: ${(await page.locator('.msg-auto-list').allInnerTexts()).join(' | ').slice(0, 300)}`); });
+  if (process.env.E2E_SHOTS) await page.screenshot({ path: `${process.env.E2E_SHOTS}/${String(expected).replace(/[^a-z]+/gi, '-')}-pill.png` });
+};
+AFTER['tool-match'] = toolPill('1 offered · 2 held');
+AFTER['tool-match-unsure'] = toolPill('3 offered · 0 held');
+AFTER['tool-recommend'] = toolPill('Recommended: notes');
+BEFORE['tool-recommend'] = withToolMatch('recommend');
+MESSAGES['tool-recommend'] = 'add a note to my notes';
+EXPECT['tool-recommend'] = 'TOOL RECOMMEND OK';
 // With two more servers, the same one under another name and one not reached: one button for them
 // all, each server a group, folded as the tools menu's, and the one without tools said apart.
 AFTER.mcp = async (page) => {

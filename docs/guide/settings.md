@@ -20,9 +20,9 @@ Settings page lists them:
 | Bookmarks | Bookmarks permission, the folder the model sees, auto-attach | [Bookmarks](bookmarks.md) |
 | History | Saving, retention, auto-attach, export and import | [Saved conversations](history.md#settings--history) |
 | ***Tools*** | | |
-| Tools | Tools offered to the model, their descriptions, tools on demand | [Tools](tools.md) |
+| Tools | Tools offered to the model, their descriptions, which reach it for a message (matching), tools on demand | [Tools](tools.md) |
 | Custom tools | Your own tools: shortcuts, HTTP requests, scripts; sources | [Custom tools](custom-tools.md) |
-| MCP servers | Remote MCP servers, their sign-in, trust and connection logs | [MCP servers](mcp.md) |
+| MCP servers | Remote MCP servers, their sign-in, trust, when their tools are offered, and connection logs | [MCP servers](mcp.md) |
 | Chromium DevTools | Real input and any-tab screenshots; more fields to mask | [The DevTools engine](devtools-engine.md) |
 | Recording | The presets a recording of a page's requests keeps calls by, and the default one | [Recording a page's requests](recordings.md#presets) |
 | Actions | The page widget's buttons, tried before saving | [Page widget](page-widget.md#an-action), [The action editor](page-widget.md#the-action-editor) |
@@ -122,7 +122,9 @@ Teseo comes in three versions. The **downloadable** one (the [releases](https://
 or the `dist` branch) has every feature. The **Chrome Web Store** one leaves out the
 [DevTools engine](devtools-engine.md), as the store's version does not ask for the browser's debugger permission.
 The **Firefox** build, a trial, lacks what Firefox has no API for: the DevTools engine, [Speak](speak.md) and the
-system voice, and [a tab's audio](tab-audio.md). Its sidebar is also one for the window, as in Vivaldi: the chat
+system voice, and [a tab's audio](tab-audio.md). It has no [chat floating on the page](chat-windows.md#floating-on-the-page)
+either: Firefox gives an extension's page framed by a web page none of the APIs the chat needs, so what opens the
+chat from a page opens it full screen in a tab there. Its sidebar is also one for the window, as in Vivaldi: the chat
 cannot keep [a panel for each tab](chat-windows.md#the-side-panel).
 
 Nothing is hidden: a section that is not in your version stays in the menu with an **unavailable** mark and says why,

@@ -12,6 +12,7 @@ import { openOptions } from '../../ui/open-options';
 import { agentOffers, agentStore } from '../../agents/profiles';
 import { BUILDER_ID } from '../../core/builder-ids';
 import { onDemandGroups, onDemandNames } from '../../tools/load';
+import { heldFor } from '../../tools/match';
 import { hasCreateGroup } from '../../agents/builtins';
 import { AgentPicker } from './AgentPicker';
 import { AttachButtons, AttachmentStrip } from './Attachments';
@@ -99,7 +100,7 @@ export function Chat({ agent, page, queued, onOpenMemory, topbar, autoInjectTo, 
 
   // `own`: in the agent manager, the chat's own model, once chosen.
   const { agents, profile, own, provider, model } = useChatTarget(settings);
-  const { toolCatalog, pageToolNames, menuTools, toolSettings, onToolSettings } = useAgentTools(settings, onChange, page, profile, agents);
+  const { toolCatalog, pageToolNames, menuTools, toolSettings, onToolSettings } = useAgentTools(settings, onChange, page, profile, agents, history.length ? undefined : agent.conversationId);
   const contextWindow = useContextWindow(settings, onChange, provider, model);
   const compaction = useCompaction(agent, settings, contextWindow.window, { provider, model });
   const attachments = useAttachments();
@@ -162,9 +163,13 @@ export function Chat({ agent, page, queued, onOpenMemory, topbar, autoInjectTo, 
   // The message box and the page bar are memoized (they re-render as you type, or with the page):
   // their props are the same while what they show is.
   // The tools offered once the model loads them, until this conversation does (tools/load): Default's
-  // that create things (none while Builder has them: not in its menus), and those of the servers set so.
+  // that create things (none while Builder has them: not in its menus), those of the servers set so, and
+  // the groups your last message did not match (Settings → Tools → Matching, tools/match).
   const onDemand = useMemo(
-    () => onDemandNames(onDemandGroups(settings, menuTools, { create: hasCreateGroup(profile) }), history),
+    () => {
+      const groups = onDemandGroups(settings, menuTools, { create: hasCreateGroup(profile) });
+      return onDemandNames([...groups, ...heldFor(history, menuTools, groups)], history);
+    },
     [settings, menuTools, profile, history],
   );
   const composerTools = useMemo(() => agentOffers(profile, toolCatalog, agents), [profile, toolCatalog, agents]);
@@ -245,7 +250,7 @@ export function Chat({ agent, page, queued, onOpenMemory, topbar, autoInjectTo, 
         </ChatActionsContext.Provider>
         <LiveStream live={live} format={format} onShown={follow} />
         <ConfirmationCards agent={agent} />
-        <ChatStatusLines agent={agent} results={results} compacting={compaction.status} sendError={sendError} onContinue={continueRun} />
+        <ChatStatusLines agent={agent} results={results} compacting={compaction.status} sendError={sendError} onContinue={continueRun} allPhases={render === 'tech'} />
       </div>
 
       {plan && planShown(plan, history, { busy }) && <PlanView steps={plan.steps} onDismiss={() => agent.dismissPlan(plan.id)} />}
@@ -258,7 +263,7 @@ export function Chat({ agent, page, queued, onOpenMemory, topbar, autoInjectTo, 
       <DevtoolsChip topbar={topbar} />
       {recording && <RecordingChip recording={recording} onRemove={() => setRecording(undefined)} onReview={() => { recorder.review(recording); setRecording(undefined); }} />}
       <QueuedStrip items={waiting.items} canEdit={!input.trim()} onEdit={waiting.edit} onSendNow={sendInsteadNow} onRemove={waiting.remove} />
-      <ComposerArea composer={composer} attachments={attachments} busy={busy} compacting={compaction.compacting} dictating={dictation.state === 'finishing'} onSend={sendBoxNow} onStop={stopRun}
+      <ComposerArea composer={composer} attachments={attachments} busy={busy} compacting={compaction.compacting} dictation={dictation} onSend={sendBoxNow} onStop={stopRun}
         canSend={canSend && !runGate?.off}
         box={{
           value: input, onChange: setInput, onSend: sendBoxNow, onSendNow: sendBoxInstead, prompts: promptTexts, tools: composerTools, disabledTools: profile ? NO_TOOLS_OFF : settings.disabledTools,

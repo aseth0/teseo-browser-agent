@@ -6,11 +6,12 @@
 // (PANEL_START, PANEL_ROWS, PANEL_SEND). What an agent answers comes back as untrusted content.
 import type { JSONSchema, Tool, ToolResult } from '../core/types';
 import type { AgentProfile } from './profiles';
-import { markValue, text } from '../core/model-texts';
+import { markValue, stripMarks, text } from '../core/model-texts';
 import { toWireName } from '../core/tool-registry';
 import { fields, optString } from '../tools/define';
 import type { PanelMessage, PanelRow } from '../manager/protocol';
 import { ASK_TOOL } from './ask';
+import { BRIEF_PROPERTIES, briefDetails, briefOf, briefShown, briefText, TASK_PROPERTY } from './brief';
 
 export const PANEL_START = 'panel.start';
 export const PANEL_WAIT = 'panel.wait';
@@ -23,8 +24,8 @@ export const WAIT_MAX_S = 1800;
 
 const START_DESCRIPTION =
   'Starts another agent in a new row of the Agents Panel, on a new tab opened at url, with a task. It works on its own and in ' +
-  'parallel, and does not see this conversation: put in the task everything it needs. Returns its row at once; call panel__wait ' +
-  'for its answer. Agents you may start:\n' +
+  'parallel, and does not see this conversation: put in the task and context everything it needs. Returns its row at once; call ' +
+  'panel__wait for its answer, which ends with what it did and what it could not do or verify. Agents you may start:\n' +
   AGENT_LIST;
 const WAIT_DESCRIPTION =
   "Waits until the agents you started have finished, or wait_seconds have passed, and returns each one's state and its last " +
@@ -37,8 +38,9 @@ const startSchema = (names: string[]): JSONSchema => ({
   type: 'object',
   properties: {
     agent: { type: 'string', enum: names, description: "The agent's name, one of those listed." },
-    task: { type: 'string', description: 'What it should do or find out, with every detail it needs: it sees nothing else.' },
+    task: TASK_PROPERTY,
     url: { type: 'string', description: 'The page its new tab opens at (http or https).' },
+    ...BRIEF_PROPERTIES,
   },
   required: ['agent', 'task', 'url'],
 });
@@ -128,18 +130,22 @@ export function panelToolsFor(callable: AgentProfile[], caller: string, page: Pa
       fillDescription: (d) => fillAgents(d, callable),
       describe: async (args) => {
         const f = fields(args);
-        return { summary: `Start ${String(f.agent)} in the Agents Panel on ${String(f.url)}`, url: undefined, details: [{ label: 'Task', value: String(f.task ?? '') }] };
+        const brief = briefOf(args);
+        return { summary: `Start ${String(f.agent)} in the Agents Panel on ${String(f.url)}`, url: undefined, details: [{ label: 'Task', value: String(f.task ?? '') }, ...(brief ? briefDetails(brief) : [])] };
       },
       run: async (args) => {
         const f = fields(args);
         const name = optString(f.agent);
         const agent = callable.find((a) => a.name === name);
         if (!agent) return error(text('error.agent_not_askable', { agent_name: String(name), agents: callable.map((a) => a.name).join(', ') }));
-        const task = optString(f.task)?.trim();
-        if (!task) return error(text('error.agent_no_task'));
+        const brief = briefOf(args);
+        if (!brief) return error(text('error.agent_no_task'));
         const url = httpUrl(f.url);
         if (!url) return error(text('error.panel_bad_url'));
-        const started = await page.start({ agent, message: { text: text('panel.task', { caller, task }), shown: task }, url, max });
+        // Its chat shows the brief without how to answer (without the origin marks the background
+        // writes: it is not sent); its row, the task alone.
+        const message = { text: text('panel.task', { caller, task: briefText(brief) }), shown: stripMarks(briefShown(brief)), title: brief.task };
+        const started = await page.start({ agent, message, url, max });
         if (!started) return notHere();
         if ('tooMany' in started) return error(started.tooMany === 1 ? text('error.panel_too_many_one') : text('error.panel_too_many', { count: String(started.tooMany) }));
         return { type: 'text', text: text('result.panel_started', { agent: agent.name, row: started.row, url }) };

@@ -18,7 +18,7 @@ import { Snippet } from './Snippet';
 import { InlineConfirm } from './InlineConfirm';
 import { useConversationsVersion } from './useConversations';
 import { withAutoAttach } from '../storage/settings-select';
-import type { AutoAttach, HistorySettings } from '../storage/settings-types';
+import { ATTACH_UNSEEN, type AutoAttach, type HistorySettings } from '../storage/settings-types';
 import { downloadText } from './download';
 import { ModelTextEditor } from './EditableText';
 import { MentionsFold } from './MentionsFold';
@@ -194,7 +194,7 @@ function HistoryTry({ settings }: Pick<Props, 'settings'>) {
   const auto = settings.history?.autoAttach ?? {};
   const version = useConversationsVersion();
   const search = async (query: string) => {
-    const { ranked: found, loaded } = await rankSaved(query);
+    const { ranked: found, loaded } = await rankSaved(query, { unseen: ATTACH_UNSEEN });
     const ranked = found.map(({ meta, match }) => ({ conv: meta, match }));
     const shown = ranked.slice(0, PLAYGROUND_RESULTS);
     const whole = await wholeOf(shown.map((r) => r.conv.id), loaded); // for their snippets

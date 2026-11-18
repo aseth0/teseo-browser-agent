@@ -7,8 +7,11 @@ import { browser } from 'wxt/browser';
 import type { DocsPage } from './links';
 
 export const STORE_BUILD = typeof __STORE__ !== 'undefined' && __STORE__;
+// Firefox's build (`wxt build -b firefox`: wxt.config.ts sets __FIREFOX__, as it gives that build its own
+// manifest). For what no API's presence tells apart (floatingChat below).
+export const firefoxBuild = (): boolean => typeof __FIREFOX__ !== 'undefined' && __FIREFOX__;
 
-export type FeatureId = 'devtools' | 'speak' | 'systemVoice' | 'tabAudio' | 'customToolSources';
+export type FeatureId = 'devtools' | 'speak' | 'systemVoice' | 'tabAudio' | 'floatingChat' | 'customToolSources';
 export type MissingReason = 'browser' | 'store';
 
 export interface Feature {
@@ -28,7 +31,8 @@ export const STORE_LEAVES_OUT: readonly FeatureId[] = ['devtools'];
 type Api = Record<string, unknown> | undefined;
 const api = (): Api => browser;
 
-const DEFS: Record<FeatureId, { name: string; about: string; docs: DocsPage; needs: (b: Api) => boolean }> = {
+// `needs`: whether the browser can, from its API (`b`) or, where no API tells, from the build (`firefox`).
+const DEFS: Record<FeatureId, { name: string; about: string; docs: DocsPage; needs: (b: Api, firefox: boolean) => boolean }> = {
   // devtools/cdp: the debugger API (Firefox has none; the store's build no permission).
   devtools: {
     name: 'Chromium DevTools engine',
@@ -57,6 +61,17 @@ const DEFS: Record<FeatureId, { name: string; about: string; docs: DocsPage; nee
     docs: 'docs/guide/tab-audio.md',
     needs: (b) => !!b?.tabCapture && !!b?.offscreen,
   },
+  // widget/ui/floating-chat: the floating chat's page (floating.html) in an iframe of the web page. Firefox
+  // gives an extension page framed by a web page only a content script's APIs (runtime, storage: no tabs,
+  // windows…), which the chat calls everywhere. Not an API check: the extension's own pages, where this is
+  // asked, have every API in both browsers; only the frame lacks them, and the page cannot ask from there.
+  // So the build says it, as its manifest does (wxt.config.ts).
+  floatingChat: {
+    name: 'Floating chat',
+    about: 'The chat floating on the page, from its bubble, the popup or a shortcut.',
+    docs: 'docs/guide/chat-windows.md#floating-on-the-page',
+    needs: (_b, firefox) => !firefox,
+  },
   // tools/custom/sources: a fetch, nothing a browser lacks; only the store's build may leave it out.
   customToolSources: {
     name: 'Custom tool sources',
@@ -69,15 +84,16 @@ const DEFS: Record<FeatureId, { name: string; about: string; docs: DocsPage; nee
 export const FEATURE_IDS = Object.keys(DEFS) as FeatureId[];
 
 // A feature in a build: `store` whether it is the store's, `leavesOut` what that one leaves out, `browser`
-// the browser's API. The store's choice is the reason first: its manifest has no permission for it either.
-export function featureIn(id: FeatureId, build: { store: boolean; leavesOut: readonly FeatureId[]; browser: Api }): Feature {
+// the browser's API, `firefox` whether it is Firefox's build. The store's choice is the reason first: its
+// manifest has no permission for it either.
+export function featureIn(id: FeatureId, build: { store: boolean; leavesOut: readonly FeatureId[]; browser: Api; firefox?: boolean }): Feature {
   const { needs, ...def } = DEFS[id];
-  const reason: MissingReason | undefined = build.store && build.leavesOut.includes(id) ? 'store' : !needs(build.browser) ? 'browser' : undefined;
+  const reason: MissingReason | undefined = build.store && build.leavesOut.includes(id) ? 'store' : !needs(build.browser, !!build.firefox) ? 'browser' : undefined;
   return { id, ...def, available: !reason, ...(reason && { reason }) };
 }
 
 // The feature in this build and browser.
-export const feature = (id: FeatureId): Feature => featureIn(id, { store: STORE_BUILD, leavesOut: STORE_LEAVES_OUT, browser: api() });
+export const feature = (id: FeatureId): Feature => featureIn(id, { store: STORE_BUILD, leavesOut: STORE_LEAVES_OUT, browser: api(), firefox: firefoxBuild() });
 export const features = (): Feature[] => FEATURE_IDS.map(feature);
 export const missingFeatures = (): Feature[] => features().filter((f) => !f.available);
 
@@ -85,5 +101,7 @@ export const missingFeatures = (): Feature[] => features().filter((f) => !f.avai
 export const tabAudioAvailable = (): boolean => feature('tabAudio').available;
 export const speakAvailable = (): boolean => feature('speak').available;
 // The debugger API itself (not the store's choice): settings-select devtoolsOn checks STORE_BUILD apart.
-export const debuggerAvailable = (): boolean => DEFS.devtools.needs(api());
+export const debuggerAvailable = (): boolean => DEFS.devtools.needs(api(), firefoxBuild());
 export const customToolSourcesAvailable = (): boolean => feature('customToolSources').available;
+// Whether the chat can float on a page; where not, the page opens it full screen in a tab (background/widget-host).
+export const floatingChatAvailable = (): boolean => feature('floatingChat').available;

@@ -27,7 +27,7 @@ export function agentActions(store: ReturnType<typeof createAgentStore>, { post,
     if (busy || compacting) return false;
     dispatch({ type: 'run', history: next });
     setStopped(false);
-    reach({ type: 'run', runId: newRun(), history: next, ...opts, conversationId });
+    reach({ type: 'run', runId: newRun(), history: next, ...opts, conversationId, sentAt: Date.now() });
     return true;
   };
   // `text`: yours, or with how the chat shows it (Part shown), and whether an agent of the panel wrote it (Part from).

@@ -25,6 +25,7 @@ export interface WidgetState {
   running?: AbortController; // the action whose card is open, while it runs
   appearance?: Appearance; // Settings → Appearance: light or dark and the accent
   chatWindow?: ChatWindow; // Settings → Bubble: where the chat opens
+  noFloating?: boolean; // the chat cannot float here (Firefox: core/build floatingChat): it opens full screen in a tab
   speakButton?: boolean; // Settings → Speak: the button beside a selection (widget/ui/speak-selection)
   speakBoxes?: 'on' | 'setup'; // and the button on an action's text boxes (widget/ui/box-speak); 'setup': nothing to read with yet
   canSpeak?: boolean; // Speak on with a voice to read with: an action's boxes may be read on their own
@@ -36,7 +37,7 @@ export interface WidgetState {
 // The elements are set when the widget is built (before anything uses them).
 export const widgetState = (site: string) => ({ site, place: {}, at: { x: 0, y: 0 }, actions: [], hovering: false, moving: false, selection: '', loaded: new Map() }) as unknown as WidgetState;
 
-export const floats = (s: WidgetState) => s.chatWindow?.opens === 'floating';
+export const floats = (s: WidgetState) => !s.noFloating && s.chatWindow?.opens === 'floating';
 
 // What the parts call back: show the widget as the state now says, and keep its place on the site.
 export interface WidgetHost {

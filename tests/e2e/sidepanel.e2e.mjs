@@ -33,7 +33,7 @@ function granting(dir, origins) {
 
 // Chrome discards <link rel="modulepreload"> in extension pages with a warning (Vivaldi shows
 // it; this Chromium does not), so check the built HTML instead of the console.
-for (const html of ['sidepanel.html', 'options.html']) {
+for (const html of ['sidepanel.html', 'floating.html', 'options.html']) {
   if (fs.readFileSync(path.join(EXT, html), 'utf8').includes('modulepreload')) {
     console.log(`FAIL ${html} contains modulepreload links`);
     process.exit(1);

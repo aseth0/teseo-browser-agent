@@ -11,9 +11,17 @@ import { isOfferedGroup, useToolCatalog } from '../../ui/Tools';
 import { toolGroup } from '../../core/tool-groups';
 import type { SettingsUpdate } from '../../ui/useSettings';
 import type { PageTarget } from './usePageTarget';
+import { MCP_CONNECT } from '../../core/protocol';
+import { sendRuntime } from '../../core/runtime';
+import { bestEffort } from '../../core/errors';
 
-export function useAgentTools(settings: Settings, onChange: SettingsUpdate, page: PageTarget, profile: AgentProfile | undefined, agents: AgentProfile[]) {
+// `fresh`: the conversation's id while it has no message yet.
+export function useAgentTools(settings: Settings, onChange: SettingsUpdate, page: PageTarget, profile: AgentProfile | undefined, agents: AgentProfile[], fresh?: string) {
   const readable = page.access === 'ok';
+  // A conversation starts: the MCP servers are connected before its first message, so that it waits for none.
+  useEffect(() => {
+    if (fresh) void bestEffort(sendRuntime({ type: MCP_CONNECT }), 'mcp-connect');
+  }, [fresh]);
   // Again when the page or the MCP servers change (Settings → MCP servers).
   const servers = useMemo(() => JSON.stringify(settings.mcpServers ?? []), [settings.mcpServers]);
   const toolCatalog = useToolCatalog(readable ? page.tabId : undefined, `${readable ? page.url : ''}|${servers}`);

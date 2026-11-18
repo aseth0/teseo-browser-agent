@@ -44,7 +44,8 @@ given it. Some tools also need:
 - **someone to ask**: `agents.ask`; in a row of the [Agents Panel](agent-manager.md#agents-that-start-agents) you
   started, also `panel.start`, `panel.wait` and `panel.send`;
 - **a `tools.load` call**: the [tools on demand](tools.md#tools-on-demand), the 12 tools that create things
-  (for Browser) and the tools of an MCP server set so. While Builder is on, Browser is not offered the tools that
+  (for Browser) and the tools of an MCP server set so; and, with [Matching](tools.md#matching-which-tools-reach-the-model)
+  set to *Only matching* (or a server set *Only when it matches*), the groups your message did not match. While Builder is on, Browser is not offered the tools that
   create things at all: they are Builder's.
 
 A tool you [mention](tools.md#mentioning-a-tool) with `$tool.name` is offered for that message even when it is off.
@@ -108,7 +109,7 @@ move a drop-down's choice, Tab moves the focus. A page that ignores synthetic ev
 | Tool | What it does | Effect | Confirmation | Parameters |
 |---|---|---|---|---|
 | `tools.read_more` | The next part of a tool result or attached file that was cut for length | read | Never | `id` (from the cut's note); `from`: where to read on |
-| `tools.load` | Loads a group of [tools on demand](tools.md#tools-on-demand), offered from the next step to the end of the conversation | read | Never | `groups`: `create`, `mcp:<server>` |
+| `tools.load` | Loads a group of [tools on demand](tools.md#tools-on-demand), offered from the next step to the end of the conversation | read | Never | `groups`: `create`, `mcp:<server>`, and those your message did not match (`web`, `history`, `bookmarks`, `custom`, `custom:<section>`) |
 
 `tools.read_more` is offered to every agent that has tools; `tools.load`, while a group on demand is not loaded
 yet.
@@ -232,8 +233,8 @@ See [agents](agents.md).
 | `agents.catalog` | What an agent can be given: the agents, the tool groups, the skills and the site templates | read | Never | `group`: that group's tools; `agent`: that agent's exact tools |
 | `agents.save` | Creates or changes an agent | write | Always | `name`, `icon`, `description`, `instructions` or `edits`, `tools`, `skills`, `templates`, `sites`, `canAsk`, `canBeAsked` |
 | `agents.delete` | Deletes an agent (not Builder) | write | Always | `name` |
-| `agents.ask` | Asks another agent to do a task and returns its answer | read | Never | `agent`, `task` |
-| `panel.start` | Starts another agent in a new row of the Agents Panel, on a new tab, with a task; returns at once | read | Always | `agent`, `task`, `url` |
+| `agents.ask` | Asks another agent to do a task and returns its answer | read | Never | `agent`, `task`; optional, the rest of the brief: `context`, `constraints`, `done`, `report` |
+| `panel.start` | Starts another agent in a new row of the Agents Panel, on a new tab, with a task; returns at once | read | Always | `agent`, `task`, `url`; optional, the rest of the brief: `context`, `constraints`, `done`, `report` |
 | `panel.wait` | Waits for the agents it started (or only checks), and returns their states and answers | read | Never | `rows`, `wait_seconds` (300 by default, at most 1,800; 0 only checks) |
 | `panel.send` | Gives one of the agents it started another message | read | Never | `row`, `message` |
 

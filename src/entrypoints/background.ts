@@ -9,6 +9,7 @@ import { createSessions } from '../background/session';
 import { listenSummarize } from '../background/summarize';
 import { createToolCatalog } from '../background/tool-catalog';
 import { hostWidget } from '../background/widget-host';
+import { listenFrameTickets } from '../background/frame-tickets';
 import { listenWidgetRuns } from '../background/widget-run';
 import { listenWatches } from '../background/watches';
 import { listenAlerts } from '../background/alerts';
@@ -20,6 +21,7 @@ import { listenPanelWindows } from '../background/panel-windows';
 import { hostCapture } from '../background/capture-host';
 import { hostRecording } from '../background/recording-host';
 import { hostAudio } from '../background/audio-host';
+import { hostDictation } from '../background/dictation-host';
 import { agentVoiceProfile, hostSpeech } from '../background/speech-host';
 import { DEFAULT_AGENT_ID } from '../agents/builtins';
 import { listenPageKeys } from '../background/shortcuts';
@@ -77,8 +79,12 @@ export default defineBackground(() => {
   hostRecording();
   // A tab's audio, captured from the popup in the offscreen document.
   hostAudio();
+  // The floating chat's dictation, recorded in the offscreen document.
+  hostDictation();
   // Closing the chat floating on a tab, or the tab, stops its run (the sessions start listening last).
   hostWidget((tabId) => sessions.stopFloating(tabId));
+  // The tickets the chat floating on a page opens with (only a frame the widget opened shows it).
+  listenFrameTickets();
   listenWidgetRuns(toolsFor);
   // Screenshots into the chat from the popup and their shortcuts, and where the chat floats for them.
   listenFloatingTabs();

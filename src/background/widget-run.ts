@@ -10,6 +10,7 @@ import { policyAccessFor } from '../policy/agent-access';
 import { effectivePolicy } from '../policy/store';
 import { WIDGET_AGENT } from '../agents/registry';
 import { errorText } from '../core/errors';
+import { floatingChatAvailable } from '../core/build';
 import { senderOf } from '../core/sender';
 import type { Message } from '../core/types';
 import { DEFAULT_LOG_MODE, logAction, logEntry } from '../logs/actions';
@@ -179,8 +180,9 @@ export function listenWidgetRuns(toolsFor: ToolsFor) {
     } finally {
       asked.stop(); // the reply carries it whole (none when it failed)
     }
-    // With its conversation kept for the chat's buttons, then kept as it is shown (a cached one too).
-    if (exchange && 'outputs' in reply) reply = { ...reply, chat: await keepChat({ messages: exchange, ...(owner && { agentId: owner.id }) }), ...(action.chatButtons && { chatIcons: true }) };
+    // With its conversation kept for the chat's buttons, then kept as it is shown (a cached one too). The
+    // two icons (here, in the side panel) only where the chat can float: else its one Open in the chat.
+    if (exchange && 'outputs' in reply) reply = { ...reply, chat: await keepChat({ messages: exchange, ...(owner && { agentId: owner.id }) }), ...(action.chatButtons && floatingChatAvailable() && { chatIcons: true }) };
     if (cacheKey && 'outputs' in reply) await loadCache.set(cacheKey, reply);
     return reply;
   };

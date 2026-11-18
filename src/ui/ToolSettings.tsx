@@ -29,6 +29,7 @@ import { SECTION_TOPS } from './section-tops';
 import { GoTo, pageColor } from './text-pages';
 import { MenuToggle, toolGroupLabel, useToolCatalogState, withEnabled } from './Tools';
 import { useHashTarget } from './useHashTarget';
+import { ToolMatchTab } from './ToolMatchTab';
 import type { SettingsPatch } from './useSettings';
 
 const toolCardId = (key: string) => `tool-${key}`;
@@ -37,9 +38,9 @@ const fmt = (n: number) => n.toLocaleString('en-US');
 const toolTokens = (tools: ToolInfo[]) => Math.round(JSON.stringify(toOpenAITools(tools.map(toSpec))).length / CHARS_PER_TOKEN / 100) * 100;
 
 // tools.load's texts: it is in no tool's list (it is made for each run, tools/load).
-const LOAD_TEXTS = ['tools.load_description', 'tools.load_group', 'tools.load_create', 'tools.load_skills', 'tools.load_first', 'tools.load_mcp_one', 'tools.load_mcp_many', 'tools.load_more', 'result.tools_loaded'] as const;
+const LOAD_TEXTS = ['tools.load_description', 'tools.load_group', 'tools.load_create', 'tools.load_builtin', 'tools.load_skills', 'tools.load_first', 'tools.load_mcp_one', 'tools.load_mcp_many', 'tools.load_more', 'result.tools_loaded'] as const;
 
-type Tab = 'tools' | 'demand' | 'mentions' | 'texts' | 'limits';
+type Tab = 'tools' | 'matching' | 'demand' | 'mentions' | 'texts' | 'limits';
 // The tab a deep link opens.
 const tabOf = (target: string): Tab => (target === LOAD_TOOL ? 'demand' : target === SHARED_REPLIES || target === WEBMCP_TEXTS ? 'texts' : 'tools');
 
@@ -85,6 +86,7 @@ export function ToolSettings({ settings, onChange }: { settings: Settings; onCha
       ]} />
       <SectionTabs label="Tools" open={tab} onOpen={(t) => setTab(t as Tab)} tabs={[
         { id: 'tools', label: 'Tools', render: () => <ToolsTab tools={tools} settings={settings} onChange={onChange} target={target} /> },
+        { id: 'matching', label: 'Matching', render: () => <ToolMatchTab tools={tools} settings={settings} onChange={onChange} /> },
         { id: 'demand', label: 'On demand', render: () => <OnDemandTab settings={settings} onChange={onChange} tokens={tokens?.create} /> },
         { id: 'mentions', label: 'Mentions', render: () => <MentionsTab settings={settings} onChange={onChange} /> },
         { id: 'texts', label: 'Shared texts', render: () => <SharedTextsTab target={target} /> },

@@ -40,7 +40,8 @@ mention:
 
 - **Match needed**: the share of your message's words a bookmark covers, rarer words weighing more. 60% by default;
   presets Broad, Moderate, Precise and Strict. Words count whole, unlike a search: *"lem"* in a message does not
-  match *"Lemon pie"*.
+  match *"Lemon pie"*. Words no bookmark has count too, each half as much as a rare one: a long message that
+  shares one word with a bookmark is no full match for it.
 - **At most, per message**: 1 by default (up to 3).
 - **Also check the model's replies between its steps** (off): matches what the model writes before a tool call too.
 - **Try a message**, under the card, shows for a message as you would send it how well each bookmark matches and

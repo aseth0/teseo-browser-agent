@@ -6,13 +6,14 @@ import type { AudioMessage, AudioReplies } from '../audio/protocol';
 import type { PageMessage, PageReplies, PageResponse, PageResult, PageScriptMessage } from '../page/protocol';
 import type { RecordingMessage, RecordingReplies } from '../recording/protocol';
 import type { SpeechMessage, SpeechReplies } from '../speech/protocol';
+import type { VoiceMessage, VoiceReplies } from '../voice/protocol';
 import type { WidgetMessage, WidgetReplies } from '../widget/protocol';
 import type { CoreMessage, CoreReplies } from './protocol';
 
-type RuntimeMessage = CoreMessage | WidgetMessage | PageScriptMessage | RecordingMessage | AudioMessage | SpeechMessage;
+type RuntimeMessage = CoreMessage | WidgetMessage | PageScriptMessage | RecordingMessage | AudioMessage | SpeechMessage | VoiceMessage;
 type RuntimeType = RuntimeMessage['type'];
 export type MessageOf<T extends RuntimeType> = Extract<RuntimeMessage, { type: T }>;
-type Replies = CoreReplies & WidgetReplies & PageReplies & RecordingReplies & AudioReplies & SpeechReplies;
+type Replies = CoreReplies & WidgetReplies & PageReplies & RecordingReplies & AudioReplies & SpeechReplies & VoiceReplies;
 // What a message is answered with; a page request, with its op's result.
 type ReplyOf<M extends RuntimeMessage> = M extends PageMessage<infer R> ? PageResponse<PageResult<R>> : Replies[M['type']];
 

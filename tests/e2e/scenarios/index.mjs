@@ -33,9 +33,9 @@ export const ALL = [
   'tool-text', 'tool-structured', 'selection-chip', 'selection-skip', 'web-read', 'web-sign-in',
   'memory-prompt', 'memory-stable', 'memory-list', 'memory-settings', 'click-deny', 'click-allow-comment', 'click-deny-comment',
   'click-always', 'click-session', 'narrow-panel', 'type-submit', 'word-blacklist', 'word-blacklist-manual', 'dom-type', 'select-option', 'navigate', 'link-click', 'webmcp-allow', 'webmcp-navigate',
-  'mcp', 'mcp-on-demand', 'site-access', 'mcp-oauth', 'access-deny', 'find-other-tab', 'tech-view', 'skill-save', 'skill-edit',
+  'mcp', 'mcp-on-demand', 'tool-match', 'tool-match-unsure', 'tool-match-about', 'tool-match-always', 'tool-match-server', 'tool-meaning', 'tool-recommend', 'site-access', 'mcp-oauth', 'access-deny', 'find-other-tab', 'tech-view', 'skill-save', 'skill-edit',
   'template-save', 'template-edit', 'custom-save', 'custom-try', 'custom-edit', 'action-save', 'action-save-prompt', 'custom-http-post', 'agent-save',
-  'memory-save', 'memory-delete', 'widget-turn-reload', 'widget-floating', 'agent-manager', 'panel-tools', 'panel-notice', 'fullscreen-chat', 'skill-edit-full', 'voice-dictate', 'voice-send', 'speak-command', 'speak-stop', 'speak-settings', 'speak-offscreen', 'action-popup', 'page-keys', 'secrets-isolated',
+  'memory-save', 'memory-delete', 'widget-turn-reload', 'widget-floating', 'agent-manager', 'panel-tools', 'panel-notice', 'fullscreen-chat', 'skill-edit-full', 'voice-dictate', 'voice-send', 'voice-floating', 'speak-command', 'speak-stop', 'speak-settings', 'speak-offscreen', 'action-popup', 'page-keys', 'secrets-isolated',
   'devtools-settings', 'engine-click', 'engine-type', 'engine-tab', 'engine-hover', 'engine-editor', 'engine-unfocused', 'engine-ignored', 'synthetic-editor', 'engine-rail', 'act-rail', 'engine-rail-still', 'act-rail-still', 'engine-rail-look', 'act-rail-look', 'rec-worker', 'rec-tabs', 'rec-hide-secret',
   'rec-gzip'
 ];

@@ -52,6 +52,7 @@ export type ChatToManager = { type: typeof MANAGER_STATUS; status: ManagerStatus
 export interface PanelMessage {
   text: string;
   shown: string;
+  title?: string; // its row's title, when not what it shows (a brief: its task); none in rows saved before
   notice?: boolean; // the panel tells the chat an agent it started answered, or waits for the user (manager/notices)
 }
 

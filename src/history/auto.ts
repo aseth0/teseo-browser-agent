@@ -6,7 +6,7 @@ import { text } from '../core/model-texts';
 import { historyAutoOf, historyAutoSource, slugOf } from '../core/sources';
 import type { AutoAttachCheck, Message } from '../core/types';
 import { autoPicks } from '../storage/auto-picks';
-import { MATCH_THRESHOLD, type AttachDefaults, type AutoAttach } from '../storage/settings-types';
+import { ATTACH_UNSEEN, MATCH_THRESHOLD, type AttachDefaults, type AutoAttach } from '../storage/settings-types';
 import { historySlugs } from './mention';
 import { readBlock } from './read';
 import { rankSaved, wholeOf } from './search';
@@ -43,7 +43,7 @@ export async function autoAttachItems(
   currentId?: string,
 ): Promise<{ items: ContextItem[]; check?: AutoAttachCheck }> {
   if (!settings.enabled || !typed.trim()) return { items: [] };
-  const { ranked, loaded } = await rankSaved(typed, { except: currentId });
+  const { ranked, loaded } = await rankSaved(typed, { except: currentId, unseen: ATTACH_UNSEEN });
   const { picks, check } = historyPicks(ranked.map(({ meta, match }) => ({ conv: meta, match })), typed, history, settings);
   const whole = await wholeOf(picks.map((p) => p.conv.id), loaded); // only those that go are read whole
   const items = picks.flatMap(({ conv: { id }, match }) => {

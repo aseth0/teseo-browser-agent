@@ -55,13 +55,14 @@ export holds whatever you or the model wrote, personal details too: keep the fil
 
 - **Auto-attach** (off) attaches the items your message matches well enough, neither pinned nor linked to a site
   (those go anyway). Its match is 60% by default, with Broad, Moderate, Precise and Strict as quick choices; it also
-  decides which items of the open site go whole, even with Auto-attach off. **At most, per message** is 2 (up to 5).
+  decides which items of the open site go whole, even with Auto-attach off. Words of your message no item has count
+  too, each half as much as a rare one: a long message that shares one word with an item is no full match for it. **At most, per message** is 2 (up to 5).
   **Also check the model's replies between its steps** (off) matches what the model writes before calling a tool
   too, and adds what matches after that tool's result.
 - **Meaning needed**, for semantic search (its tab, below): set it by trying messages under the cards, as its scale
   changes from model to model. Dimmed while semantic search is off.
 - **Model's search**: the least match the model's own `memory__search` results need. Off (the default): any item
-  with one of the query's words is found. Raise it when the model's searches bring back too much that does not fit.
+  with one of the query's words is found. A search's words no item has do not count against its match. Raise it when the model's searches bring back too much that does not fit.
 
 **Try a message**, under the cards, shows for a message as you would send it and **For** an agent how well each item
 matches (with semantic search on, two meters, **Words** and **Meaning**, each with its own mark), its chip, and which
@@ -77,7 +78,9 @@ its terms are masked in all of that. Turning it on starts indexing, and the tab 
 by its words **or** by its meaning. **Model prefixes** are for models that ask for one before a query or a document.
 If the provider does not answer in time (2 seconds), the message goes by words only and the chat says so; changing
 the model, the provider's address or an item embeds it again. When the model returns vectors of another length than
-**Test** found (it was replaced under the same name), the indexing status says so: run **Test** again.
+**Test** found (it was replaced under the same name), the indexing status says so: run **Test** again. The same
+model matches the tools by meaning too, when [Settings → Tools → Matching](tools.md#matching-which-tools-reach-the-model)
+is on, with a meaning needed and an index of its own: your message goes once for both.
 
 **Limits and texts**: **Pinned memory items, sent in full**, the **Memory index** (500 to 50,000) and **Memory
 items for the open site sent in full** (20 per message), the same settings as in [Limits](limits.md); and the texts

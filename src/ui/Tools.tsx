@@ -59,30 +59,9 @@ export function useToolCatalogState(tabId?: number, refresh?: string): { tools: 
 // A group of a website's or a server's tools ("webmcp:<host>", "mcp:<server>"): remembered once seen.
 export const isOfferedGroup = (group: string) => /^(webmcp|mcp):/.test(group);
 
-const GROUP_LABELS: Record<string, string> = {
-  browser: 'Browser',
-  user: 'User (questions, picking, plan)',
-  history: 'History (saved conversations)',
-  memory: 'Memory',
-  bookmarks: 'Bookmarks',
-  web: 'Web (search and read)',
-  custom: 'Custom tools (yours)',
-  agents: 'Agents',
-  speech: 'Speech (read aloud)',
-  skills: 'Skills',
-  'site-templates': 'Site templates',
-  webmcp: 'WebMCP (offered by the page)',
-  mcp: 'MCP servers',
-  site: 'Site adapters',
-};
-
-export function toolGroupLabel(group: string): string {
-  const [kind, name] = group.split(/:(.*)/);
-  if (name && kind === 'webmcp') return `WebMCP · ${name}`;
-  if (name && kind === 'mcp') return `MCP · ${name}`;
-  if (name && kind === 'custom') return name;
-  return GROUP_LABELS[group] ?? group;
-}
+// Moved to core/tool-groups (the background names groups too, tools/match).
+import { toolGroupLabel } from '../core/tool-groups';
+export { toolGroupLabel };
 
 interface Props {
   tools: ToolInfo[];

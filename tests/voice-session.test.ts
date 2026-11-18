@@ -166,6 +166,19 @@ describe("a tab's audio", () => {
     expect(h.sent.map((s) => s.n)).toEqual([120]); // numbered as recorded: the silent ones count
   });
 
+  it('says it is stopping as it stops, by itself too, before the chunks out are back', async () => {
+    const onStopping = vi.fn();
+    const h = harness({ onStopping });
+    vi.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(1000);
+    h.sent[0]!.reject(new Error('server down')); // stops it by itself, the second chunk still out
+    await settle();
+    expect(onStopping).toHaveBeenCalledTimes(1);
+    expect(h.ends).toEqual([]);
+    h.session.stop(); // already stopping: not said again
+    expect(onStopping).toHaveBeenCalledTimes(1);
+  });
+
   it('a failed chunk is handed back and the rest goes on', async () => {
     const failed: [number, string][] = [];
     const h = harness({ onFailed: (n, _audio, error) => failed.push([n, error]) });

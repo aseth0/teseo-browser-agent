@@ -17,7 +17,8 @@ const GROUPS: { title: string; items: Item[] }[] = [
     { item: 'site-access', name: 'Site access', about: 'Says when this site is not enabled, with Enable it' },
   ] },
   { title: 'Open the chat', items: [
-    { item: 'page', name: 'Page', about: 'The chat floating on this page' },
+    // Where the chat cannot float (Firefox): greyed here with why, and in the popup until hidden.
+    { item: 'page', name: 'Page', about: 'The chat floating on this page', feature: 'floatingChat' },
     { item: 'panel', name: 'Panel', about: 'The side panel' },
     { item: 'full-screen', name: 'Full screen', about: 'The chat in a tab of its own' },
   ] },

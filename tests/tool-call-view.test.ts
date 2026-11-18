@@ -151,6 +151,18 @@ describe('a tool call as Settings → Display says', () => {
     expect(fields[2]!.querySelector('dd pre')!.textContent).toBe('a\nb');
   });
 
+  it("shows an agents.ask brief's fields in the schema's order; a call saved before, with agent and task alone, as it was", () => {
+    const fieldsOf = (args: unknown) => {
+      const v = show(done, {}, false, { display: { toolArgs: 'fields' }, name: ASK_WIRE, args });
+      v.click('.tool-switch[data-part="args"]');
+      const shown = [...v.host.querySelectorAll('dl.tool-args-fields > div')].map((f) => [f.querySelector('dt')!.textContent, f.querySelector('dd')!.textContent]);
+      act(() => root?.unmount());
+      return shown;
+    };
+    expect(fieldsOf({ report: 'the link', task: 'find it', agent: 'mm', context: 'not #general' })).toEqual([['agent', 'mm'], ['task', 'find it'], ['context', 'not #general'], ['report', 'the link']]);
+    expect(fieldsOf({ agent: 'mm', task: 'find it' })).toEqual([['agent', 'mm'], ['task', 'find it']]);
+  });
+
   it('opens a JSON result as JSON first, and its switch still goes back to text', () => {
     const v = show(json, {}, false, { display: { toolResultView: 'json' } });
     v.click('.tool-switch[data-part="result"]');

@@ -6,7 +6,7 @@ import type { Message } from '../src/core/types';
 import { fakeBrowser, fakeStorage } from './fakes/browser';
 
 const storage = fakeStorage();
-vi.stubGlobal('location', { search: '?floating' });
+vi.stubGlobal('location', { pathname: '/floating.html', search: '' });
 vi.mock('wxt/browser', () => ({ browser: fakeBrowser(storage, { tabs: { getCurrent: vi.fn(async () => ({ id: 3, windowId: 9 })) } }) }));
 const { CHAT_HANDOFF, FLOATING_PREFIX } = await import('../src/widget/protocol');
 const { HANDOFF_MAX_BYTES, HANDOFF_TOO_LARGE, floatOnPage, moveToPage, moveToPanel, movePanel } = await import('../src/entrypoints/sidepanel/floating');
