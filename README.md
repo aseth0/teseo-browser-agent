@@ -57,7 +57,7 @@ supported. Each [GitHub release](https://github.com/aseth0/teseo-browser-agent/r
 | Version | For | Leaves out |
 |---|---|---|
 | **Downloadable** (recommended): `teseo-browser-agent-X.Y.Z-chrome.zip`, or the `dist` branch | Everyone: every feature. Its extension id is fixed: the same from any folder, so an update keeps your settings | Nothing, but it does not update itself |
-| **Chrome Web Store**: `teseo-browser-agent-X.Y.Z-chrome-store.zip` | The same build submitted to the Chrome Web Store | The [DevTools engine](docs/guide/devtools-engine.md); its own extension id, so its own settings; loaded unpacked, that id depends on the folder it is in |
+| **Chrome Web Store**: `teseo-browser-agent-X.Y.Z-chrome-store.zip` | The same build submitted to the Chrome Web Store | The [DevTools engine](docs/guide/devtools-engine.md) and the [sources of custom tools](docs/guide/custom-tools.md#sources-tools-shared-by-a-team); its own extension id, so its own settings; loaded unpacked, that id depends on the folder it is in |
 | **Source**: the repository at the release's tag | Development | Nothing: you build it ([Building from source](CONTRIBUTING.md#building-from-source)) |
 
 The `dist` branch holds the downloadable version unzipped, ready to load. Clone it once and update it with `git pull`:

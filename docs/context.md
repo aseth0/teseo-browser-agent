@@ -152,7 +152,7 @@ still counts. Tests: `tests/once-seen.test.ts`; e2e `compaction` checks the full
     - `decideToolMatch` decides against `reference`, every group offered (`matchGroups(…, { every: true })`, the
       browser's too; meaning indexes them all): by words (`scoreGroups` drops `COMMON` words of the message first)
       with `wordCuts` (the best tool must reach `threshold`, 40 by default; then a group within `WORDS_WITHIN` 0.5 of
-      it for 'matching', 0.85 for 'recommend'), or by meaning (`meaningCuts`). Neither points at any tool (`unsure`):
+      it for 'matching', 0.85 for 'recommend'; match and cut compared as whole percents, `reachesWords`), or by meaning (`meaningCuts`). Neither points at any tool (`unsure`):
       'matching' groups are offered (outcome `unsure`), nothing is recommended; `wordsOnly` when no meaning was used. The decision (`ToolMatch`,
       event `tool-match`, kept as `Message.toolMatch`) says per group its `mode` and `matched`, `used` (one of its
       tools was called, `usedGroups`), `earlier` (stays from an earlier message; not after `unsure`), `loaded`,

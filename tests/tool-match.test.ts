@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('wxt/browser', async () => (await import('./fakes/browser')).emptyBrowser());
 const { ToolRegistry, toWireName } = await import('../src/core/tool-registry');
 const { LOAD_TOOL, withOnDemand } = await import('../src/tools/load');
-const { alwaysGroups, decideToolMatch, heldFor, heldGroups, matchGroups, recommendationItem, scoreGroups, groupModes, matchingTools, toolMatchMode, toolMatchThreshold, TOOL_MATCH_THRESHOLD } = await import('../src/tools/match');
+const { alwaysGroups, decideToolMatch, heldFor, heldGroups, matchGroups, recommendationItem, scoreGroups, groupModes, matchingTools, toolMatchMode, toolMatchThreshold, wordCuts, reachesWords, TOOL_MATCH_THRESHOLD } = await import('../src/tools/match');
 const { turnToolMatch, toolMatchNote } = await import('../src/tools/match-turn');
 const { pieceLabel } = await import('../src/context/pieces');
 const { loop } = await import('./helpers');
@@ -181,6 +181,20 @@ describe('Recommended', () => {
     expect(item.text).toBe('Tool groups that match this message:\n- MCP · tracker: mcp__tracker__create_issue, mcp__tracker__list_issues\nPrefer their tools for this task; the others stay available.');
     expect(pieceLabel({ type: 'text', text: item.text, context: 'tool', source: item.source })).toBe('Tools recommended · MCP · tracker');
     expect(recommendationItem(decide('hello', { mode: 'recommend' }), groups)).toBeUndefined();
+  });
+});
+
+describe('the match by words a group needs', () => {
+  it('is reached by the message\u2019s best match whenever that one passes the floor, also when it does so only once rounded', () => {
+    expect(wordCuts(0.394, 40)).toBeUndefined();
+    for (let best = 0.395; best <= 1; best += 0.001) {
+      const cuts = wordCuts(best, 40)!;
+      expect(reachesWords(best, cuts.matching), String(best)).toBe(true);
+      expect(reachesWords(best, cuts.recommend), String(best)).toBe(true);
+    }
+    // 39.9% is shown as 40%, the match needed: it passes, and one shown as 39% does not.
+    expect(reachesWords(0.399, wordCuts(0.399, 40)!.matching)).toBe(true);
+    expect(reachesWords(0.394, 0.4)).toBe(false);
   });
 });
 

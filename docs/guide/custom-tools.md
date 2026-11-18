@@ -159,7 +159,9 @@ Your header values, saved values, session and read-only choices are kept through
 while the tool's site and method are unchanged. A file can never turn on your browser session or mark a request
 read-only: only you can. **Remove** drops the source and keeps its tools as yours.
 
-Every version has sources ([what each version has](settings.md#what-each-version-has)).
+The Chrome Web Store version has no sources: the store does not let an extension keep code in sync with a file
+on a server, and a tool can carry a script. There, share tools with **Export** and **Import** instead, a file or a
+URL you import once and review ([what each version has](settings.md#what-each-version-has)).
 
 ## Letting the model make them
 

@@ -12,7 +12,7 @@ offers three versions; **Settings → About** shows what yours has
 | Version | For | Leaves out |
 |---|---|---|
 | [The downloadable version](#the-downloadable-version), `teseo-browser-agent-X.Y.Z-chrome.zip` | Everyone: every feature | Nothing, but it does not update itself |
-| [The Chrome Web Store version](#the-chrome-web-store-version), `teseo-browser-agent-X.Y.Z-chrome-store.zip` | The same build submitted to the Chrome Web Store | The [DevTools engine](devtools-engine.md); its settings are its own |
+| [The Chrome Web Store version](#the-chrome-web-store-version), `teseo-browser-agent-X.Y.Z-chrome-store.zip` | The same build submitted to the Chrome Web Store | The [DevTools engine](devtools-engine.md) and the [sources of custom tools](custom-tools.md#sources-tools-shared-by-a-team); its settings are its own |
 | [From source](#from-source) | Development | Nothing: you build it |
 
 ### The downloadable version
@@ -40,7 +40,8 @@ computer and from any folder: move or replace the folder and your settings stay.
 ### The Chrome Web Store version
 
 The build submitted to the Chrome Web Store: without the browser's debugger permission, so without the
-[DevTools engine](devtools-engine.md). Where Teseo is listed in the store, install it from there and the store
+[DevTools engine](devtools-engine.md), and without the
+[sources of custom tools](custom-tools.md#sources-tools-shared-by-a-team). Where Teseo is listed in the store, install it from there and the store
 keeps it updated. Otherwise, download `teseo-browser-agent-X.Y.Z-chrome-store.zip` from the
 [releases page](https://github.com/aseth0/teseo-browser-agent/releases), unzip it and load it unpacked as above.
 

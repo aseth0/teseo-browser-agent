@@ -2,7 +2,6 @@
 import { act, createElement, type ReactElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { FeatureId } from '../src/core/build';
 import type { Settings } from '../src/storage/settings';
 
 // What a build leaves out (core/build) and how the UI tells it (ui/FeatureNotice), in each of the three
@@ -69,9 +68,9 @@ describe('the features of each build', () => {
     expect([build.speakAvailable(), build.tabAudioAvailable(), build.debuggerAvailable(), build.customToolSourcesAvailable()]).toEqual([true, true, true, true]);
   });
 
-  it("the store's leaves out the DevTools engine, by its choice", async () => {
+  it("the store's leaves out the DevTools engine and the sources of custom tools, by its choice", async () => {
     const { build } = await load('store');
-    expect(reasons(build)).toEqual({ devtools: 'store', speak: 'here', systemVoice: 'here', tabAudio: 'here', floatingChat: 'here', customToolSources: 'here' });
+    expect(reasons(build)).toEqual({ devtools: 'store', speak: 'here', systemVoice: 'here', tabAudio: 'here', floatingChat: 'here', customToolSources: 'store' });
   });
 
   it("Firefox's lacks what it has no API for", async () => {
@@ -99,17 +98,17 @@ describe('the features of each build', () => {
 
 describe("the store's switch for custom tool sources", () => {
   const all = CHROMIUM;
-  it('leaves them in as it is', async () => {
+  it('leaves them out of the store build', async () => {
     const { build } = await load('store');
-    expect(build.STORE_LEAVES_OUT).not.toContain('customToolSources');
-    expect(build.customToolSourcesAvailable()).toBe(true);
+    expect(build.STORE_LEAVES_OUT).toContain('customToolSources');
+    expect(build.customToolSourcesAvailable()).toBe(false);
+    expect(build.feature('customToolSources')).toMatchObject({ available: false, reason: 'store' });
   });
-  it('leaves them out of the store build only, once listed', async () => {
+  it('and in every other build', async () => {
     const { build } = await load('chrome');
-    const leavesOut: FeatureId[] = ['devtools', 'customToolSources'];
-    expect(build.featureIn('customToolSources', { store: true, leavesOut, browser: all })).toMatchObject({ available: false, reason: 'store' });
-    expect(build.featureIn('customToolSources', { store: false, leavesOut, browser: all })).toMatchObject({ available: true });
-    expect(build.featureIn('customToolSources', { store: true, leavesOut: build.STORE_LEAVES_OUT, browser: all })).toMatchObject({ available: true });
+    expect(build.customToolSourcesAvailable()).toBe(true);
+    expect(build.featureIn('customToolSources', { store: false, leavesOut: build.STORE_LEAVES_OUT, browser: all })).toMatchObject({ available: true });
+    expect(build.featureIn('customToolSources', { store: true, leavesOut: ['devtools'], browser: all })).toMatchObject({ available: true });
   });
   it('a source is not read where they are left out', async () => {
     vi.resetModules();

@@ -287,8 +287,9 @@ BEFORE['tool-match-always'] = async (page) => {
   if ((await offered.inputValue()) !== 'follow') throw new Error(`offered: ${await offered.inputValue()}`);
   await offered.selectOption('always');
   await options.locator('.mcp-server', { hasText: 'always offered' }).waitFor({ timeout: T.short });
-  const saved = await options.evaluate(async () => (await chrome.storage.local.get('settings')).settings.mcpServers[0]);
-  if (saved.matching !== 'always' || saved.onDemand) throw new Error(`saved: ${JSON.stringify(saved)}`);
+  // The row says so before the setting is stored: wait for it.
+  const saved = () => options.evaluate(async () => (await chrome.storage.local.get('settings')).settings.mcpServers[0]);
+  if (!(await waitFor(async () => (await saved()).matching === 'always', T.short)) || (await saved()).onDemand) throw new Error(`saved: ${JSON.stringify(await saved())}`);
   await options.close();
 };
 MESSAGES['tool-match-always'] = 'take a screenshot of the page';

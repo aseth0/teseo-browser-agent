@@ -120,7 +120,9 @@ Each part holds exactly what that section's own Export writes, so a part copied 
 
 Teseo comes in three versions. The **downloadable** one (the [releases](https://github.com/aseth0/teseo-browser-agent/releases),
 or the `dist` branch) has every feature. The **Chrome Web Store** one leaves out the
-[DevTools engine](devtools-engine.md), as the store's version does not ask for the browser's debugger permission.
+[DevTools engine](devtools-engine.md), as the store's version does not ask for the browser's debugger permission,
+and the [sources of custom tools](custom-tools.md#sources-tools-shared-by-a-team), as the store does not let an
+extension keep code in sync with a file on a server.
 The **Firefox** build, a trial, lacks what Firefox has no API for: the DevTools engine, [Speak](speak.md) and the
 system voice, and [a tab's audio](tab-audio.md). It has no [chat floating on the page](chat-windows.md#floating-on-the-page)
 either: Firefox gives an extension's page framed by a web page none of the APIs the chat needs, so what opens the

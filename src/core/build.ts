@@ -24,9 +24,10 @@ export interface Feature {
 }
 
 // What the Chrome Web Store's build (`pnpm zip:store`, wxt.config.ts) leaves out, by choice: the DevTools
-// engine (its manifest has no debugger permission). Add 'customToolSources' here to leave out the sources
-// of custom tools too (tools synced from a URL: tools/custom/sources); it stays in for now.
-export const STORE_LEAVES_OUT: readonly FeatureId[] = ['devtools'];
+// engine (its manifest has no debugger permission) and the sources of custom tools (tools/custom/sources:
+// tools, their scripts too, kept in sync with a file at a URL, which the store's rule against remotely
+// hosted code may count as such). A one-time import from a URL, which the user starts and reviews, stays.
+export const STORE_LEAVES_OUT: readonly FeatureId[] = ['devtools', 'customToolSources'];
 
 type Api = Record<string, unknown> | undefined;
 const api = (): Api => browser;
@@ -72,7 +73,7 @@ const DEFS: Record<FeatureId, { name: string; about: string; docs: DocsPage; nee
     docs: 'docs/guide/chat-windows.md#floating-on-the-page',
     needs: (_b, firefox) => !firefox,
   },
-  // tools/custom/sources: a fetch, nothing a browser lacks; only the store's build may leave it out.
+  // tools/custom/sources: a fetch, nothing a browser lacks; only the store's build leaves it out.
   customToolSources: {
     name: 'Custom tool sources',
     about: 'Keeps custom tools in sync with a file at a URL.',

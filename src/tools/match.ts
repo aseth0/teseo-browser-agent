@@ -219,6 +219,10 @@ export function wordCuts(best: number, floor: number): { matching: number; recom
   if (pct(best) < floor) return undefined;
   return { matching: Math.max(floor / 100, best * WORDS_WITHIN.matching), recommend: Math.max(floor / 100, best * WORDS_WITHIN.recommend) };
 }
+// Whether a match by words reaches a cut: as whole percents, the way both are shown and the floor is
+// judged. Unrounded, a best match of 39.9% passed the floor of 40 (as 40%) and then reached no cut: every
+// group was held, the message's own best one too.
+export const reachesWords = (match: number, cut: number) => pct(match) >= pct(cut);
 
 export interface MatchInput {
   mode: ToolMatchMode; // Settings → Tools → Matching's, for the record
@@ -250,7 +254,7 @@ export function decideToolMatch({ mode, modeOf = () => mode, threshold, typed, g
     .filter((r) => ids.has(r.group.id))
     .map((r) => {
       const own: 'recommend' | 'matching' = modeOf(r.group.id) === 'recommend' ? 'recommend' : 'matching';
-      const passes = (!!words && r.match >= words[own]) || (r.meaning !== undefined && !!meaning?.cut && r.meaning >= meaning.cut[own]);
+      const passes = (!!words && reachesWords(r.match, words[own])) || (r.meaning !== undefined && !!meaning?.cut && r.meaning >= meaning.cut[own]);
       const outcome: ToolMatch['groups'][number]['outcome'] =
         passes ? 'matched'
         : own === 'recommend' ? 'unmatched'

@@ -5,6 +5,13 @@ import { recordClipboard, toolCount } from './helpers.mjs';
 import { SCANNED_PDF, TEXT_PDF } from '../pdf-fixtures.mjs';
 import { ACTIONS, AFTER, BEFORE, BETWEEN, CHAT_VIEW, CHECK, EXPECT, MESSAGES, MID_TURN, MODEL_OF, TEMPLATES } from './tables.mjs';
 
+// The conversation as saved, once it is: the panel saves it after the turn's last render, so the answer on
+// screen does not mean it is stored yet.
+const savedConversation = async (page) => {
+  if (!(await waitFor(async () => !!(await stored(page, 'convIndex'))?.[0], T.short))) throw new Error('the conversation was not saved');
+  return stored(page, `conv:${(await stored(page, 'convIndex'))[0].id}`);
+};
+
 // User page templates present in storage for a scenario.
 Object.assign(TEMPLATES, {
   'web-read': [{ id: 'af', name: 'article-facts', description: '', matches: ['*://localhost/*'], enabled: true, webRead: true,
@@ -202,8 +209,7 @@ AFTER.compaction = async (page) => {
   if (!(await page.locator('.compaction-divider').evaluate((d) => d.open))) throw new Error('the link did not open the divider');
   if (!(await page.locator('.compaction-body').innerText()).includes('SUMMARY-OK')) throw new Error('the divider lacks the summary');
   if (process.env.E2E_SHOTS) await page.screenshot({ path: `${process.env.E2E_SHOTS}/compaction-done.png` });
-  const convIndex = await stored(page, 'convIndex');
-  const saved = await stored(page, `conv:${convIndex[0].id}`);
+  const saved = await savedConversation(page);
   if (!saved.history.some((m) => m.compaction?.summary === 'SUMMARY-OK')) throw new Error('the compaction was not saved');
   await page.getByPlaceholder(/Ask something/).fill('hello 4');
   await page.getByPlaceholder(/Ask something/).press('Enter');
@@ -259,8 +265,7 @@ BEFORE['image-upload'] = async (page) => {
 AFTER['image-upload'] = async (page) => {
   await page.locator('.msg-image img').waitFor({ timeout: T.short });
   if (await page.locator('.attachment').count()) throw new Error('the attachment stayed after sending');
-  const convIndex = await stored(page, 'convIndex');
-  const saved = await stored(page, `conv:${convIndex[0].id}`);
+  const saved = await savedConversation(page);
   const image = saved.history[0].parts.find((p) => p.type === 'image');
   if (!image || image.data !== '') throw new Error(`saved image: ${JSON.stringify(image).slice(0, 100)}`);
 };
@@ -280,8 +285,7 @@ BEFORE['pdf-attach'] = async (page) => {
   if (titles.join('|') !== 'PDF, 2 pages, 63 characters, sent as text|PDF without text: 1 page sent as images') throw new Error(`PDF chips: ${titles.join('|')}`);
 };
 AFTER['pdf-attach'] = async (page) => {
-  const convIndex = await stored(page, 'convIndex');
-  const saved = await stored(page, `conv:${convIndex[0].id}`);
+  const saved = await savedConversation(page);
   const parts = saved.history[0].parts;
   const pdf = parts.find((p) => p.source === 'pdf:report.pdf');
   if (!pdf?.text.includes('PDF not kept in the saved conversation') || pdf.text.includes('example.com')) throw new Error(`saved PDF: ${JSON.stringify(pdf).slice(0, 200)}`);

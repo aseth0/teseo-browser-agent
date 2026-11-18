@@ -3,6 +3,17 @@
 What changed in each version of Teseo. Versions before 0.61.0 are not listed here; see
 the git tags and their commits.
 
+## 0.75.3
+
+### Changed
+- The Chrome Web Store version leaves out the sources of custom tools (tools kept in sync with a file at a
+  URL): the store does not let an extension keep code in sync with a server. Importing from a file or a URL
+  stays. The downloadable version keeps sources.
+
+### Fixed
+- Tool matching by words: a best match that reached the match needed only once rounded (39.9% shown as 40%)
+  held every group instead of offering it.
+
 ## 0.75.2
 
 ### Fixed
