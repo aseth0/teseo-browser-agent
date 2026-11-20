@@ -117,6 +117,8 @@ export async function draftCustomTool(args: SaveArgs, catalog: Tool[]): Promise<
           ...withKept(String(args.http?.url ?? '').trim()),
         }
       : undefined;
+  // Its section: the one given ("" for none), or the one it had.
+  const group = typeof args.group === 'string' ? args.group.trim() : existing?.group;
   const custom: CustomTool = {
     id: existing?.id ?? crypto.randomUUID(),
     name,
@@ -128,7 +130,7 @@ export async function draftCustomTool(args: SaveArgs, catalog: Tool[]): Promise<
     ...(baseName === SCRIPT_BASE && { script: String(args.script?.code ?? '') }),
     ...(baseName === SCRIPT_BASE && Array.isArray(args.script?.uses) && args.script.uses.length && { uses: args.script.uses.map((u) => dotted(String(u).trim())).filter(Boolean) }),
     ...(existing?.labels && { labels: existing.labels }), // the user's: the model sees none
-    ...(existing?.group && { group: existing.group }), // the user's (or its source's) section
+    ...(group && { group }),
     ...draftMeta(existing),
   };
   const base = catalog.find((t) => t.name === custom.base && t.source !== 'custom');
@@ -181,6 +183,7 @@ export function customDescription(custom: CustomTool, base: Tool | undefined, up
     summary: `${update ? 'Update' : 'Save'} the custom tool "${custom.name}" (${customRuns(custom)})`,
     details: [
       { label: 'Description', value: custom.description },
+      ...(custom.group ? [{ label: 'Group', value: custom.group }] : []),
       ...(custom.uses?.length ? [{ label: 'Tools it calls (only these, each asked as usual)', value: custom.uses.join('\n') }] : []),
       ...(custom.base === SCRIPT_BASE ? [{ label: 'Script (all of it)', value: custom.script ?? '', code: true }] : []),
       ...(http?.body ? [{ label: 'Request body', value: http.body, code: true }] : []),
@@ -210,6 +213,7 @@ export function savedArgs(c: CustomTool): SaveArgs {
     name: c.name,
     description: c.description,
     base: c.base,
+    ...(c.group && { group: c.group }),
     ...(Object.keys(c.params).length && {
       params: Object.fromEntries(
         Object.entries(c.params).map(([param, rule]) => [

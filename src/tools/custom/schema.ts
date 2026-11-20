@@ -6,6 +6,7 @@ export interface SaveArgs {
   name: string;
   description: string;
   base: string;
+  group?: string;
   params?: Record<string, { fixed?: unknown; template?: string; description?: string }>;
   inputs?: Partial<CustomInput>[];
   http?: Partial<Pick<HttpRequest, 'method' | 'url' | 'body' | 'extract' | 'session' | 'headers'>>;
@@ -19,6 +20,12 @@ export const SAVE_PROPERTIES = {
   name: { type: 'string', description: 'Lowercase words joined by dots, e.g. "reddit.search". An existing name updates that tool.' },
   description: { type: 'string', description: 'What it does and when to use it: the model decides from it alone.' },
   base: { type: 'string', description: 'The tool it runs, by its name with dots ("web.search"), one you are offered; or "http", or "script".' },
+  group: {
+    type: 'string',
+    description:
+      'Optional: the group the user sees it under, in Settings and in the tools menus (e.g. "Chat"). Give the name exactly as an ' +
+      'existing group has it to join that one; an empty text takes the tool out of its group. Left out, the group stays as it is.',
+  },
   params: {
     type: 'object',
     description:

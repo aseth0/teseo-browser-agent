@@ -16,7 +16,7 @@ export interface CustomTool extends CollectionItem {
   script?: string; // a script's code: the body of an async function given input and request (tools/custom/script-tool)
   uses?: string[]; // the tools a script calls with tool(name, args): only these (script/steps); then its site is optional
   labels?: string[]; // the user's, to find it in Settings (tools/labels); the model never sees them
-  group?: string; // the section it is listed under (named so in the tools menus), a team's or the user's; not for the model
+  group?: string; // the section it is listed under (named so in the tools menus), a team's or the user's; the model may set it (custom_tools.save)
   createdBy?: 'model'; // saved by the model (custom_tools.save), after the user approved it
   source?: ToolSource; // read from a source (tools/custom/sources), replaced at each of its syncs
 }
