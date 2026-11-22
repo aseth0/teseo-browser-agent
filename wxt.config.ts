@@ -136,7 +136,7 @@ export default defineConfig({
     // (devtools/cdp, the only module that uses it), only while Settings → Chromium DevTools is on;
     // required, since the browser does not allow it as an optional permission. favicon: the icons of
     // the tabs in the page bar's tab picker (tab-picker faviconOf).
-    permissions: ['storage', 'unlimitedStorage', 'sidePanel', 'tabs', 'scripting', 'activeTab', 'search', 'tabGroups', 'identity', 'declarativeNetRequestWithHostAccess', 'cookies', 'webRequest', 'offscreen', 'alarms', 'notifications', 'tts', ...(STORE ? [] : ['debugger']), 'favicon', 'tabCapture'],
+    permissions: ['storage', 'unlimitedStorage', 'sidePanel', 'tabs', 'scripting', 'activeTab', 'search', 'tabGroups', 'identity', 'declarativeNetRequestWithHostAccess', 'cookies', 'webRequest', 'offscreen', 'alarms', 'notifications', 'tts', 'debugger', 'favicon', 'tabCapture'],
     // Images in the extension's pages only from it or in memory (an attached image, a screenshot): a
     // URL in the model's text is never fetched (ui/Markdown), and markup it might slip into an SVG
     // (the turn diagram's) could neither post a form nor move the page's base URL.

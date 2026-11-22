@@ -23,11 +23,11 @@ export interface Feature {
   reason?: MissingReason; // when not available
 }
 
-// What the Chrome Web Store's build (`pnpm zip:store`, wxt.config.ts) leaves out, by choice: the DevTools
-// engine (its manifest has no debugger permission) and the sources of custom tools (tools/custom/sources:
-// tools, their scripts too, kept in sync with a file at a URL, which the store's rule against remotely
-// hosted code may count as such). A one-time import from a URL, which the user starts and reviews, stays.
-export const STORE_LEAVES_OUT: readonly FeatureId[] = ['devtools', 'customToolSources'];
+// What the Chrome Web Store's build (`pnpm zip:store`, wxt.config.ts) leaves out, by choice: the sources
+// of custom tools (tools/custom/sources: tools, their scripts too, kept in sync with a file at a URL, which
+// the store's rule against remotely hosted code may count as such). A one-time import from a URL, which the
+// user starts and reviews, stays. The DevTools engine is in it: its manifest asks for the debugger permission.
+export const STORE_LEAVES_OUT: readonly FeatureId[] = ['customToolSources'];
 
 // What Firefox's build leaves out by choice, besides what Firefox has no API for: the sources of custom
 // tools, for Mozilla's add-on policies (an add-on is self-contained and loads no remote code to run; a
@@ -39,7 +39,7 @@ const api = (): Api => browser;
 
 // `needs`: whether the browser can, from its API (`b`) or, where no API tells, from the build (`firefox`).
 const DEFS: Record<FeatureId, { name: string; about: string; docs: DocsPage; needs: (b: Api, firefox: boolean) => boolean }> = {
-  // devtools/cdp: the debugger API (Firefox has none; the store's build no permission).
+  // devtools/cdp: the debugger API (Firefox has none).
   devtools: {
     name: 'Chromium DevTools engine',
     about: 'Real clicks, keys and typing, hover, drag and screenshots of any tab.',
@@ -91,8 +91,7 @@ export const FEATURE_IDS = Object.keys(DEFS) as FeatureId[];
 
 // A feature in a build: `store` whether it is the store's, `leavesOut` what that one leaves out, `browser`
 // the browser's API, `firefox` whether it is Firefox's build (`firefoxLeavesOut` what that one leaves out by
-// choice: FIREFOX_LEAVES_OUT). A build's choice is the reason first: the store's manifest has no permission for
-// it either.
+// choice: FIREFOX_LEAVES_OUT). A build's choice is the reason first.
 export function featureIn(id: FeatureId, build: { store: boolean; leavesOut: readonly FeatureId[]; browser: Api; firefox?: boolean; firefoxLeavesOut?: readonly FeatureId[] }): Feature {
   const { needs, ...def } = DEFS[id];
   const reason: MissingReason | undefined = build.store && build.leavesOut.includes(id)
@@ -111,7 +110,7 @@ export const missingFeatures = (): Feature[] => features().filter((f) => !f.avai
 // The readers callers had before the registry, unchanged in what they answer.
 export const tabAudioAvailable = (): boolean => feature('tabAudio').available;
 export const speakAvailable = (): boolean => feature('speak').available;
-// The debugger API itself (not the store's choice): settings-select devtoolsOn checks STORE_BUILD apart.
+// The debugger API itself: Firefox has none.
 export const debuggerAvailable = (): boolean => DEFS.devtools.needs(api(), firefoxBuild());
 export const customToolSourcesAvailable = (): boolean => feature('customToolSources').available;
 // Whether the chat can float on a page; where not, the page opens it full screen in a tab (background/widget-host).

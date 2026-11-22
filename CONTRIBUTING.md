@@ -141,7 +141,7 @@ The tag runs `release.yml`, one job after another:
 |---|---|
 | `version` | Stops at once unless the tag is `v` + `package.json`'s version |
 | `checks` | Typecheck, lint, tests and security checks (`checks.yml`; the development repository runs it on every push too) |
-| `build` · `build-store` · `build-firefox` | In parallel, each in its own runner: `pnpm zip` (the downloadable zip, everything), `pnpm zip:store` (the Chrome Web Store's: no manifest `key`, no `debugger` permission, so no DevTools engine) and `pnpm zip:firefox` (Firefox's trial build, unsigned, and its sources zip for addons.mozilla.org: [Firefox's build](#building-from-source)) |
+| `build` · `build-store` · `build-firefox` | In parallel, each in its own runner: `pnpm zip` (the downloadable zip, everything), `pnpm zip:store` (the Chrome Web Store's: no manifest `key`, no sources of custom tools) and `pnpm zip:firefox` (Firefox's trial build, unsigned, and its sources zip for addons.mozilla.org: [Firefox's build](#building-from-source)) |
 | `publish` | Creates the GitHub release `Teseo X.Y.Z` with the notes (the page above, plus the four zips' SHA-256) and attaches the four zips |
 | `dist-branch` | Puts the downloadable build, unzipped, on the `dist` branch, one commit per version |
 

@@ -1,5 +1,5 @@
 // What the chat reads from the settings, and changes to them made by more than one page.
-import { debuggerAvailable, floatingChatAvailable, STORE_BUILD } from '../core/build';
+import { debuggerAvailable, floatingChatAvailable } from '../core/build';
 import { DISPLAY_IDS, displayFrom, type DisplayId, type DisplayValue, type DisplayValues } from '../core/display-defs';
 import { levelOf, type AlertLevel, type InteractionKind } from '../core/interaction-kinds';
 import { modelKey } from '../core/util';
@@ -13,8 +13,8 @@ export const memoryOn = (s: Settings) => s.memory?.enabled ?? true;
 // Settings → Tools: the tools that create things offered once the model loads them (tools/load).
 export const createOnDemand = (s: Settings) => s.tools?.createOnDemand ?? true;
 export const includePageOn = (s: Settings) => s.includePage ?? true;
-// Never in the store's build, nor where the browser has no debugger API (Firefox).
-export const devtoolsOn = (s: Settings) => !STORE_BUILD && s.devtoolsTools === true && debuggerAvailable();
+// Never where the browser has no debugger API (Firefox).
+export const devtoolsOn = (s: Settings) => s.devtoolsTools === true && debuggerAvailable();
 export const panelFollowsOn = (s: Settings) => s.panelFollows ?? true;
 // Where the bubble and its actions open the chat (Settings → Bubble → Opening the chat): floating only where
 // the chat can float (core/build floatingChat); else the side panel, the default, whatever was saved.

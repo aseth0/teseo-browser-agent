@@ -8,11 +8,10 @@ through Chrome's debugger instead of synthetic events:
 - **screenshots of any tab**, of one element or of the full page, in a mobile or dark view;
 - `browser.wait_for` can also wait until the network is idle.
 
-The engine needs the browser's `debugger` permission, which the Chrome Web Store version does not ask for, and the
-debugger API, which Firefox does not have. There the section stays in the menu with an **unavailable** mark and says
+The engine needs the browser's debugger API, which Firefox does not have. There the section stays in the menu with
+an **unavailable** mark and says
 why, `browser.hover` and `browser.drag` show greyed in **Settings → Tools** (never offered to the model), and
-full-page screenshots scroll through the page. The version from the project's
-[releases](https://github.com/aseth0/teseo-browser-agent/releases) has it
+full-page screenshots scroll through the page. The Chrome versions, the Chrome Web Store's too, have it
 ([what each version has](settings.md#what-each-version-has)).
 
 The debugger attaches to one tab for one call and detaches after it. Meanwhile the chat's top bar shows

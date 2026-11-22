@@ -5,8 +5,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Settings } from '../src/storage/settings';
 
 // What a build leaves out (core/build) and how the UI tells it (ui/FeatureNotice), in each of the three
-// builds: the downloadable Chrome one (everything), the Chrome Web Store's (__STORE__, no debugger
-// permission) and Firefox's (no debugger, offscreen, tts, tabCapture nor sidePanel; __FIREFOX__: no floating chat,
+// builds: the downloadable Chrome one (everything), the Chrome Web Store's (__STORE__, no sources
+// of custom tools) and Firefox's (no debugger, offscreen, tts, tabCapture nor sidePanel; __FIREFOX__: no floating chat,
 // and no sources of custom tools, by its choice).
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -19,9 +19,7 @@ type Build = 'chrome' | 'store' | 'firefox';
 const runtime = { getManifest: () => ({ version: '1.2.3' }), id: 'test', sendMessage: vi.fn(async () => undefined), onMessage: { addListener() {}, removeListener() {} } };
 const CHROMIUM = { debugger: {}, offscreen: {}, tts: {}, tabCapture: {}, sidePanel: {} };
 function browserOf(build: Build): Record<string, unknown> {
-  if (build === 'chrome') return { runtime, ...CHROMIUM };
-  const { debugger: _d, ...store } = CHROMIUM; // the store's manifest has no debugger permission
-  return build === 'store' ? { runtime, ...store } : { runtime };
+  return build === 'firefox' ? { runtime } : { runtime, ...CHROMIUM };
 }
 
 async function load(build: Build, release = false) {
@@ -70,9 +68,9 @@ describe('the features of each build', () => {
     expect([build.speakAvailable(), build.tabAudioAvailable(), build.debuggerAvailable(), build.customToolSourcesAvailable()]).toEqual([true, true, true, true]);
   });
 
-  it("the store's leaves out the DevTools engine and the sources of custom tools, by its choice", async () => {
+  it("the store's leaves out the sources of custom tools, by its choice, and nothing else", async () => {
     const { build } = await load('store');
-    expect(reasons(build)).toEqual({ devtools: 'store', speak: 'here', systemVoice: 'here', tabAudio: 'here', floatingChat: 'here', customToolSources: 'store' });
+    expect(reasons(build)).toEqual({ devtools: 'here', speak: 'here', systemVoice: 'here', tabAudio: 'here', floatingChat: 'here', customToolSources: 'store' });
   });
 
   it("Firefox's lacks what it has no API for, and leaves out the sources of custom tools by its choice", async () => {
@@ -183,9 +181,9 @@ describe('the notice', () => {
 
   it('(A) a section: what it does, and the store text to the releases', async () => {
     const { notice } = await load('store');
-    const box = await render(createElement(notice.FeaturePage, { id: 'devtools', title: 'Chromium DevTools' }));
-    expect(box.querySelector('h3')?.textContent).toBe('Chromium DevTools');
-    expect(box.textContent).toContain('Real clicks, keys and typing');
+    const box = await render(createElement(notice.FeaturePage, { id: 'customToolSources', title: 'Sources' }));
+    expect(box.querySelector('h3')?.textContent).toBe('Sources');
+    expect(box.textContent).toContain('Keeps custom tools in sync');
     expect(box.textContent).toContain(STORE_TEXT);
     expect(linkOf(box)).toBe(`${REPO}/releases/latest`);
   });
@@ -251,7 +249,7 @@ describe('where the notices show', () => {
 
   it('the settings menu keeps every section, and marks those left out', async () => {
     expect((await menu('chrome')).marked).toEqual([]);
-    expect((await menu('store')).marked).toEqual(['devtools']);
+    expect((await menu('store')).marked).toEqual([]);
     const firefox = await menu('firefox');
     expect(firefox.ids).toContain('speak');
     expect(firefox.marked).toEqual(['devtools', 'speak']);
@@ -343,12 +341,11 @@ describe('where the notices show', () => {
   });
 
   // Firefox's and Chrome's: devtools-settings.test.
-  it('Settings → Chromium DevTools: the store text in the store build', async () => {
+  it('Settings → Chromium DevTools: the engine itself in the store build, no notice', async () => {
     await load('store');
     const { DevtoolsSection } = await import('../src/ui/DevtoolsSettings');
     const box = await render(createElement(DevtoolsSection, { settings, onChange: vi.fn() }));
-    expect(box.textContent).toContain(STORE_TEXT);
-    expect(linkOf(box)).toBe(`${REPO}/releases/latest`);
+    expect(box.textContent).not.toContain(STORE_TEXT);
   });
 });
 
@@ -367,7 +364,8 @@ describe('Settings → Tools', () => {
   }
 
   it('lists the tools only the DevTools engine has greyed, never offered, where the build lacks it', async () => {
-    const box = await toolsPage('store');
+    expect((await toolsPage('store')).querySelectorAll('.tool-line.feature-row').length).toBe(0); // the store's has it
+    const box = await toolsPage('firefox');
     const rows = [...box.querySelectorAll('.tool-line.feature-row')];
     expect(rows.map((r) => r.querySelector('.tool-name')?.textContent)).toEqual(['browser__hover', 'browser__drag']);
     expect(rows.some((r) => r.querySelector('input, [role="switch"]'))).toBe(false);
@@ -401,9 +399,9 @@ describe('a call to a tool this build lacks', () => {
     return execute({ tools: { registry: tools, lacking: lackedBy } } as never, tools, name, {}, {} as never);
   }
 
-  it('the store build: the DevTools engine left out, not an unknown tool', async () => {
-    const r = await call('store', 'browser__hover');
-    expect(r).toEqual({ content: "browser__hover is not in this version of Teseo: the Chrome Web Store's version leaves it out (Chromium DevTools engine). Do without it.", isError: true });
+  it('the store build has the DevTools engine: its tools are not told as left out', async () => {
+    const { lackedBy } = await (async () => { await load('store'); return import('../src/tools/build-tools'); })();
+    expect(lackedBy('browser.hover')).toBeUndefined();
   });
 
   it('Firefox: speech.say has no API there', async () => {

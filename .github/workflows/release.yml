@@ -1,7 +1,7 @@
 # On a version tag (vX.Y.Z, which must be package.json's version):
 #   version → checks (checks.yml) → build, build-store and build-firefox, in parallel → publish → dist-branch
 # The three builds are separate jobs, each with its own dist/: the downloadable zip (everything), the Chrome Web
-# Store's (wxt.config.ts STORE: no `key`, no debugger permission; uploaded to the store by hand) and Firefox's (a
+# Store's (wxt.config.ts STORE: no `key`, no sources of custom tools; uploaded to the store by hand) and Firefox's (a
 # trial: core/firefox-manifest, unsigned; with the sources zip addons.mozilla.org asks for, of the files
 # git tracks). `publish` creates the tag's GitHub release, its notes made by scripts/release-notes.mjs from
 # .github/release-notes.md and the version's section of CHANGELOG.md, and attaches the four zips; `dist-branch`

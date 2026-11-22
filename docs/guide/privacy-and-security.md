@@ -59,7 +59,7 @@ The extension asks the browser for what its features need (`wxt.config.ts` says 
 | `tts` | The system's voice [reads aloud](speak.md) when you have no voice profile: the voices the operating system and the browser offer, with no provider of yours |
 | `tabCapture` | [A tab's audio](tab-audio.md), only the tab you ask for, after you click the extension's icon or use its shortcut |
 | `alarms`, `notifications` | A [tab watch](tab-watches.md) ends on time while the extension sleeps, and tells you; [what waits for you](chat.md#when-the-agent-waits-for-you) while the chat is not in view tells you (Settings → Alerts) |
-| `debugger` | The [DevTools engine](devtools-engine.md) and recording through DevTools, only while **Settings → Chromium DevTools** is on. Required, since the browser does not allow it to be optional. Not in the Chrome Web Store version, which has no DevTools engine |
+| `debugger` | The [DevTools engine](devtools-engine.md) and recording through DevTools, only while **Settings → Chromium DevTools** is on. Required, since the browser does not allow it to be optional |
 | `favicon` | The tabs' icons in the tab picker, from the browser's own cache: the site is not asked for them |
 | Hosts `api.openai.com`, `api.groq.com`, `openrouter.ai` | The cloud providers of the presets, granted at install |
 | Optional: every site (`<all_urls>`) | **Website access**: asked site by site, or all at once |
