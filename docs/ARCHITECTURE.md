@@ -535,8 +535,8 @@ place where a feature must say "this needs the permission" when it is denied; pe
 keep what they granted. It matters mostly for a Chrome Web Store listing (a shorter review, a less alarming install
 prompt); loading the extension unpacked from GitHub, nothing practical changes. A possible shape, still to be
 thought through: two builds, a "dev" build that asks for the permissions at install as today, and a "publish" build
-without them (asked for when used). The store build that exists today (`pnpm zip:store`, `STORE=1`, no `debugger`
-permission, no `key`) is the natural starting point for "publish"; the names and the split are not decided.
+without them (asked for when used). The store build that exists today (`pnpm zip:store`, `STORE=1`, no `key`,
+no sources of custom tools) is the natural starting point for "publish"; the names and the split are not decided.
 
 ---
 
@@ -568,8 +568,7 @@ permission, no `key`) is the natural starting point for "publish"; the names and
    private windows), without the side panel, the offscreen document, the DevTools engine, a tab's audio or Speak;
    a headless smoke run checks it (`pnpm e2e:firefox`, `tests/e2e/firefox-smoke.mjs`: Playwright's Firefox driven
    over WebDriver BiDi). What a build lacks is one registry (`core/build`: each feature, whether it is here, the reason, `browser`,
-   `store` or `firefox`, its line and docs page; the store's choices in `STORE_LEAVES_OUT`: the DevTools engine and
-   the sources of custom tools; Firefox's in `FIREFOX_LEAVES_OUT`: the sources of custom tools), told by one component (`ui/FeatureNotice`: a section's page, a greyed
+   `store` or `firefox`, its line and docs page; the store's choices in `STORE_LEAVES_OUT`: the sources of custom tools; Firefox's in `FIREFOX_LEAVES_OUT`: the sources of custom tools), told by one component (`ui/FeatureNotice`: a section's page, a greyed
    row whose mark opens why, Settings → About's summary). Every link out of the extension comes from
    `core/links`: the repository set at build time (`package.json`, or `TESEO_REPO_URL`), releases at
    `/releases/latest`, the docs at the version's tag in a release's build and the default branch otherwise.

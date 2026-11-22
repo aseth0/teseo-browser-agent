@@ -50,7 +50,7 @@ export function DevtoolsSection({ settings, onChange }: Props) {
   );
 }
 
-// The engine where this build lacks it (core/build: the store's leaves it out, Firefox has no debugger API).
+// The engine where this build lacks it (core/build: Firefox has no debugger API).
 function NotHere() {
   return (
     <FeaturePage id="devtools" title="Chromium DevTools" about={<>

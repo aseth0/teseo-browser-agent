@@ -169,4 +169,5 @@ a URL you import once and review ([what each version has](settings.md#what-each-
 Ask *"make a tool that searches the forum"*. The `create-custom-tool` and `create-script-tool` skills guide the
 model: it learns the API first (from its documentation, `browser.site_access`, or a recording you made), tries the
 tool with `custom_tools.try`, and saves it with `custom_tools.save` for you to review. It never puts keys or
-tokens in a tool: it tells you where to add them.
+tokens in a tool: it tells you where to add them. Ask it to put a tool in a group (*"put it in Chat"*), move it to
+another or take it out: the card you review shows the group.

@@ -40,7 +40,7 @@ export const REPLY_TEXTS = {
     group: 'replies',
     tool: SHARED_REPLIES,
     label: 'Tool not in the store version',
-    when: "the model calls a tool the Chrome Web Store's version leaves out (core/build: the DevTools engine)",
+    when: "the model calls a tool the Chrome Web Store's version leaves out (core/build STORE_LEAVES_OUT)",
     text: "{name} is not in this version of Teseo: the Chrome Web Store's version leaves it out ({feature}). Do without it.",
   },
   'result.missing_args': {

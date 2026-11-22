@@ -49,6 +49,24 @@ describe('a custom tool as the model reads it', () => {
 });
 
 describe('custom_tools.edit', () => {
+  it('puts it in a group, moves it and takes it out; left out, the group stays', async () => {
+    const edit = (changes: object) => named('custom_tools.edit').run({ name: 'tracker.issues', ...changes }, ctx);
+    const saved = async () => (await customToolStore.load()).find((c) => c.name === 'tracker.issues')!;
+    expect(await edit({ group: ' Work ' })).not.toHaveProperty('isError');
+    expect((await saved()).group).toBe('Work');
+    expect(savedArgs(await saved()).group).toBe('Work');
+    const card = await named('custom_tools.edit').describe!({ name: 'tracker.issues', group: 'Chat' }, ctx);
+    expect(card.details?.find((d) => d.label === 'Group')).toMatchObject({ diff: true });
+    await edit({ description: 'Lists the issues.' });
+    expect((await saved()).group).toBe('Work');
+    await edit({ group: '' });
+    expect(await saved()).not.toHaveProperty('group');
+  });
+  it('custom_tools.save gives a new tool its group', async () => {
+    const result = await named('custom_tools.save').run({ name: 'wiki.page', description: 'Reads a page.', base: 'http', group: 'Reference', inputs: [{ name: 'title', type: 'string', description: 'Its title' }], http: { method: 'GET', url: 'https://wiki.example.com/{title}' } }, ctx);
+    expect(result).not.toHaveProperty('isError');
+    expect((await customToolStore.load()).find((c) => c.name === 'wiki.page')!.group).toBe('Reference');
+  });
   it('changes only what it gives: a key of the request, a parameter (null takes it out)', () => {
     const edited = editedArgs(synced, { name: 'other', params: { query: null as never, count: { fixed: 5 } } });
     expect(edited).toMatchObject({ name: 'team.search', description: 'Searches.', params: { count: { fixed: 5 } } });

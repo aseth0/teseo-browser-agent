@@ -215,7 +215,7 @@ export function holdForRecording(tabId: number, onEnded: (reason: string) => voi
 export function listenDevtools(given: DevtoolsDeps) {
   deps = given;
   onRuntime(DEVTOOLS_STATUS, (_msg, sender) => (isExtensionPage(sender) ? { tabs: attachedTabs() } : undefined));
-  if (!browser.debugger) return; // the store's build has no debugger permission (core/build)
+  if (!browser.debugger) return; // Firefox has no debugger API (core/build)
   listenDetach();
   // A worker that stopped mid-call (the browser stops idle ones) left its debugger attached and the
   // badge on: undone when it starts again. getTargets cannot tell who attached a tab (its extensionId

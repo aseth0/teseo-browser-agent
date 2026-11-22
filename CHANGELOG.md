@@ -3,6 +3,21 @@
 What changed in each version of Teseo. Versions before 0.61.0 are not listed here; see
 the git tags and their commits.
 
+## 0.78.0
+
+### Changed
+- The Chrome Web Store version now has the DevTools engine (real clicks, keys and typing, hover, drag, screenshots
+  of any tab), off until you turn it on in Settings → Chromium DevTools. It asks for the browser's debugger
+  permission, which the browser does not let an extension ask for later: on updating, Chrome asks you to accept it
+  and keeps the extension off until you do. It still leaves out the sources of custom tools.
+
+## 0.77.1
+
+### Fixed
+- The model can put a custom tool in a group when it creates or changes one (`custom_tools.save` and
+  `custom_tools.edit` take `group`), move it to another and take it out; the card you review shows the group.
+  Before, only Settings could.
+
 ## 0.77.0
 
 ### Added

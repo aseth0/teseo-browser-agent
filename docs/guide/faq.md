@@ -59,7 +59,7 @@ other Chromium browsers with side panels may work but are not tested.
 Your version, or your browser, does not have that feature. Why, and a link to the docs page about it or to the
 downloadable version (which has everything), is in the section the mark leads to and in **Settings → About**; in
 the menu the mark's tooltip says it too, and on a greyed row clicking the mark opens it under the row. The Chrome Web
-Store version leaves out the DevTools engine. Your settings move to the other version with
+Store version leaves out the sources of custom tools. Your settings move to the other version with
 [Export and import](settings.md#export-and-import).
 
 **Can I use it at work with sensitive data?**
