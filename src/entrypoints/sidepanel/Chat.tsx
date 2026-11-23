@@ -9,11 +9,11 @@ import { IconButton, JSON_ICON, PAGE_ICON } from '../../ui/icons';
 import { Icon } from '../../ui/chat-icons';
 import { OverflowBar } from '../../ui/OverflowBar';
 import { openOptions } from '../../ui/open-options';
-import { agentOffers, agentStore } from '../../agents/profiles';
+import { agentLabel, agentOffers, agentStore, browserAgentLabel, callableAgents } from '../../agents/profiles';
 import { BUILDER_ID } from '../../core/builder-ids';
 import { onDemandGroups, onDemandNames } from '../../tools/load';
 import { heldFor } from '../../tools/match';
-import { hasCreateGroup } from '../../agents/builtins';
+import { hasCreateGroup, isEmptyAgent } from '../../agents/builtins';
 import { AgentPicker } from './AgentPicker';
 import { AttachButtons, AttachmentStrip } from './Attachments';
 import { ConfirmationCards } from './ConfirmCards';
@@ -173,6 +173,12 @@ export function Chat({ agent, page, queued, onOpenMemory, topbar, autoInjectTo, 
     [settings, menuTools, profile, history],
   );
   const composerTools = useMemo(() => agentOffers(profile, toolCatalog, agents), [profile, toolCatalog, agents]);
+  // What @ offers: the agents the chat's agent may ask (agents.ask).
+  const askable = useMemo(() => callableAgents(profile, agents, settings), [profile, agents, settings]);
+  // And why it offers none (not for EmptyAgent, which gets no mentions).
+  const noAgents = askable.length || isEmptyAgent(profile) ? undefined
+    : !(profile ? profile.canAsk : settings.defaultCanAsk) ? `${profile ? agentLabel(profile) : browserAgentLabel(settings)} cannot ask other agents: switch on its Can ask in Settings → Agents.`
+    : 'No agent can be asked: switch on Can be asked on one in Settings → Agents.';
   const skillsOff = offWhy('siteSkills');
   const templatesWithheld = offWhy('templates') ?? pageWithheld;
   const pageBar = useMemo(() => (
@@ -241,7 +247,7 @@ export function Chat({ agent, page, queued, onOpenMemory, topbar, autoInjectTo, 
           {/* Its own per turn state (the diagram kind, what is unfolded) for each conversation. */}
           <HistoryView key={agent.conversationId} render={render} history={history} results={results} running={busy} toolCatalog={toolCatalog} />
           {!history.length && !busy && (
-            <MentionsHelp tools={toolCatalog} disabledTools={settings.disabledTools ?? []} mentions={settings.mentions} onInsert={insertMention} />
+            <MentionsHelp tools={toolCatalog} disabledTools={settings.disabledTools ?? []} agents={askable} mentions={settings.mentions} onInsert={insertMention} />
           )}
           </ReplacedContext.Provider>
           </LiveContext.Provider>
@@ -266,7 +272,7 @@ export function Chat({ agent, page, queued, onOpenMemory, topbar, autoInjectTo, 
       <ComposerArea composer={composer} attachments={attachments} busy={busy} compacting={compaction.compacting} dictation={dictation} onSend={sendBoxNow} onStop={stopRun}
         canSend={canSend && !runGate?.off}
         box={{
-          value: input, onChange: setInput, onSend: sendBoxNow, onSendNow: sendBoxInstead, prompts: promptTexts, tools: composerTools, disabledTools: profile ? NO_TOOLS_OFF : settings.disabledTools,
+          value: input, onChange: setInput, onSend: sendBoxNow, onSendNow: sendBoxInstead, prompts: promptTexts, tools: composerTools, disabledTools: profile ? NO_TOOLS_OFF : settings.disabledTools, agents: askable, noAgents,
           mentions: settings.mentions, bookmarksRoot: settings.bookmarks?.rootId, conversationId: agent.conversationId, recall, onRecall: setRecall,
         }} />
       <DictationLines dictation={dictation} />

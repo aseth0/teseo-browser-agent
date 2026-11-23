@@ -5,7 +5,10 @@ import { MENTION_PROBLEMS } from '../../../templates/mentions';
 import { bookmarkDetail, conversationDetail } from './suggestions';
 import type { MentionChipsIn } from './useMentionChips';
 
-const INLINE_ICONS: Record<InlineKind, ChatIconName> = { skill: 'skill', tool: 'tool' };
+const INLINE_ICONS: Record<InlineKind, ChatIconName> = { skill: 'skill', tool: 'tool', agent: 'agent' };
+
+const inlineChipTitle = (kind: InlineKind, name: string, props: { forceTool?: boolean; disabledTools?: string[] }) =>
+  kind === 'skill' ? `Loads the skill "${name}" for this message` : kind === 'agent' ? `Asks the model to ask the agent "${name}" (agents.ask)` : toolChipTitle(name, props);
 
 const toolChipTitle = (name: string, props: { forceTool?: boolean; disabledTools?: string[] }) =>
   `${props.forceTool ? 'The model must call' : 'Asks the model to use'} ${name}` +
@@ -22,7 +25,7 @@ export function MentionChips({ chips, ...props }: { chips: MentionChipsIn; force
         </span>
       ))}
       {inline.map((m) => (
-        <span key={m.kind + m.name} className="skill-chip" title={m.kind === 'skill' ? `Loads the skill "${m.name}" for this message` : toolChipTitle(m.name, props)}>
+        <span key={m.kind + m.name} className="skill-chip" title={inlineChipTitle(m.kind, m.name, props)}>
           <Icon name={INLINE_ICONS[m.kind]} size={12} /> {m.name}
         </span>
       ))}

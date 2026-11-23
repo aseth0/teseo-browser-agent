@@ -118,9 +118,16 @@ export function Popup() {
       <div className="popup-menu" role="menu" aria-label="Teseo">
         <div className="popup-head" role="none">
           <span className="popup-title">Teseo</span>
-          <button className="icon-button" role="menuitem" onClick={settingsAt()} title="Settings" aria-label="Settings">
-            <Icon name="settings" size={16} />
-          </button>
+          <span className="popup-head-actions" role="none">
+            {shows('agents') && (
+              <button className="icon-button" role="menuitem" onClick={() => done(openManager())} title="Agents Panel" aria-label="Agents Panel">
+                <Icon name="agents" size={16} />
+              </button>
+            )}
+            <button className="icon-button" role="menuitem" onClick={settingsAt()} title="Settings" aria-label="Settings">
+              <Icon name="settings" size={16} />
+            </button>
+          </span>
         </div>
         {newer.popup && !PREVIEW && <UpdateLine latest={newer.popup.latest} onDismiss={newer.dismiss} />}
         {shows('site-access') && <SiteAccessLine access={access} url={tab?.url} onEnable={enableSite} />}
@@ -146,14 +153,6 @@ export function Popup() {
           <SpeakLine shortcuts={shortcuts} />
           <RecordLine hidden={!shows('requests')} tab={tab} settings={settings ?? undefined} shortcuts={shortcuts} onDone={done} onError={setRecordNote} />
         </div>
-        {shows('agents') && <>
-          <div className="popup-label" role="none">Agents</div>
-          <button className="popup-choice" role="menuitem" onClick={() => done(openManager())}>
-            <Icon name="agents" size={16} />
-            <span className="popup-choice-label">Agents Panel</span>
-            <Icon name="chevron" size={14} />
-          </button>
-        </>}
       </div>
       {audioNote && (
         <div className="popup-note" role="status">

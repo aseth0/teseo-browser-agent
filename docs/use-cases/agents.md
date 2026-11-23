@@ -44,7 +44,7 @@ Agent
 
 ## In the chat
 
-- A selector next to the model's (and maybe an `@agent` mention); each conversation remembers its
+- A selector next to the model's (and an `@agent` mention, which asks an agent rather than switching to it); each conversation remembers its
   agent. The agent's name shows on its replies and on its confirmation cards.
 - **Sites (changed in 0.46.5).** An agent uses every site the extension may reach, with the site's
   policy (Website access), and its own policy on its sites. On one of its sites the chat changes to

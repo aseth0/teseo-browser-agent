@@ -1,5 +1,5 @@
 // The message box, with mentions: typing "::" at the start of a word suggests the enabled site
-// templates, then (after "/") their views; "/" the skills, "$" the tools, "#" the saved conversations, and "b::" the bookmarks. ↑ ↓ move, Enter or Tab
+// templates, then (after "/") their views; "/" the skills, "$" the tools, "@" the agents it may ask, "#" the saved conversations, and "b::" the bookmarks. ↑ ↓ move, Enter or Tab
 // complete, Esc closes; while the list is open Enter completes instead of sending. Ctrl/⌘+Enter
 // sends at once (onSendNow: while the agent works, it stops it; Enter queues). Below the box,
 // the mentions in the text as chips. Otherwise ↑ on the first line brings back your previous
@@ -15,7 +15,7 @@ import { useTemplates } from '../../ui/templates/useTemplates';
 import { useSkills } from '../../ui/Skills';
 import { isEnter } from '../../ui/enter';
 import { MentionChips } from './composer/MentionChips';
-import { LIST_LABELS, suggestionsFor, typingAt, type Suggestion } from './composer/suggestions';
+import { LIST_LABELS, suggestionsFor, typingAt, type AskableAgent, type Suggestion } from './composer/suggestions';
 import { useMentionChips } from './composer/useMentionChips';
 import { useRecallKeys } from './composer/useRecallKeys';
 
@@ -30,6 +30,8 @@ interface Props {
   onRecall?: (recall: Recall | undefined) => void;
   tools?: ToolInfo[]; // what $ suggests
   disabledTools?: string[];
+  agents?: AskableAgent[]; // what @ suggests: the agents the chat's agent may ask
+  noAgents?: string; // why @ has none to suggest, shown in place of the list; none: nothing shown
   mentions?: Mentions; // which kinds are on (Settings → Auto-inject → Mentions)
   conversationId?: string; // the current one, not offered with #
   bookmarksRoot?: string; // the folder b:: offers (Settings → Bookmarks); none: every bookmark
@@ -51,17 +53,19 @@ export interface ComposerHandle {
 }
 
 const NO_TOOLS: ToolInfo[] = [];
+const NO_AGENTS: AskableAgent[] = [];
 
 // Memoized: the chat re-renders for much else than the box (a message arrives, a card, the page).
 export const MentionComposer = memo(function MentionComposer(props: Props) {
   const templates = useTemplates();
   const skills = useSkills();
   const tools = props.tools ?? NO_TOOLS;
+  const agents = props.agents ?? NO_AGENTS;
   const allConversations = useConversations();
   const conversations = useMemo(() => allConversations.filter((c) => c.id !== props.conversationId), [allConversations, props.conversationId]);
   const { mentions: kinds } = props;
   const on = useMemo(
-    () => ({ template: kinds?.templates ?? true, skill: kinds?.skills ?? true, tool: kinds?.tools ?? true, history: kinds?.history ?? true, bookmark: kinds?.bookmarks ?? true }),
+    () => ({ template: kinds?.templates ?? true, skill: kinds?.skills ?? true, tool: kinds?.tools ?? true, agent: kinds?.agents ?? true, history: kinds?.history ?? true, bookmark: kinds?.bookmarks ?? true }),
     [kinds],
   );
   const bookmarks = useBookmarks(on.bookmark, props.bookmarksRoot);
@@ -103,11 +107,13 @@ export const MentionComposer = memo(function MentionComposer(props: Props) {
 
   const typing = typingAt(props.value.slice(0, caret), on);
   // Nothing to suggest for a mention already written in full (Enter then sends).
-  const suggestions = closed ? [] : suggestionsFor(typing, { templates, skills, tools, disabled: props.disabledTools ?? [], conversations, bookmarks }).filter((sg) => sg.insert.trim() !== typing?.mention);
+  const suggestions = closed ? [] : suggestionsFor(typing, { templates, skills, tools, disabled: props.disabledTools ?? [], agents, conversations, bookmarks }).filter((sg) => sg.insert.trim().toLowerCase() !== typing?.mention.toLowerCase());
   const open = suggestions.length > 0;
+  // "@" with no agent to ask: why, instead of nothing (Esc closes it, Enter still sends).
+  const noAgents = !closed && typing?.kind === 'agent' && !agents.length ? props.noAgents : undefined;
   const selected = Math.min(index, suggestions.length - 1);
   // The mentions in the text, as chips.
-  const chips = useMentionChips(props.value, on, { templates, skills, tools, conversations, bookmarks });
+  const chips = useMentionChips(props.value, on, { templates, skills, tools, agents, conversations, bookmarks });
 
   const track = () => setCaret(box.current?.selectionStart ?? 0);
   const { leaveRecall, onRecallKey } = useRecallKeys({ prompts, recall, onRecall: props.onRecall, onChange: props.onChange, caretTo });
@@ -137,6 +143,7 @@ export const MentionComposer = memo(function MentionComposer(props: Props) {
           ))}
         </ul>
       )}
+      {noAgents && <div className="mention-list mention-hint" role="status">{noAgents}</div>}
       <BoxGrip box={box} onHeight={setHeight} />
       <textarea
         ref={box}
@@ -173,6 +180,10 @@ export const MentionComposer = memo(function MentionComposer(props: Props) {
               e.preventDefault();
               return setClosed(true);
             }
+          }
+          if (noAgents && e.key === 'Escape') {
+            e.preventDefault();
+            return setClosed(true);
           }
           if (isEnter(e) && !e.shiftKey) {
             e.preventDefault();

@@ -88,7 +88,7 @@ itself, which follows each switch (nothing in it can be clicked). Everything sho
 | **This site** | **Site access**: the line saying the tab's site is not enabled, with **Enable it** ([Where the chat opens](chat-windows.md)) |
 | **Open the chat** | **Page**, **Panel**, **Full screen**: one per tile; the others share the width |
 | **Into the chat** | **Screenshot** and, under it, **Section**, **Visible**, **Full page**; **Tab's audio**; **Requests** |
-| **Agents** | **Agents Panel** |
+| **Agents** | **Agents Panel**: its button at the top, beside ⚙ |
 | **Details** | **Shortcuts** (the keys under the tiles and beside the names) and **Block titles** (off: a more compact popup) |
 
 A block with nothing left shows nothing, not even its title. **Settings** (the gear) always shows, so the popup can

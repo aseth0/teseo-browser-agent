@@ -136,6 +136,7 @@ export interface Mentions {
   templates?: boolean; // ::site/view
   skills?: boolean; // /skill
   tools?: boolean; // $tool
+  agents?: boolean; // @agent: one the chat's agent may ask (agents.ask)
   history?: boolean; // #saved-conversation
   bookmarks?: boolean; // b::bookmark
   forceTool?: boolean; // the first call must use the mentioned tool (tool_choice; default: no)

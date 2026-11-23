@@ -21,7 +21,7 @@ Short guides built around one example each: [all of them](howto/README.md).
 - [Using the chat](guide/chat.md): what goes with each message, models and thinking, messages and the queue.
 - [Where the chat opens](guide/chat-windows.md): side panel, floating on the page, full screen, following you across
   tabs.
-- [Mentions](guide/mentions.md): `::site`, `/skill`, `$tool`, `#conversation`, `b::bookmark`.
+- [Mentions](guide/mentions.md): `::site`, `/skill`, `$tool`, `@agent`, `#conversation`, `b::bookmark`.
 - [Attachments](guide/attachments.md): images, screenshots, text files, PDFs.
 - [Chat views, Layers and the context meter](guide/layers.md): see every request the model got.
 - [Appearance](guide/appearance.md): text size, themes, how steps and reasoning show.

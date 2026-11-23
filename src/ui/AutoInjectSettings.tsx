@@ -24,6 +24,7 @@ const MENTION_KINDS: [MentionKind, ReactNode][] = [
   ['templates', <><code>::site/view</code> site templates (texts in Site templates)</>],
   ['skills', <><code>/skill</code> skills (text in Skills)</>],
   ['tools', <><code>$tool</code> tools (text and forcing in Tools)</>],
+  ['agents', <><code>@agent</code> agents the chat's agent may ask (text in Agents)</>],
   ['history', <><code>#saved-conversation</code> saved conversations (History)</>],
   ['bookmarks', <><code>b::bookmark</code> bookmarks (Bookmarks)</>],
 ];

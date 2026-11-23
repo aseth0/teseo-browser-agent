@@ -53,7 +53,7 @@ describe('the popup, as things change while it is open', () => {
     await saveSettings({ ...(await loadSettings()), popup: { hidden: ['agents'] } });
     await open();
     expect(item('Chat full screen in a tab')).not.toBeNull();
-    expect([...box.querySelectorAll('[role="menuitem"]')].some((b) => b.textContent === 'Agents Panel')).toBe(false);
+    expect([...box.querySelectorAll('[role="menuitem"]')].some((b) => b.getAttribute('aria-label') === 'Agents Panel')).toBe(false);
     await act(async () => saveSettings({ ...(await loadSettings()), popup: { hidden: ['agents', 'full-screen'] } }));
     await settle();
     expect(item('Chat full screen in a tab')).toBeNull();

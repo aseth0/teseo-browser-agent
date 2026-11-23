@@ -4,6 +4,7 @@
 // (agents.ask) run in background/sub-agent.
 import { agentAllows, agentById, agentStore } from '../agents/profiles';
 import { isEmptyAgent } from '../agents/builtins';
+import { ASK_TOOL } from '../agents/ask';
 import { forcedToolChoice } from '../context/inline-mentions';
 import { excludedTools } from '../context/request';
 import { stepPlanReminder } from '../context/plan-reminder';
@@ -121,7 +122,8 @@ export async function runAgent(msg: RunMessage, { toolsFor, signal, send, questi
     history = keepSystemMemory(history, main.built);
     send({ type: 'system-memory', memory: main.built });
   }
-  let mentionedTools: string[] = []; // $tool: offered even if off, and asked for
+  let mentionedTools: string[] = []; // $tool: offered even if off, and asked for; agents.ask too with an @agent
+  let forcedTools: string[] = []; // those Settings → Tools' forcing applies to: the $tool ones
   let held: OnDemandGroup[] = []; // the tool groups the message did not match, for tools.load (Only matching)
   // EmptyAgent gets your message as you wrote it: no page, no mentions, nothing attached.
   const last = history.at(-1);
@@ -139,9 +141,11 @@ export async function runAgent(msg: RunMessage, { toolsFor, signal, send, questi
     const preparing = phases.start({ kind: 'context', label: 'Preparing your message' });
     const turn = await turnContext(
       { history, tabId, url: listedUrl, includePage: msg.includePage && agentGetsPage, noSelection: msg.noSelection, noPage: noPageReason(), userTab: msg.userTab, conversationId: msg.conversationId, skip: msg.skip, turn: thisTurn },
-      { settings: seen, skills, templates, memory, memoryOpts: main.memoryOpts, toolNames: registry.list().map((t) => t.name), requestAccess: askAccess, send, phases: phases.under(preparing.id) },
+      { settings: seen, skills, templates, memory, memoryOpts: main.memoryOpts, toolNames: registry.list().map((t) => t.name), askable: main.callable, requestAccess: askAccess, send, phases: phases.under(preparing.id) },
     ).finally(() => preparing.end());
-    mentionedTools = turn.mentionedTools;
+    forcedTools = turn.mentionedTools;
+    // An agent mentioned is asked through agents.ask: offered as a mentioned tool is, but not forced.
+    mentionedTools = turn.mentionedAgents.length && !forcedTools.includes(ASK_TOOL) ? [...forcedTools, ASK_TOOL] : forcedTools;
     // Settings → Tools → Matching: the tool groups the message matches (tools/match), recommended with it
     // or the others held for tools.load.
     const offeredNow = registry.without(excludedTools(seen, skills).filter((n) => !mentionedTools.includes(n))).list();
@@ -181,7 +185,7 @@ export async function runAgent(msg: RunMessage, { toolsFor, signal, send, questi
     {
       ...opts,
       // Settings → Tools: the first call must use the mentioned tool (any of them, when several).
-      model: { ...opts.model, thinking: msg.thinking, toolChoice: settings.mentions?.forceTool ? forcedToolChoice(mentionedTools) : undefined },
+      model: { ...opts.model, thinking: msg.thinking, toolChoice: settings.mentions?.forceTool ? forcedToolChoice(forcedTools) : undefined },
       // Between its steps, memory and bookmarks its replies match, then the plan to update (not for
       // EmptyAgent: nothing attached).
       context: { ...opts.context, view: (system, messages, seen) => opts.context.view(system, withPlansDismissed(messages, dismissedPlans), seen), attachAfter: isEmptyAgent(agent) ? undefined : async (reply, messages) => {

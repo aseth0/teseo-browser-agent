@@ -1,22 +1,24 @@
 // The user's own text in the chat, as Markdown (ui/chat/MessageView): its line breaks kept, and the
-// mentions attached with it (::site/view, /skill, $tool, #conversation, b::bookmark) marked for
+// mentions attached with it (::site/view, /skill, $tool, @agent, #conversation, b::bookmark) marked for
 // ui/Markdown to show as chips. The model's text is rendered without these.
 import { SLUG } from '../core/sources';
 
-// What a message mentions that was attached, by trigger ('::', '/', '$', '#', 'b::'): name → what its
+// What a message mentions that was attached, by trigger ('::', '/', '$', '@', '#', 'b::'): name → what its
 // chip shows (ui/chat/mentions mentionsIn).
 export type Mentioned = Record<string, Map<string, string>>;
 
 // A mention, at the start of the text or after a space (so "std::vector" and "a/b" are not).
-export const MENTION_TOKEN = new RegExp(`((?:^|(?<=\\s))(?:b::${SLUG}|::${SLUG}(?:\\/${SLUG})?|\\/${SLUG}|\\$[A-Za-z][\\w-]*(?:\\.[\\w-]+)*|#${SLUG}))`);
+export const MENTION_TOKEN = new RegExp(`((?:^|(?<=\\s))(?:b::${SLUG}|::${SLUG}(?:\\/${SLUG})?|\\/${SLUG}|\\$[A-Za-z][\\w-]*(?:\\.[\\w-]+)*|@[A-Za-z0-9][A-Za-z0-9-]*|#${SLUG}))`);
 
 // A token (as MENTION_TOKEN finds it) that was attached: its trigger, its name, and what follows the
 // name in the token (a sentence may end right after a tool: "$browser.find.").
 export function mentionOf(token: string, mentioned: Mentioned): { trigger: string; name: string; rest: string } | undefined {
   const trigger = token.startsWith('b::') ? 'b::' : token.startsWith('::') ? '::' : token[0]!;
   const name = token.slice(trigger.length);
-  const found = [name, name.replace(/[.-]+$/, '')].find((n) => mentioned[trigger]?.has(n));
-  return found === undefined ? undefined : { trigger, name: found, rest: name.slice(found.length) };
+  // An agent in any case ("@Todoist"): its slug is lowercase.
+  const key = (n: string) => (trigger === '@' ? n.toLowerCase() : n);
+  const found = [name, name.replace(/[.-]+$/, '')].find((n) => mentioned[trigger]?.has(key(n)));
+  return found === undefined ? undefined : { trigger, name: key(found), rest: name.slice(found.length) };
 }
 
 // A node of the Markdown tree remark plugins work on (only what these use).

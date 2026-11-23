@@ -20,7 +20,7 @@ import './devtools.mjs';
 import * as tables from './tables.mjs';
 
 export const ALL = [
-  'stop', 'no-provider', 'scroll-reading', 'expand-mid-turn', 'agent', 'sub-agent', 'web-search', 'web-blocked', 'custom-tool',
+  'stop', 'no-provider', 'scroll-reading', 'expand-mid-turn', 'agent', 'sub-agent', 'agent-mention', 'web-search', 'web-blocked', 'custom-tool',
   'custom-http', 'custom-session', 'custom-csrf', 'custom-sources', 'script-tool', 'script-steps', 'page-widget',
   'widget-agent', 'widget-prompt', 'widget-fold', 'widget-write', 'widget-load', 'widget-chat', 'widget-move',
   'widget-float-default', 'widget-sticky', 'history', 'temporary', 'history-tools', 'history-mention', 'history-auto', 'mentions-help',

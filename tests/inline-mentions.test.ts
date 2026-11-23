@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mentionedIn, parseInline, skillMentionItems, skillNamed, toolMentionItem, toolNamed } from '../src/context/inline-mentions';
+import { agentMentionItem, agentNamed, agentSlug, mentionedIn, parseInline, skillMentionItems, skillNamed, toolMentionItem, toolNamed } from '../src/context/inline-mentions';
 import type { Skill } from '../src/skills/types';
 
 const skill = (name: string, enabled = true): Skill => ({ id: name, name, description: '', matches: [], body: `Do ${name}.`, references: [], enabled });
@@ -29,5 +29,27 @@ describe('skill and tool mentions', () => {
     const m = mentionedIn([note.source, 'skill-mention:summarize-page', undefined]);
     expect([...m.tool]).toEqual(['browser.find', 'webmcp.add_to_cart']);
     expect([...m.skill]).toEqual(['summarize-page']);
+  });
+});
+
+describe('agent mentions', () => {
+  const askable = [{ name: 'Research Bot', description: 'Looks things up' }, { name: 'mm', description: '' }, { name: '🤖', description: 'no slug' }];
+  const named = agentNamed(askable);
+
+  it('are the slug of an agent that may be asked, at the start of a word, each once', () => {
+    const text = 'ask @research-bot and @mm, not someone@example.com nor @nobody; again @research-bot.';
+    expect(parseInline(text, 'agent', named).map((m) => m.name)).toEqual(['Research Bot', 'mm']);
+    expect(agentSlug('Research Bot')).toBe('research-bot');
+    expect(agentSlug('🤖')).toBe(''); // cannot be mentioned
+    expect(parseInline('write to a@mm.test', 'agent', named)).toEqual([]);
+    expect(parseInline('hi @Research-Bot and @MM', 'agent', named).map((m) => m.name)).toEqual(['Research Bot', 'mm']); // any case
+  });
+
+  it('attach one note naming them, and say which were mentioned', () => {
+    const note = agentMentionItem(['Research Bot', 'mm'])!;
+    expect(note.text).toBe('The user wants Research Bot, mm to do this: ask them with agents__ask.');
+    expect(agentMentionItem([])).toBeUndefined();
+    expect([...mentionedIn([note.source]).agent]).toEqual(['Research Bot', 'mm']);
+    expect(mentionedIn(['agent-mention:not json']).agent.size).toBe(0); // edited by hand: still opens
   });
 });
