@@ -1,1 +1,0 @@
-import{Kn as e,Ut as t,Vt as n}from"./useSettings-p1rKzvWk.js";function r(r){return n(()=>t(`session`,r),t=>e(`session`,r,e=>t(e.newValue)),void 0,`[${r}]`,r)}export{r as t};
