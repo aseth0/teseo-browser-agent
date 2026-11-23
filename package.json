@@ -1,7 +1,7 @@
 {
   "name": "teseo-browser-agent",
   "private": true,
-  "version": "0.78.0",
+  "version": "0.78.1",
   "description": "An AI assistant that lives in your browser, reads the page you are on and acts on it, with your permission: any OpenAI-compatible provider, MCP and skills.",
   "repository": {
     "type": "git",

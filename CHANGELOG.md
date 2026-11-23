@@ -3,6 +3,13 @@
 What changed in each version of Teseo. Versions before 0.61.0 are not listed here; see
 the git tags and their commits.
 
+## 0.78.1
+
+### Fixed
+- The chat no longer scrolls as a whole: at times, in the side panel, all of it (its top bar included) went up
+  out of sight and left an empty space under the message box, until the panel was reloaded. Only the list of
+  messages scrolls.
+
 ## 0.78.0
 
 ### Changed

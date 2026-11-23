@@ -18,8 +18,10 @@ code { background: var(--surface); padding: 1px 4px; border-radius: 4px; }
 .app { display: flex; flex-direction: column; height: 100%; }
 /* Never wider than its window (a narrow side panel, the chat floating on a page, the Agents Panel's):
    what would stick out is clipped instead of making the page scroll sideways, by a swipe or by the
-   focus going to it. Clip, not hidden: no box that scrolls; the popovers open inside the bars' width. */
-.app { overflow-x: clip; }
+   focus going to it. Clip, not hidden: no box that scrolls; the popovers open inside the bars' width.
+   Nor taller: only the message list scrolls. What would stick out below is clipped too, so that the
+   page itself can never scroll, the whole chat (its top bar included) taken up out of sight. */
+.app { overflow: clip; }
 /* Full-screen in a tab (sidepanel.html?full): the layout takes the tab's whole width; only the prose
    keeps a readable line length. Tables, code, diagrams and images still use the whole width. */
 .app.full .msg :is(.markdown, .fold-section, .fold-body) > :is(p:not(:has(img)), ul, ol, h1, h2, h3, h4, h5, h6, blockquote),
