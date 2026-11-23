@@ -3,6 +3,18 @@
 What changed in each version of Teseo. Versions before 0.61.0 are not listed here; see
 the git tags and their commits.
 
+## 0.79.0
+
+### Added
+- `@agent` mentions in the message box: `@` lists the agents the chat's agent may ask (name and description),
+  filtered as you type; the one you pick is asked for that message (the model is told you named it, and the tool
+  that asks agents is offered even if it is off). An email address is not a mention. Switch them off in
+  Settings → Auto-inject → Mentions; the text the model gets is in Settings → Agents.
+
+### Changed
+- The toolbar popup: **Agents Panel** is now a button at the top, beside ⚙ Settings, instead of a row of its own
+  at the bottom.
+
 ## 0.78.1
 
 ### Fixed

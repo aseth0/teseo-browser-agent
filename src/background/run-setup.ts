@@ -154,7 +154,7 @@ export function prepareAgent(run: RunScope, who: AgentProfile | undefined, depth
   // servers' set so; the skills of those not loaded yet are not listed, tools.load names them.
   const groups = onDemandGroups(settings, registry.without(excludedTools(seen, skills)).list(), { create: hasCreateGroup(who), skills });
   const system = buildSystemPrompt({ settings: seen, skills, templates, agent: who, asksAgents: callable.length > 0, memory, memoryText: (kept ?? built)?.text, heldSkills: heldSkills(groups, history ?? []) });
-  return { seen, skills, templates, memory, memoryOpts, kept, built, registry, authorizing, log, system, groups };
+  return { seen, skills, templates, memory, memoryOpts, kept, built, registry, authorizing, log, system, groups, callable };
 }
 type AgentSetup = ReturnType<typeof prepareAgent>;
 

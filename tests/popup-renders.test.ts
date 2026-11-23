@@ -76,13 +76,13 @@ describe('the popup', () => {
     expect(openSidePanel).toHaveBeenLastCalledWith(expect.objectContaining({ id: 4, windowId: 2 }), true, true);
     panelShown = false;
   });
-  it('the gear opens Settings; the last row, the agent manager', async () => {
+  it('the gear opens Settings; the button beside it, the agent manager', async () => {
     const { box, item } = await show();
     await act(async () => item('Settings').click());
     expect(opened.options).toHaveBeenCalledWith(undefined);
-    const agents = [...box.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].at(-1)!;
-    expect(agents.textContent).toBe('Agents Panel');
-    await act(async () => agents.click());
+    const head = [...box.querySelectorAll<HTMLButtonElement>('.popup-head [role="menuitem"]')].map((b) => b.getAttribute('aria-label'));
+    expect(head).toEqual(['Agents Panel', 'Settings']);
+    await act(async () => item('Agents Panel').click());
     expect(opened.manager).toHaveBeenCalled();
   });
   it('the page tile is off where the chat cannot float', async () => {

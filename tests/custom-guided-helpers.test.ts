@@ -116,7 +116,7 @@ describe('what looks like a credential', () => {
   });
   it('by its value', () => {
     expect(['eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.x', 'sk-0123456789abcdef', 'ghp_0123456789abcdefABCDEF', 'aZ3kQ9vX2mP7wL5tR8nB4cY6'].every(isCredentialValue)).toBe(true);
-    expect(['cats', '123456789012345678901234', 'c56a4180-65aa-42ec-a945-5fd21dec0538', 'hello world this is long'].some(isCredentialValue)).toBe(false);
+    expect(['cats', '123456789012345678901234', '11111111-2222-4333-8444-555555555555', 'hello world this is long'].some(isCredentialValue)).toBe(false);
   });
 });
 
@@ -282,7 +282,7 @@ describe('keys the second review found', () => {
   it('reads names written together', () => {
     expect(['accesstoken', 'authkey', 'apitoken', 'secretkey', 'hapikey', 'adminpassword'].every(isCredentialName)).toBe(true);
     expect(['keyword', 'author', 'keywords', 'q'].some(isCredentialName)).toBe(false);
-    const { http } = parsed('https://api.example.com/a?accesstoken=AbC123xyZ987LmN456&hapikey=c56a4180-65aa-42ec-a945-5fd21dec0538');
+    const { http } = parsed('https://api.example.com/a?accesstoken=AbC123xyZ987LmN456&hapikey=QwE456rtY123UiO789');
     expect(http.url).toBe('https://api.example.com/a?accesstoken={{secret:accesstoken}}&hapikey={{secret:hapikey}}');
   });
 

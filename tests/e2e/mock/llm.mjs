@@ -898,6 +898,12 @@ export function respond(body, res) {
       }
       return say(res, contentOf(toolMsg).includes('may not use localhost') ? 'AGENT OK' : `AGENT FIND: ${contentOf(toolMsg).slice(0, 200)}`);
     }
+    case 'agent-mention': { // @mm: the note names it, agents.ask is offered with mm, and no tool is forced
+      const ask = (body.tools ?? []).find((t) => t.function.name === 'agents__ask')?.function;
+      const ok = lastUser.includes('The user wants mm to do this: ask them with agents__ask.') && ask?.parameters.properties.agent.enum.join() === 'mm'
+        && !body.tool_choice && !lastUser.includes('The user wants someone');
+      return say(res, ok ? 'AGENT MENTION OK' : `AGENT MENTION MISSING: ${JSON.stringify(body.tool_choice)} ${JSON.stringify(ask)?.slice(0, 200)} ${lastUser.slice(0, 300)}`);
+    }
     case 'sub-jira': { // jira asks mattermost (a sub-agent with its own model and tool), then answers with what it got
       const ask = (body.tools ?? []).find((t) => t.function.name === 'agents__ask')?.function;
       if (!toolMsg) {

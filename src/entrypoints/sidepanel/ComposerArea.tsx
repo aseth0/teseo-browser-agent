@@ -31,7 +31,7 @@ export function ComposerArea({ composer, box, attachments, busy, compacting, dic
     <div className={`composer${framed}`} aria-busy={finishing || undefined} {...attachments.dropProps}>
       <div className="composer-box">
         {dictation && <DictationStrip dictation={dictation} />}
-        <MentionComposer ref={composer} {...box} placeholder="Ask something… (Enter sends, Shift+Enter for a new line, :: a site, / a skill, $ a tool, ↑ your previous messages)" />
+        <MentionComposer ref={composer} {...box} placeholder="Ask something… (Enter sends, Shift+Enter for a new line, :: a site, / a skill, $ a tool, @ an agent, ↑ your previous messages)" />
       </div>
       {busy ? <button onClick={onStop}>Stop</button>
         : compacting ? <button disabled title="The earlier turns are being compacted before your message goes">Compacting…</button>

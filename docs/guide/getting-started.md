@@ -109,8 +109,8 @@ name):
 Below them, **Screenshot** takes a screenshot of the page into the chat, ready to ask about: **Section** (drag over
 a part), **Visible** (what you see) or **Full page** (the whole page, top to bottom). **Tab's audio** captures what the tab
 plays, to save it, review its transcript or put it in the chat ([A tab's audio](tab-audio.md)). **Requests** records the
-calls the page makes while you use it ([Recording a page's requests](recordings.md)). Then **Agents Panel** opens the agent
-manager: several agents at once, each on its own tab. The ⚙ at the top right opens **Settings**.
+calls the page makes while you use it ([Recording a page's requests](recordings.md)). At the top right, **Agents Panel**
+opens the agent manager (several agents at once, each on its own tab) and ⚙ opens **Settings**.
 
 Keyboard shortcuts (change them on the browser's shortcuts page, `chrome://extensions/shortcuts`, or give each
 action a key of its own in **Settings → Shortcuts**: [keys set in Settings](chat-windows.md#keys-set-in-settings)):

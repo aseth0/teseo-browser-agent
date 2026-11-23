@@ -51,6 +51,18 @@ export function memoryIndexOf(source: string | undefined): { host: string; title
 // Skills and tools mentioned inline: "skill-mention:summarize-page", "tool-mention:browser.find,…".
 export const SKILL_MENTION_SOURCE = 'skill-mention:';
 export const TOOL_MENTION_SOURCE = 'tool-mention:';
+export const AGENT_MENTION_SOURCE = 'agent-mention:'; // "agent-mention:["Research bot",…]": the agents' names, as JSON
+// The agents a context part's source names, if it is an agent mention.
+export function agentMentionOf(source: string | undefined): string[] | undefined {
+  if (!source?.startsWith(AGENT_MENTION_SOURCE)) return undefined;
+  try {
+    const names: unknown = JSON.parse(source.slice(AGENT_MENTION_SOURCE.length));
+    return Array.isArray(names) ? names.map(String) : undefined;
+  } catch {
+    return undefined; // a saved conversation can be edited by hand: it must still open
+  }
+}
+
 // The tool groups a message matched, recommended with it (tools/match): their labels as a JSON array.
 export const TOOL_MATCH_SOURCE = 'tool-match:';
 export function toolMatchOf(source: string | undefined): string[] | undefined {
@@ -78,14 +90,16 @@ export const slugsAfter = (trigger: string, typed: string) =>
   [...new Set([...typed.matchAll(new RegExp(`(?:^|\\s)${escapeRegExp(trigger)}(${SLUG})`, 'g'))].map((m) => m[1]!))];
 
 // "Find the cheapest cable" → "find-the-cheapest-cable"
-export const slugOf = (title: string) =>
+export const slugOf = (title: string) => slugOrEmpty(title) || 'conversation';
+// The same, "" for a title without a letter or a digit it can keep ("🤖").
+export const slugOrEmpty = (title: string) =>
   title
     .toLowerCase()
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
-    .slice(0, 40) || 'conversation';
+    .slice(0, 40);
 
 // A saved conversation attached on its own (history/auto).
 export const historyAutoSource = (id: string, match: number, title: string) => `${HISTORY_AUTO_SOURCE}${id}:${match}:${title}`;

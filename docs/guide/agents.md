@@ -54,6 +54,8 @@ An agent with **Can ask** gets a tool to hand a task to any agent with **Can be 
 - gets the task as its only message, without the conversation;
 - works in a background tab of its own.
 
+You can point the model at one yourself: `@agent-name` in a message asks it to ask that agent ([mentions](mentions.md#agents)).
+
 The task comes as a **brief**: what to do (`task`, the only field required) and, when the caller fills them, what is
 already known (`context`), what it must not do (`constraints`), when it is done (`done`) and what to send back
 (`report`). The asked agent gets each field given in a section of its own (*Already known*, *Do not*, *Done when*,

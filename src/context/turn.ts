@@ -1,6 +1,6 @@
 // The context a user message gets before it goes to the model, in order: the site skills of the page,
 // the memory items for its site, the sites mentioned (::site/view), the skills (/skill), the saved conversations (#title), the
-// bookmarks (b::title), the saved conversations attached on their own, the tools mentioned ($tool), then the page (its skills' values, its
+// bookmarks (b::title), the saved conversations attached on their own, the tools ($tool) and agents (@agent) mentioned, then the page (its skills' values, its
 // templates' output, the page itself) when asked for.
 import type { ContextItem } from '../core/messages';
 import type { BackgroundToPanel } from '../core/protocol';
@@ -16,7 +16,7 @@ import type { Settings } from '../storage/settings';
 import { parseMentions } from '../templates/mentions';
 import { templateItems } from '../templates/render';
 import type { PageTemplate } from '../templates/types';
-import { parseInline, skillMentionItems, toolMentionItem, toolNamed } from './inline-mentions';
+import { agentMentionItem, agentNamed, parseInline, skillMentionItems, toolMentionItem, toolNamed } from './inline-mentions';
 import { readMentions } from './mentions';
 import { NO_PAGE_SOURCE, PAGE_SOURCE, USER_ELSEWHERE_SOURCE } from './sources';
 import { markPageData, text } from '../core/model-texts';
@@ -52,6 +52,7 @@ interface TurnDeps {
   memory?: MemoryItem[]; // the items for the agent (memory/store memoryFor)
   memoryOpts?: MemoryPromptOptions; // what it may do with them
   toolNames: string[]; // the tools that can be mentioned
+  askable?: { name: string }[]; // the agents that can be mentioned: those it may ask (agents/profiles callableAgents)
   requestAccess: (access: AccessRequest) => Promise<boolean>;
   send: (event: Extract<BackgroundToPanel, { type: 'status' | 'auto-attach' | 'notice' }>) => void; // to the panel
   phases?: PhaseRecorder; // each source that attached something, timed (core/phases)
@@ -60,8 +61,9 @@ interface TurnDeps {
 // A source's phase detail: how many it attached; none, and it is left out.
 const attached = (n: number) => (n ? `${n} attached` : undefined);
 
-// The items, and the tools mentioned: offered even if off, and asked for.
-export async function turnContext(input: TurnInput, deps: TurnDeps): Promise<{ items: ContextItem[]; mentionedTools: string[] }> {
+// The items, the tools mentioned (offered even if off, and asked for), and the agents mentioned (to be
+// asked through agents.ask, offered likewise).
+export async function turnContext(input: TurnInput, deps: TurnDeps): Promise<{ items: ContextItem[]; mentionedTools: string[]; mentionedAgents: string[] }> {
   const { history, tabId, url, conversationId } = input;
   const { settings, skills, templates } = deps;
   const phases = deps.phases ?? noPhases;
@@ -109,6 +111,13 @@ export async function turnContext(input: TurnInput, deps: TurnDeps): Promise<{ i
     const note = toolMentionItem(mentionedTools);
     if (note) items.push(note);
   }
+  // The agents (@agent) mentioned in it: only those it may ask.
+  let mentionedAgents: string[] = [];
+  if (mentions('agents') && deps.askable?.length) {
+    mentionedAgents = parseInline(typed, 'agent', agentNamed(deps.askable)).map((m) => m.name);
+    const note = agentMentionItem(mentionedAgents);
+    if (note) items.push(note);
+  }
   if (input.includePage && tabId !== undefined) {
     // The values its site skills ask for, the output of its site templates (except those just read
     // from this tab as mentions), then the page itself.
@@ -131,5 +140,5 @@ export async function turnContext(input: TurnInput, deps: TurnDeps): Promise<{ i
   if (elsewhere) {
     items.push({ kind: 'page', text: text('context.user_elsewhere', { tab_id: String(elsewhere.tabId), title: markPageData(elsewhere.title ?? ''), url: elsewhere.url ?? '' }), source: USER_ELSEWHERE_SOURCE });
   }
-  return { items, mentionedTools };
+  return { items, mentionedTools, mentionedAgents };
 }

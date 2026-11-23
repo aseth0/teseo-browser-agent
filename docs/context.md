@@ -116,7 +116,8 @@ still counts. Tests: `tests/once-seen.test.ts`; e2e `compaction` checks the full
 7. **`b::bookmark` mentions** (`bookmarks/mention.ts`) and bookmark auto-attach
    (`bookmarks/auto.ts`, `bookmark.auto_note`).
 8. **History auto-attach** (`history/auto.ts`, `history.auto_note`), once per chat.
-9. **`$tool` mention note** (`inline-mentions.ts`).
+9. **`$tool` mention note** (`inline-mentions.ts`), then the **`@agent` mention note** (`agent.mention`): only agents
+   the run may ask (`callableAgents`); `agents.ask` is offered as a mentioned tool is, but not forced.
 10. With "Page" on: site skill values (`skills/prompt.ts`, `skill.values`, caps `skillValue`,
     `skillItems`), site template output (`templates/render`, `template.data`, cap
     `templateOutput`), then the **page block** (`context/pipeline.ts` → `page-context.ts`):

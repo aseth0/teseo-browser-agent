@@ -1,7 +1,7 @@
-// The mentions attached to a message (::site/view, /skill, $tool, #conversation, b::bookmark), shown as chips in its text.
+// The mentions attached to a message (::site/view, /skill, $tool, @agent, #conversation, b::bookmark), shown as chips in its text.
 import { Icon, type ChatIconName } from '../chat-icons';
 import { Fragment } from 'react';
-import { mentionedIn } from '../../context/inline-mentions';
+import { agentSlug, mentionedIn } from '../../context/inline-mentions';
 import { bookmarkMentionOf, historyMentionOf, MENTION_SOURCE } from '../../context/sources';
 import { MENTION_TOKEN, mentionOf, type Mentioned } from '../../markdown/user';
 
@@ -10,7 +10,8 @@ import { MENTION_TOKEN, mentionOf, type Mentioned } from '../../markdown/user';
 export function mentionsIn(sources: (string | undefined)[]): Mentioned | undefined {
   const named = (names: Iterable<string>) => new Map([...names].map((n) => [n, n]));
   const sites = named(sources.flatMap((s) => (s?.startsWith(MENTION_SOURCE) ? [s.slice(MENTION_SOURCE.length)] : [])));
-  const { skill, tool } = mentionedIn(sources);
+  const { skill, tool, agent } = mentionedIn(sources);
+  const asked = new Map([...agent].map((name) => [agentSlug(name), name]));
   const saved = new Map(sources.flatMap((s) => {
     const m = historyMentionOf(s);
     return m ? [[m.slug, m.title] as const] : [];
@@ -19,13 +20,14 @@ export function mentionsIn(sources: (string | undefined)[]): Mentioned | undefin
     const m = bookmarkMentionOf(s);
     return m ? [[m.slug, m.title] as const] : [];
   }));
-  return sites.size + skill.size + tool.size + saved.size + marks.size ? { '::': sites, '/': named(skill), $: named(tool), '#': saved, 'b::': marks } : undefined;
+  return sites.size + skill.size + tool.size + asked.size + saved.size + marks.size ? { '::': sites, '/': named(skill), $: named(tool), '@': asked, '#': saved, 'b::': marks } : undefined;
 }
 
 const MENTION_CHIPS: Record<string, { icon: ChatIconName; title: string }> = {
   '::': { icon: 'template', title: 'Read and attached to the message' },
   '/': { icon: 'skill', title: 'Skill loaded for this message' },
   $: { icon: 'tool', title: 'Tool asked for in this message' },
+  '@': { icon: 'agent', title: 'Agent to ask in this message' },
   '#': { icon: 'history', title: 'Saved conversation attached' },
   'b::': { icon: 'bookmark', title: 'Bookmark attached' },
 };

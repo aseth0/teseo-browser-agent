@@ -489,6 +489,13 @@ export const USER_TEXTS = {
     note: 'Attached to your message. A mentioned tool is offered for that message even if it is off.',
     text: 'The user asks you to use {tool_names} for this message.',
   },
+  'agent.mention': {
+    group: 'user',
+    label: 'Agent mention',
+    when: 'you mention agents in your message (@agent)',
+    note: 'Attached to your message. Only agents this one may ask can be mentioned; agents.ask is offered for that message even if it is off.',
+    text: 'The user wants {agent_names} to do this: ask them with agents__ask.',
+  },
   'tools.recommended': {
     group: 'user',
     label: 'Tools recommended',

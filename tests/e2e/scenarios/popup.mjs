@@ -11,7 +11,7 @@ RUN['action-popup'] = async ({ errors, ctx, extId, shop, sw, page }) => {
   await shop.bringToFront();
   // By their names (the screenshots are icons; Visible's name carries its key when the browser set one).
   const names = await popup.getByRole('menuitem').evaluateAll((items) => items.map((i) => i.getAttribute('aria-label') ?? i.textContent?.trim()));
-  if (!/^Settings\|Chat on this page\|Chat in the side panel\|Chat full screen in a tab\|Section\|Visible( \(.+\))?\|Full page\|Capture the tab's audio\|This tab( \(.+\))?\|Agents Panel$/.test(names.join('|'))) errors.push(`popup: ${names.join('|')}`);
+  if (!/^Agents Panel\|Settings\|Chat on this page\|Chat in the side panel\|Chat full screen in a tab\|Section\|Visible( \(.+\))?\|Full page\|Capture the tab's audio\|This tab( \(.+\))?$/.test(names.join('|'))) errors.push(`popup: ${names.join('|')}`);
   // Visible: handed to the chat's message box (CHAT_ATTACH). Opened as a page here, the popup gives the
   // extension no activeTab grant (the toolbar button and the shortcut do), so the browser refuses the
   // capture and the note says so: the way from the popup to the chat is what this checks.

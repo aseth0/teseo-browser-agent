@@ -1,10 +1,13 @@
 // The background of an empty chat: what can be mentioned in a message, as a faded table of groups
-// (site templates with ::, skills with /, tools with $ by group, and each MCP server's tools apart).
+// (site templates with ::, skills with /, tools with $ by group, the agents it may ask with @, and each MCP
+// server's tools apart).
 // A group opens to its mentions, each one a button that writes it in the message box.
 import { Fragment, useState } from 'react';
 import type { ToolInfo } from '../../core/protocol';
 import type { Mentions } from '../../storage/settings-types';
 import { slugOf } from '../../context/sources';
+import { agentSlug } from '../../context/inline-mentions';
+import type { AskableAgent } from './composer/suggestions';
 import { mcpServerOf } from '../../core/mcp-keys';
 import { useConversations } from '../../ui/useConversations';
 import { useTemplates } from '../../ui/templates/useTemplates';
@@ -16,6 +19,7 @@ import { mentionsOn, type MentionKind } from '../../storage/settings-select';
 interface Props {
   tools: ToolInfo[];
   disabledTools: string[];
+  agents?: AskableAgent[]; // those the chat's agent may ask
   mentions?: Mentions;
   onInsert: (token: string) => void;
 }
@@ -44,7 +48,7 @@ const toolGroups = (tools: ToolInfo[], disabled: string[]): Group[] =>
     items: list!.map((t) => ({ token: `$${t.name}`, title: t.description, off: disabled.includes(t.name) })),
   }));
 
-export function MentionsHelp({ tools, disabledTools, mentions = {}, onInsert }: Props) {
+export function MentionsHelp({ tools, disabledTools, agents = [], mentions = {}, onInsert }: Props) {
   const templates = useTemplates().filter((t) => t.enabled);
   const skills = useSkills().filter((s) => s.enabled);
   const conversations = useConversations();
@@ -57,6 +61,7 @@ export function MentionsHelp({ tools, disabledTools, mentions = {}, onInsert }: 
     });
 
   const on = (kind: MentionKind) => mentionsOn({ mentions }, kind);
+  const mentionable = agents.filter((a) => agentSlug(a.name));
   const sections: { title: string; how: string; groups: Group[] }[] = [
     {
       title: 'Site templates',
@@ -72,6 +77,13 @@ export function MentionsHelp({ tools, disabledTools, mentions = {}, onInsert }: 
       groups: on('skills') && skills.length ? [{ id: 'skills', trigger: '/', name: 'Skills', items: skills.map((s) => ({ token: `/${s.name}`, title: s.description })) }] : [],
     },
     { title: 'Tools', how: '$tool asks the model to use it (offered even if off)', groups: on('tools') ? toolGroups(tools.filter((t) => t.source !== 'mcp'), disabledTools) : [] },
+    {
+      title: 'Agents',
+      how: '@agent asks the model to ask that agent (agents.ask)',
+      groups: on('agents') && mentionable.length
+        ? [{ id: 'agents', trigger: '@', name: 'Agents it may ask', items: mentionable.map((a) => ({ token: `@${agentSlug(a.name)}`, title: a.description.trim() || a.name })) }]
+        : [],
+    },
     {
       title: 'Saved conversations',
       how: '#title attaches that conversation to your message',

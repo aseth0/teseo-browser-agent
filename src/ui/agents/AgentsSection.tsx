@@ -15,6 +15,8 @@ import { DragRow } from '../DragRow';
 import { useAttempt } from '../useAttempt';
 import { useCollectionScreen } from '../useCollectionScreen';
 import { PageModelTexts } from '../PageModelTexts';
+import { MentionsFold } from '../MentionsFold';
+import { ModelTextEditor } from '../EditableText';
 import { plural } from '../../core/util';
 import type { SettingsUpdate } from '../useSettings';
 import { AgentEditor } from './AgentEditor';
@@ -62,7 +64,15 @@ export function AgentsSection(props: AgentsProps) {
         tool switched on in Tools, the skills switched on in Skills, the sites in Website access. <strong>EmptyAgent</strong> gets only
         your system prompt.
       </p>
-      <PageModelTexts page="agents" />
+      <MentionsFold syntax="@agent-name">
+        <p className="hint">
+          Mention an agent in a message with <code>@agent-name</code> (its name in lowercase, with dashes) to have the model ask it
+          (agents.ask) for that message. Only the agents the chat's agent may ask are offered: it needs <strong>Can ask</strong>, and
+          they <strong>Can be asked</strong> (switch mentions off in Auto-inject → Mentions).
+        </p>
+        <ModelTextEditor id="agent.mention" />
+      </MentionsFold>
+      <PageModelTexts page="agents" skip={['agent.mention']} />
       {/* They come in off, replacing those of the same name. */}
       <CollectionIO noun={['agent', 'agents']} label="Agents" fileName="agents.json" items={agents} shown={rows.flatMap((id) => agentOf(id) ?? [])} id={(a) => a.id}
         exportJson={exportAgents} read={(json) => importAgents(json, agents)} save={(items) => agentStore.saveMany(items)}

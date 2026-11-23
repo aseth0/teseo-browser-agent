@@ -1,5 +1,6 @@
 // What the message box suggests for the mention being typed (sidepanel/MentionComposer).
-import type { InlineKind } from '../../../context/inline-mentions';
+import { agentSlug, type InlineKind } from '../../../context/inline-mentions';
+import { agentLabel } from '../../../agents/profiles';
 import { slugOf } from '../../../context/sources';
 import type { ToolInfo } from '../../../core/protocol';
 import { bookmarkSlug, type Bookmark } from '../../../bookmarks/store';
@@ -17,12 +18,14 @@ export interface Suggestion {
 export type Kind = 'template' | InlineKind | 'history' | 'bookmark';
 
 // The mention being typed right before the caret, if any: "::site" or "::site/view", "/skill",
-// "$tool", "#saved-conversation", "b::bookmark". Only at the start of a word, so "a/b" or "std::x" are not.
+// "$tool", "@agent", "#saved-conversation", "b::bookmark". Only at the start of a word, so "a/b", "std::x"
+// or "someone@example.com" are not.
 const TYPING: Record<Kind, RegExp> = {
   bookmark: /(?:^|\s)(b::([a-z0-9-]*))$/,
   template: /(?:^|\s)(::([a-z0-9-]*)(?:\/([a-z0-9-]*))?)$/,
   skill: /(?:^|\s)(\/([a-z0-9-]*))$/,
   tool: /(?:^|\s)(\$([\w.-]*))$/,
+  agent: /(?:^|\s)(@([A-Za-z0-9-]*))$/,
   history: /(?:^|\s)(#([a-z0-9-]*))$/,
 };
 
@@ -59,18 +62,22 @@ function templateSuggestions([, , site = '', view]: RegExpMatchArray, templates:
 }
 
 const MAX_SUGGESTIONS = 12;
-export const LIST_LABELS: Record<Kind, string> = { template: 'Site mentions', skill: 'Skill mentions', tool: 'Tool mentions', history: 'Saved conversations', bookmark: 'Bookmarks' };
+export const LIST_LABELS: Record<Kind, string> = { template: 'Site mentions', skill: 'Skill mentions', tool: 'Tool mentions', agent: 'Agent mentions', history: 'Saved conversations', bookmark: 'Bookmarks' };
 
 interface Sources {
   templates: PageTemplate[];
   skills: Skill[];
   tools: ToolInfo[];
   disabled: string[];
+  agents: AskableAgent[];
   conversations: ConversationMeta[];
   bookmarks: Bookmark[];
 }
 
-export function suggestionsFor(typing: Typing | undefined, { templates, skills, tools, disabled, conversations, bookmarks }: Sources): Suggestion[] {
+// An agent @ offers: one the chat's agent may ask (agents/profiles callableAgents).
+export type AskableAgent = { name: string; description: string; icon?: string };
+
+export function suggestionsFor(typing: Typing | undefined, { templates, skills, tools, disabled, agents, conversations, bookmarks }: Sources): Suggestion[] {
   if (!typing) return [];
   const written = typing.match[2] ?? '';
   switch (typing.kind) {
@@ -86,6 +93,14 @@ export function suggestionsFor(typing: Typing | undefined, { templates, skills, 
         .filter((t) => t.name.startsWith(written))
         .map((t) => ({ label: t.name, detail: `${disabled.includes(t.name) ? '(off: offered for this message) ' : ''}${t.description}`, insert: `$${t.name} ` }))
         .slice(0, MAX_SUGGESTIONS);
+    case 'agent': {
+      const lower = written.toLowerCase(); // "@Todo" as "@todo"
+      const words = lower.replace(/-/g, ' ');
+      return agents
+        .filter((a) => agentSlug(a.name) && (agentSlug(a.name).startsWith(lower) || a.name.toLowerCase().includes(words)))
+        .map((a) => ({ label: agentLabel(a), detail: a.description.trim() || '(no description)', insert: `@${agentSlug(a.name)} ` }))
+        .slice(0, MAX_SUGGESTIONS);
+    }
     case 'history':
       return conversations
         .filter((c) => slugOf(c.title).startsWith(written) || c.title.toLowerCase().includes(written.replace(/-/g, ' ')))

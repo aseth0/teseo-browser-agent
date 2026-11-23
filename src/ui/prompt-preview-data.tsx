@@ -35,6 +35,7 @@ function userTemplateParts(): { label: string; hash?: string; kind: 'skill' | 't
     { label: 'Site skill', id: 'skill.site_block', hash: 'skills', kind: 'skill', text: siteSkillBlock('{skill_name}', '{skill_instructions}') },
     { label: 'Skill mention', id: 'skill.mention', hash: 'skills', kind: 'skill', text: text('skill.mention', { skill_name: '{skill_name}', skill_instructions: '{skill_instructions}' }) },
     { label: 'Tool mention', id: 'tool.mention', hash: 'tools', kind: 'tool', text: text('tool.mention', { tool_names: '{tool_names}' }) },
+    { label: 'Agent mention', id: 'agent.mention', hash: 'agents', kind: 'tool', text: text('agent.mention', { agent_names: '{agent_names}' }) },
     { label: 'Saved conversation', id: 'history.mention_note', hash: 'history', kind: 'page', text: `${text('history.mention_note')}\n${text('result.history_read')}` },
     { label: 'Site skill values', id: 'skill.values', hash: 'skills', kind: 'page', text: values },
     { label: 'Site template', id: 'template.note', hash: 'site-templates', kind: 'page', text: template },
@@ -134,7 +135,7 @@ export function messageParts(message: Message): AsSentPart[] {
   });
 }
 const PIECE_PAGES: [RegExp, string][] = [
-  [/^(Site skill|Skill mention)/, 'skills'], [/^Tool mention/, 'tools'], [/^Saved conversation/, 'history'], [/^(Site template|Mention ::)/, 'site-templates'],
+  [/^(Site skill|Skill mention)/, 'skills'], [/^Tool mention/, 'tools'], [/^Agent mention/, 'agents'], [/^Saved conversation/, 'history'], [/^(Site template|Mention ::)/, 'site-templates'],
   [/^Memory/, 'memory'], [/^Summary of the earlier turns/, 'compaction'],
 ];
 const pieceHash = (label: string) => PIECE_PAGES.find(([re]) => re.test(label))?.[1];

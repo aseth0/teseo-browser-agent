@@ -23,7 +23,7 @@ goes as soon as the site is allowed. On a page no extension may reach (browser p
 | **Screenshot**: **Section**, **Visible**, **Full page** (the first line of *Into the chat*) | A [screenshot of the page](attachments.md#screenshots-from-the-popup-or-a-shortcut) attached to the chat's message box |
 | **Tab's audio**: where it goes, then **● Start** | [A tab's audio](tab-audio.md) captured; while it captures, its time and **Stop** |
 | **Requests**: a preset, then **● Start** (on [the DevTools engine](devtools-engine.md) also **Several tabs**, **Tabs and mouse**, as icons before it) | A [recording of the page's requests](recordings.md); while it records, *Recording requests* in the accent, its count and **Stop**, which opens the review in the chat |
-| **Agents Panel** (under *Agents*) | The [agent manager](agent-manager.md), several agents at once |
+| **Agents Panel** (top right, beside ⚙) | The [agent manager](agent-manager.md), several agents at once |
 | ⚙ **Settings** (top right) | The settings page |
 
 Keyboard shortcuts. These are the browser's: they work everywhere, and only its shortcuts page changes them

@@ -142,6 +142,32 @@ AGENT_PROFILES['sub-agent'] = [
     tools: ['browser.find'], skills: [], templates: [], sites: { [HOST]: 'ask' }, canBeAsked: true },
 ];
 BEFORE['sub-agent'] = BEFORE.agent;
+// "@" lists the agents the chat's agent may ask: "lead" may ask mm, not "shy" (it cannot be asked).
+AGENT_PROFILES['agent-mention'] = [
+  { id: 'lead', enabled: true, name: 'lead', description: 'Leads', instructions: '', providerId: 'env', model: 'agent-mention', tools: [], skills: [], templates: [], sites: {}, canAsk: true, canBeAsked: false },
+  { ...AGENT_PROFILES['sub-agent'][1], sites: {} }, // no site of its own: the chat stays with lead
+  { ...AGENT_PROFILES['sub-agent'][1], id: 'shy', name: 'shy', sites: {}, canBeAsked: false },
+];
+MESSAGES['agent-mention'] = null; // sends what was typed
+BEFORE['agent-mention'] = async (page) => {
+  // Browser may not ask (its Can ask is off): "@" says why instead of listing nothing.
+  const box = page.getByPlaceholder(/Ask something/);
+  await box.click();
+  await page.keyboard.type('@');
+  await page.getByRole('status').filter({ hasText: 'cannot ask other agents' }).waitFor({ timeout: T.short });
+  await box.fill('');
+  await chooseAgent(page, 'lead');
+  await box.click();
+  await page.keyboard.type('mail someone@example.com, then ask @M'); // any case
+  const list = page.getByRole('listbox', { name: 'Agent mentions' });
+  await list.getByRole('option', { name: /mm/ }).waitFor({ timeout: T.short });
+  const offered = await list.innerText();
+  if (offered.includes('shy') || offered.includes('lead') || !offered.includes('Searches the shop')) throw new Error(`@ offers: ${offered}`);
+  await page.keyboard.press('Enter');
+  if ((await box.inputValue()) !== 'mail someone@example.com, then ask @mm ') throw new Error(`completed to: ${await box.inputValue()}`);
+  const chips = await page.locator('.mention-chips').innerText();
+  if (chips.trim() !== 'mm') throw new Error(`chips: ${chips}`);
+};
 // Builder, switched on, with its own model and only what this test needs; Browser then lacks the
 // creating tools. Stored after its skills were taken away (builderSkills: none comes back).
 AGENT_PROFILES['agent-save'] = [{ id: 'builder', enabled: true, name: 'Builder', icon: '🛠️', description: 'Creates things', instructions: '', providerId: 'env', model: 'agent-save',
@@ -172,6 +198,7 @@ AFTER['agent-save'] = async (page) => {
   const [, off] = await toolCount(page);
   if (off - on !== 12) throw new Error(`Browser's tools: ${on} with Builder on, ${off} with it off (the 12 creating ones are Builder's)`);
 };
+EXPECT['agent-mention'] = ['AGENT MENTION OK', 'mm'];
 EXPECT['sub-agent'] = 'SUB OK'; // the mock checks its tools: the skill loaders and agents.ask, with someone to ask
 // The sub-agent's run is kept with the call, for the user.
 AFTER['sub-agent'] = async (page) => {
