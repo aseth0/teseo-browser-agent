@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { isObject } from '../../core/util';
 import type { ToolInfo } from '../../core/protocol';
 import { baseParams } from '../../tools/custom/runtime';
+import { toolOptionGroups } from './tool-options';
 import { stepKind, type ActionStep, type FieldType, type ModelStep, type ReadStep, type StepKind, type ToolStep } from '../../widget/steps';
 import type { ActionOutput, WidgetAction } from '../../widget/actions';
 import { DrawnChoice, type DrawnOption } from '../DrawnChoice';
@@ -43,16 +44,31 @@ const pathsOf = (step: ActionStep): string[] => {
 };
 const givesOf = (step: ActionStep) => pathsOf(step).map((p) => `{${p}}`);
 
-// The tools to pick from (one that changes things asks first), and the one picked when it is not among them.
 const asksFirst = (t: ToolInfo) => (t.effect === 'write' ? ' (asks first)' : '');
-export const ToolOptions = ({ tools, picked }: { tools: ToolInfo[]; picked: string }) => (
+
+// The tools to pick from, under their groups, the custom ones last (one that changes things asks first);
+// `blocked`, custom tools listed but not to pick (tool-options); and the one picked when it is among neither.
+export const ToolOptions = ({ tools, blocked = [], picked }: { tools: ToolInfo[]; blocked?: ToolInfo[]; picked: string }) => (
   <>
-    {tools.map((t) => <option key={t.name} value={t.name}>{t.name}{asksFirst(t)}</option>)}
-    {picked && !tools.some((t) => t.name === picked) && <option value={picked}>{picked} (not available)</option>}
+    {toolOptionGroups(tools, blocked).map((g) => (
+      <optgroup key={g.id} label={g.label}>
+        {g.options.map((o) => <option key={o.name} value={o.name} disabled={o.disabled}>{o.label}</option>)}
+      </optgroup>
+    ))}
+    {picked && ![...tools, ...blocked].some((t) => t.name === picked) && <option value={picked}>{picked} (not available)</option>}
   </>
 );
 
-export function StepsEditor({ steps, tools, onChange, onBad, onTry }: { steps: ActionStep[] | undefined; tools: ToolInfo[]; onChange: (steps: ActionStep[] | undefined) => void; onBad: (problem: string | undefined) => void; onTry: (upTo: number) => void }) {
+// Why some custom tools are greyed out in the select, and what makes one pickable.
+export const BlockedToolsHint = ({ blocked = [] }: { blocked?: ToolInfo[] }) =>
+  blocked.length > 0 && (
+    <p className="hint">
+      Greyed out: your custom tools that change things, which do not run on page load. One that only reads says so in its
+      editor (Settings → Custom tools, <em>only reads</em>).
+    </p>
+  );
+
+export function StepsEditor({ steps, tools, blocked, onChange, onBad, onTry }: { steps: ActionStep[] | undefined; tools: ToolInfo[]; blocked?: ToolInfo[]; onChange: (steps: ActionStep[] | undefined) => void; onBad: (problem: string | undefined) => void; onTry: (upTo: number) => void }) {
   const [asJson, setAsJson] = useState(false);
   const list = steps ?? [];
   const set = (next: ActionStep[]) => onChange(next.length ? next : undefined);
@@ -71,7 +87,7 @@ export function StepsEditor({ steps, tools, onChange, onBad, onTry }: { steps: A
         <>
           {list.map((step, i) => (
             <div key={keyOf(step)}>
-              <StepCard step={step} tools={tools} onChange={(change) => set(patchAt(list, i, change))}
+              <StepCard step={step} tools={tools} blocked={blocked} onChange={(change) => set(patchAt(list, i, change))}
                 onRemove={() => set(list.filter((_, j) => j !== i))} onTry={() => onTry(i + 1)}
                 {...(i > 0 && { onUp: () => move(i, -1) })} {...(i < list.length - 1 && { onDown: () => move(i, 1) })} />
               <p className="hint">↓ gives {givesOf(step).map((g) => <code key={g}>{g} </code>)}</p>
@@ -90,7 +106,7 @@ export function StepsEditor({ steps, tools, onChange, onBad, onTry }: { steps: A
 
 const KIND_LABEL: Record<StepKind, string> = { read: 'read', tool: 'tool', model: 'model' };
 
-function StepCard({ step, tools, onChange, onRemove, onTry, onUp, onDown }: { step: ActionStep; tools: ToolInfo[]; onChange: (change: Partial<ActionStep>) => void; onRemove: () => void; onTry: () => void; onUp?: () => void; onDown?: () => void }) {
+function StepCard({ step, tools, blocked, onChange, onRemove, onTry, onUp, onDown }: { step: ActionStep; tools: ToolInfo[]; blocked?: ToolInfo[]; onChange: (change: Partial<ActionStep>) => void; onRemove: () => void; onTry: () => void; onUp?: () => void; onDown?: () => void }) {
   const kind = stepKind(step);
   return (
     <div className={`custom-param step step-${kind}`}>
@@ -104,7 +120,7 @@ function StepCard({ step, tools, onChange, onRemove, onTry, onUp, onDown }: { st
         <button className="icon-button warn" title="Remove" aria-label={`Remove step ${step.name}`} onClick={onRemove}>✕</button>
       </div>
       {'read' in step && <ReadFields step={step} onChange={onChange} />}
-      {'tool' in step && <ToolFields step={step} tools={tools} onChange={onChange} />}
+      {'tool' in step && <ToolFields step={step} tools={tools} blocked={blocked} onChange={onChange} />}
       {'prompt' in step && <ModelFields step={step} tools={tools} onChange={onChange} />}
     </div>
   );
@@ -123,7 +139,7 @@ function ReadFields({ step, onChange }: { step: ReadStep; onChange: (change: Par
   );
 }
 
-function ToolFields({ step, tools, onChange }: { step: ToolStep; tools: ToolInfo[]; onChange: (change: Partial<ToolStep>) => void }) {
+function ToolFields({ step, tools, blocked, onChange }: { step: ToolStep; tools: ToolInfo[]; blocked?: ToolInfo[]; onChange: (change: Partial<ToolStep>) => void }) {
   const tool = tools.find((t) => t.name === step.tool);
   const params = tool ? baseParams(tool) : {};
   const setArg = (name: string, template: string) => onChange({ args: withKey(step.args, name, template || undefined) });
@@ -132,9 +148,10 @@ function ToolFields({ step, tools, onChange }: { step: ToolStep; tools: ToolInfo
       <label>The tool (one that changes things asks you in the card first)
         <select value={step.tool} onChange={(e) => onChange({ tool: e.target.value, args: {} })}>
           <option value="">Choose a tool…</option>
-          <ToolOptions tools={tools} picked={step.tool} />
+          <ToolOptions tools={tools} blocked={blocked} picked={step.tool} />
         </select>
       </label>
+      <BlockedToolsHint blocked={blocked} />
       <label>For each item of (optional): a list a step before it gives; the tool runs once per item (at most 20), each as <code>{'{item}'}</code>, <code>{'{item.url}'}</code>
         <input className="mono" list="step-paths" value={step.each ?? ''} placeholder="results" onChange={(e) => onChange({ each: e.target.value || undefined })} />
       </label>

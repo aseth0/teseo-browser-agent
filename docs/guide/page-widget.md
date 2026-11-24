@@ -212,7 +212,9 @@ until you open them: a tool before the prompt, **Model and thinking**, **Reading
 boxes are read on their own: [Reading a box aloud](#reading-a-box-aloud)), and with steps the badge and **Buttons to go
 on in the chat**. Folding a step or a part keeps what you typed. Choosing another kind, or an example, asks first when
 the action has something it would replace, and says what; the steps that still apply (where it shows, what it
-takes, its values, its name) stay done. On page load, its tool and its steps' tools are only tools that read. An action on page load shows a badge once it is made of steps: **Make it
+takes, its values, its name) stay done. On page load, its tool and its steps' tools are only tools that read. The tool list is grouped (the built-in
+tools and the servers' first, your custom tools last); on page load, your custom tools that change things stay in it,
+greyed out: one that only reads says so in its editor (*only reads*). An action on page load shows a badge once it is made of steps: **Make it
 steps**, under **How the answer shows**, turns its tool into the step `result`, its boxes and a badge taken from it.
 
 An action that exists opens with every step folded to its line, as the kind its fields make it; saved untouched, it
