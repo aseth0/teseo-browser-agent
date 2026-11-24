@@ -3,6 +3,14 @@
 What changed in each version of Teseo. Versions before 0.61.0 are not listed here; see
 the git tags and their commits.
 
+## 0.79.1
+
+### Fixed
+- The action editor's tool list no longer drops your custom tools without a word when the action runs on page
+  load: those that change things stay in the list, greyed out, saying why (one that only reads says so in its
+  editor, *only reads*). The list is also grouped: the built-in tools and the servers' first, your custom tools
+  last, under their sections.
+
 ## 0.79.0
 
 ### Added

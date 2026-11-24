@@ -169,7 +169,11 @@ describe('a new action', () => {
     kindCard('Check each page as it loads');
     expect(titles()).not.toContain('What it takes');
     openStep('What it runs');
-    expect([...byLabel<HTMLSelectElement>('The tool it runs')!.options].map((o) => o.value)).toEqual(['', 'wiki.search']);
+    // A custom tool that changes things stays in the list, greyed out, saying why.
+    const offered = [...byLabel<HTMLSelectElement>('The tool it runs')!.options];
+    expect(offered.filter((o) => !o.disabled).map((o) => o.value)).toEqual(['', 'wiki.search']);
+    expect(offered.filter((o) => o.disabled).map((o) => o.textContent)).toEqual(['shop.order (changes things: not on page load)']);
+    expect(page().textContent).toContain('Greyed out: your custom tools that change things');
     const select = byLabel<HTMLSelectElement>('The tool it runs')!;
     act(() => {
       select.value = 'wiki.search';
@@ -284,7 +288,8 @@ describe('a new action', () => {
     openStep('What it takes');
     segment('When it runs', 'On page load');
     openStep('What it runs');
-    expect([...toolOptions()].map((o) => o.value)).toEqual(['', 'wiki.search']);
+    expect([...toolOptions()].filter((o) => !o.disabled).map((o) => o.value)).toEqual(['', 'wiki.search']);
+    expect([...toolOptions()].filter((o) => o.disabled).map((o) => o.value)).toEqual(['shop.order']);
   });
 
   it('with every step removed, says to add one, not to choose a tool', () => {

@@ -21,6 +21,7 @@ import { FieldProblems, Fold, GuideStep, InlineAsk, KindCards, problemsAt as mak
 import { ActionSpeakFields } from './ActionSpeak';
 import { StepsEditor, StepsShow } from './Steps';
 import { TryAction } from './TryAction';
+import { blockedOnLoad } from './tool-options';
 import { ActionModel, Boxes, modelLine, PageReads, ToolAndArgs } from './Parts';
 import {
   ACTION_EXAMPLES, ACTION_KINDS, asToolStep, EVERY_STEP, fieldOf, fromExample, hasWork, kindOf, kindPatch, listed, lostBy, OPTIONAL_STEPS, STEPS_OF, stepOfField, suggestActionName,
@@ -70,6 +71,8 @@ export function ActionEditor({ action, actions, catalog, agents, settings, onClo
   const loads = kind === 'load' || draft.when === 'load';
   const all = runnable(agentOffers(owner, catalog, agents));
   const tools = loads ? all.filter((t) => t.effect === 'read') : all;
+  // The custom tools it cannot run then stay in the list, greyed out, saying why.
+  const blocked = loads ? blockedOnLoad(all) : [];
   const prompted = !!draft.prompt?.trim();
   const json = answersInJson(draft);
   const takesInput = kind !== 'load' && draft.when !== 'load' && draft.input !== 'none';
@@ -239,7 +242,7 @@ export function ActionEditor({ action, actions, catalog, agents, settings, onClo
             <GuideStep {...step('runs')} summary={runsLine(draft, kind)} about={RUNS_ABOUT[kind]}>
               {kind === 'steps' && (
                 <>
-                  <StepsEditor key={round} steps={draft.steps} tools={tools} onChange={(steps) => patch({ steps })} onBad={setBadSteps} onTry={tryUpToStep} />
+                  <StepsEditor key={round} steps={draft.steps} tools={tools} blocked={blocked} onChange={(steps) => patch({ steps })} onBad={setBadSteps} onTry={tryUpToStep} />
                   {!hasSteps(draft) && <p className="hint">No steps yet: add one with ＋ read, ＋ tool or ＋ model above.</p>}
                   <FieldProblems problems={problemsAt('steps')} />
                   {tryUpTo && <TryAction action={current} upTo={tryUpTo} legend="Try up to a step" />}
@@ -248,7 +251,7 @@ export function ActionEditor({ action, actions, catalog, agents, settings, onClo
               )}
               {(kind === 'tool' || kind === 'load') && (
                 <>
-                  <ToolAndArgs draft={draft} tools={tools} chips={chips} noneLabel="Choose a tool…" patch={patch} />
+                  <ToolAndArgs draft={draft} tools={tools} blocked={blocked} chips={chips} noneLabel="Choose a tool…" patch={patch} />
                   <FieldProblems problems={[...problemsAt('tool'), ...problemsAt('args')]} />
                 </>
               )}
@@ -266,7 +269,7 @@ export function ActionEditor({ action, actions, catalog, agents, settings, onClo
                 <>
                   <Fold title="A tool first" summary={draft.tool ? <code>{draft.tool}</code> : "None: only the model answers"} initiallyOpen={false}>
                     <p className="hint">Its answer goes to the model after the prompt.</p>
-                    <ToolAndArgs draft={draft} tools={tools} chips={chips} noneLabel="No tool" patch={patch} />
+                    <ToolAndArgs draft={draft} tools={tools} blocked={blocked} chips={chips} noneLabel="No tool" patch={patch} />
                   </Fold>
                   <FieldProblems problems={problemsAt('args')} />
                   {modelFold}

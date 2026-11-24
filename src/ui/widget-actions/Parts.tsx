@@ -14,7 +14,7 @@ import { withKey } from '../edits';
 import { ParamHead, ProviderModel } from '../fields';
 import { TemplateInput } from '../guide';
 import { freeName, readsOf, repeatedName, type ReadRow } from './reads';
-import { ToolOptions } from './Steps';
+import { BlockedToolsHint, ToolOptions } from './Steps';
 
 const THINKING_LABELS: Record<ThinkingLevel, string> = { off: 'Off', low: 'Low', medium: 'Medium', high: 'High' };
 
@@ -96,7 +96,7 @@ export function PageReads({ reads, onChange, onTwice }: { reads: Record<string, 
 }
 
 // The tool it runs and its parameters, each a template with chips for what the action takes and reads.
-export function ToolAndArgs({ draft, tools, chips, noneLabel, patch }: { draft: WidgetAction; tools: ToolInfo[]; chips: string[]; noneLabel: string; patch: (change: Partial<WidgetAction>) => void }) {
+export function ToolAndArgs({ draft, tools, blocked, chips, noneLabel, patch }: { draft: WidgetAction; tools: ToolInfo[]; blocked?: ToolInfo[]; chips: string[]; noneLabel: string; patch: (change: Partial<WidgetAction>) => void }) {
   const tool = tools.find((t) => t.name === draft.tool);
   const params = tool ? baseParams(tool) : {};
   const required = (tool?.inputSchema as { required?: string[] } | undefined)?.required ?? [];
@@ -106,9 +106,10 @@ export function ToolAndArgs({ draft, tools, chips, noneLabel, patch }: { draft: 
       <label>The tool it runs (one that changes things asks you in the card first, as Website access says)
         <select aria-label="The tool it runs" value={draft.tool} onChange={(e) => patch({ tool: e.target.value, args: {} })}>
           <option value="">{noneLabel}</option>
-          <ToolOptions tools={tools} picked={draft.tool} />
+          <ToolOptions tools={tools} blocked={blocked} picked={draft.tool} />
         </select>
       </label>
+      <BlockedToolsHint blocked={blocked} />
       {tool && Object.keys(params).length > 0 && (
         <div className="custom-params">
           <div className="field-label">Its parameters</div>
