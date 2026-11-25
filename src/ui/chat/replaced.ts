@@ -2,7 +2,7 @@
 // pill on your message and on a tool's result, listing by where it was each term and its placeholder.
 // Only for what went masked: what the next answer of the model came from (Message.masked).
 import { createContext } from 'react';
-import { bookmarkAutoOf, fileOf, historyAutoOf, MEMORY_SOURCE } from '../../context/sources';
+import { bookmarkAutoOf, fileOf, historyAutoOf, MEMORY_SOURCE, MESSAGE_TIME_SOURCE } from '../../context/sources';
 import type { Message, Part } from '../../core/types';
 import type { Blacklist } from '../../word-blacklist/core';
 import type { AutoGroup } from './AttachedChips';
@@ -38,6 +38,7 @@ function zoneOf(p: TextPart): string {
   if (bookmarkAutoOf(p.source)) return 'Bookmark';
   if (p.context === 'skill') return 'Site skill';
   if (p.context === 'memory' || p.source?.startsWith(MEMORY_SOURCE)) return 'Memory';
+  if (p.source === MESSAGE_TIME_SOURCE) return 'Message time';
   if (p.context === 'tool') return 'Tool result';
   return p.context ? 'Page' : 'Your message';
 }

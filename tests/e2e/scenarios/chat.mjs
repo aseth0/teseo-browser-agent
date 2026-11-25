@@ -79,9 +79,9 @@ Object.assign(AFTER, {
     await firstMsg.locator('> summary').click();
     await waitFor(async () => (await firstMsg.getAttribute('open')) !== null, T.short);
     if ((await firstMsg.getAttribute('open')) === null) throw new Error(`a resent message of the call does not open (${await firstMsg.locator('> summary').innerText()})`);
-    // Your message piece by piece: what you typed, then the page block.
+    // Your message piece by piece: what you typed, the page block, then when it was written.
     const pieces = (await firstMsg.locator('.conv-piece-head > span:first-child').allInnerTexts()).join('|');
-    if (pieces !== 'Your message|Page block') throw new Error(`message pieces: ${pieces}`);
+    if (pieces !== 'Your message|Page block|Message time') throw new Error(`message pieces: ${pieces}`);
     // The tool definitions, folded: what each group weighs.
     const toolsLine = third.locator('details.conv-tools');
     await toolsLine.locator('> summary').click();
@@ -225,7 +225,7 @@ AFTER.compaction = async (page) => {
   // new, since the call before went uncompacted. The site skill's block went with a turn the summary
   // replaced: your message carries it whole again, not its reminder.
   const pieces = (await last.locator('details.conv-msg.new .conv-piece-head > span:first-child').allInnerTexts()).join('|');
-  if (!pieces.startsWith('Summary of the earlier turns|Your message|Site skill reminder|Page block|Your message|Site skill "test-site"|Page block')) throw new Error(`compacted pieces: ${pieces}`);
+  if (!pieces.startsWith('Summary of the earlier turns|Your message|Site skill reminder|Page block|Message time|Your message|Site skill "test-site"|Page block|Message time')) throw new Error(`compacted pieces: ${pieces}`);
   if (process.env.E2E_SHOTS) await page.screenshot({ path: `${process.env.E2E_SHOTS}/compaction-layers.png` });
   await page.getByRole('button', { name: 'Show the chat as: Layers' }).click();
   await page.getByRole('menuitemradio', { name: 'Markdown' }).click();
@@ -597,7 +597,7 @@ AFTER['stop'] = async (page) => {
   for (const chip of await page.locator('.messages .layer-chip').all()) await chip.click();
   const second = page.locator('.messages details.layer.sent').last();
   const pieces = (await second.locator('details.conv-msg.new .conv-piece-head > span:first-child').allInnerTexts()).join('|');
-  if (pieces !== 'Previous turn stopped|Your message|Page block') throw new Error(`message pieces: ${pieces}`);
+  if (pieces !== 'Previous turn stopped|Your message|Page block|Message time') throw new Error(`message pieces: ${pieces}`);
   await page.getByRole('button', { name: 'Show the chat as: Layers' }).click();
   await page.getByRole('menuitemradio', { name: 'Markdown' }).click();
 };

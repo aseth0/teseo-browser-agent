@@ -25,6 +25,8 @@ Conversations, memory, settings and logs stay in the browser's storage. Nothing 
 - With each message: the page block (URL, title, selection, visible elements), and what **Settings →
   Auto-inject** adds. Turn the page off with the **Page** button, or leave things out with the ✨ menu.
 - When you send from the side panel while on another tab than the chat's: that tab's id, title and URL.
+- At the end of each message: when you wrote it, with your time zone (**Settings → About you → Date & time**,
+  each part can be switched off; [Date & time](prompt.md#date--time)).
 - With `browser.list_tabs`: the titles and URLs of your open tabs, in the chat's window or in every window.
 - What the model reads with its tools, and the results of tools it runs.
 - Never: your API keys, header values, cookies, saved secrets or password field values (shown as `••••`).

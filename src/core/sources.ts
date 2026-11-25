@@ -48,6 +48,8 @@ export function memoryIndexOf(source: string | undefined): { host: string; title
     return undefined; // a saved conversation can be edited by hand: it must still open
   }
 }
+// When your message was written, as the model reads it at its end (context/date-time).
+export const MESSAGE_TIME_SOURCE = 'message-time';
 // Skills and tools mentioned inline: "skill-mention:summarize-page", "tool-mention:browser.find,…".
 export const SKILL_MENTION_SOURCE = 'skill-mention:';
 export const TOOL_MENTION_SOURCE = 'tool-mention:';

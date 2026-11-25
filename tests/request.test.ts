@@ -10,8 +10,12 @@ const settings: Settings = { providers: [], systemPrompt: 'Be brief.', disabledT
 const general: Skill = { id: 'g', name: 'summarize-page', description: 'Summarize.', matches: [], body: '', references: [], enabled: true };
 
 describe('request assembly', () => {
-  it('system prompt = your prompt + page instructions + plan + skills, in that order', () => {
-    expect(systemPromptSections({ settings, skills: [general], templates: [] }).map((s) => s.label)).toEqual(['Your system prompt', 'Page instructions', 'Plan', 'Skills']);
+  it('system prompt = your prompt + page instructions + date and time + plan + skills, in that order', () => {
+    expect(systemPromptSections({ settings, skills: [general], templates: [] }).map((s) => s.label)).toEqual(['Your system prompt', 'Page instructions', 'Date and time', 'Plan', 'Skills']);
+    // The date and time line only while Settings → About you → Date & time sends something.
+    const noTime = { ...settings, dateTime: { weekday: false, date: false, time: false, zone: false } };
+    expect(systemPromptSections({ settings: noTime, skills: [], templates: [] }).map((s) => s.label)).not.toContain('Date and time');
+    expect(systemPromptSections({ settings: { ...settings, dateTime: { weekday: false, date: false, time: false } }, skills: [], templates: [] }).map((s) => s.label)).toContain('Date and time');
     // The plan line only while user.plan is offered.
     expect(systemPromptSections({ settings: { ...settings, disabledTools: ['user.plan'] }, skills: [], templates: [] }).map((s) => s.label)).not.toContain('Plan');
     expect(systemPromptSections({ settings, skills: [], templates: [], agent: { name: 'Shop', instructions: '', tools: ['browser.find'] } }).map((s) => s.label)).not.toContain('Plan');
@@ -64,7 +68,7 @@ describe('editable texts', () => {
   it('uses the overrides everywhere the text is built', () => {
     setTextOverrides({ 'page.meta': 'PAGE {url}', 'system.page': 'Custom page rules.', 'result.snapshot_truncated': ' [cut]' });
     expect(formatPageContext({ url: 'u', title: '', lang: '', viewport: '', scroll: '', selection: '', snapshot: '' })).toContain('PAGE u');
-    expect(buildSystemPrompt({ settings: { ...settings, disabledTools: ['user.plan'] }, skills: [], templates: [] })).toBe('Be brief.\n\nCustom page rules.');
+    expect(buildSystemPrompt({ settings: { ...settings, disabledTools: ['user.plan'], dateTime: { weekday: false, date: false, time: false, zone: false } }, skills: [], templates: [] })).toBe('Be brief.\n\nCustom page rules.');
     expect(withMarker({ text: 'tree', truncated: true }, 'pageElements', 'result.snapshot_truncated')).toBe('tree [cut]');
   });
 
@@ -80,7 +84,7 @@ describe('editable texts', () => {
       'summary', 'max_words', 'what', 'pending', 'definition', 'custom_tool_list', 'action_name', 'action_list', 'agent_list',
       'condition', 'minutes', 'after', 'end', 'steps', 'selector', 'attr', 'group', 'fragment', 'groups', 'ms', 'names', 'given', 'agents', 'shown', 'part', 'page', 'pages', 'other', 'kind', 'message', 'problems', 'changes',
       'template_catalog', 'template_list', 'template_description', 'view_description', 'rounds', 'plan_steps', 'duration',
-      'row', 'rows', 'state', 'step', 'max_steps', 'when', 'skills', 'feature', 'context', 'constraints', 'report', 'failed', 'label']);
+      'row', 'rows', 'state', 'step', 'max_steps', 'when', 'skills', 'feature', 'context', 'constraints', 'report', 'failed', 'label', 'message_time']);
     for (const def of Object.values(TEXT_DEFS)) for (const p of placeholdersOf(def.text)) expect(known).toContain(p);
   });
 

@@ -55,7 +55,8 @@ runAgentLoop (core/agent-loop.ts), per step:
 
 ### 1.3 System prompt (`context/request.ts` `systemPromptParts`)
 In order, blank-line separated: your system prompt · agent instructions (`system.agent`) · page
-instructions (`system.page`, only with browser tools) · `system.mcp` · `system.agents` ·
+instructions (`system.page`, only with browser tools) · `system.mcp` · `system.time` (while
+Settings → About you → Date & time sends something) · `system.agents` ·
 `system.history` · skills catalog (`skills/prompt.ts`: `system.skills_header`,
 `system.skills_item` per general skill, `system.site_skills`) · `system.templates` · memory
 (`memory/prompt.ts`: `system.memory`, pinned items whole up to `pinnedMemory`, index up to
@@ -165,6 +166,15 @@ still counts. Tests: `tests/once-seen.test.ts`; e2e `compaction` checks the full
       `withOnDemand` as groups on demand (`tools.load_builtin` lines, or the server's), and the previews rebuild
       them from the kept decision (`heldFor`).
 
+12. **Message time** (`context/date-time.ts`, last, in `background/agent-run.ts`; not for EmptyAgent):
+    `time.stamp`, `<message_time>Wednesday, 25 November 2026, 10:42 (Europe/Madrid, UTC+01:00)</message_time>`,
+    from the parts on in `settings.dateTime` (weekday, date, time, zone; each on unless false) in its `timeZone`
+    (none or unknown: the browser's, `Intl` at send time), at the run message's `sentAt`. Source `message-time`,
+    kind `tool`. Like every context part it is stored on the message, so later requests carry it byte-identical
+    (prefix cache): a setting changed later applies to new messages only; earlier stamps stay. Regenerate drops
+    the message's context and stamps it again with the time it is sent again. Never written twice
+    (`hasMessageTime`). Compaction keeps it: the message a compaction is on, and every later one, stay whole.
+
 Sources (what each part is, used by dedupe and the Layers view): `core/sources.ts`, labels in
 `context/pieces.ts`. Auto-inject switches and per-conversation skip: `context/auto-inject.ts`.
 
@@ -222,7 +232,8 @@ cut, which their note (`result.cut_from`) gives.
 
 ### 1.7 Sub-agents (`background/sub-agent.ts`)
 Same `prepareAgent` + `loopOptions` (so in-run shortening and dedupe apply), one message
-(`agent.task`, its `{task}` the brief: `brief.*`, agents/brief), no page block, no step attach. The caller gets
+(`agent.task`, its `{task}` the brief: `brief.*`, agents/brief; then `time.stamp` with when it was asked,
+as your messages, not for EmptyAgent), no page block, no step attach. The caller gets
 only `result.agent_answer`, then `result.agent_tools` (its tool calls, counted); the
 whole run is kept as `trace` (shown to the user, not sent). No compaction (see gaps).
 
@@ -331,7 +342,7 @@ the turn ends. The message gets `cut`; your next message goes with `user.repetit
 `context.already_attached`, `compaction.summary_request`,
 `memory.site_block/site_index_block/auto_block/step_block`, `user.stopped`, `user.interrupted`, `recording.block`,
 `file.block`, `pdf.page/scanned/not_kept`, `template.data`, `skill.site_block`, `skill.reminder`,
-`skill.values`, `context.no_page*`, `agent.task`, `brief.*`.
+`skill.values`, `context.no_page*`, `agent.task`, `brief.*`, `time.stamp`.
 `defs-system.ts`: `system.*`, `system.compaction`.
 `defs-replies.ts`: `result.truncated`, `result.snapshot_truncated`, `result.screenshot`,
 `history.auto_note`, `bookmark.auto_note/step_note`, `history.mention_note`, `result.agent_answer`.

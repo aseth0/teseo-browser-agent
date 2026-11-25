@@ -14,6 +14,7 @@ import { LucideIcon } from './LucideIcon';
 const PAGE_OF_PREFIX: Record<string, [string, string]> = {
   skill: ['skills', 'Skills'], template: ['site-templates', 'Site templates'], memory: ['memory', 'Memory'], history: ['history', 'History'], bookmark: ['bookmarks', 'Bookmarks'],
   compaction: ['compaction', 'Compaction'], mcp: ['mcp', 'MCP servers'], agent: ['agents', 'Agents'], widget: ['actions', 'Actions'], tool: ['tools', 'Tools'],
+  time: ['about-you', 'About you'],
 };
 const PAGE_OF_ID: Record<string, [string, string]> = {
   'refusal.read_only': ['site-policies', 'Site policies'], 'refusal.agent_site': ['agents', 'Agents'], 'context.no_page_agent': ['agents', 'Agents'],
@@ -22,7 +23,7 @@ const PAGE_OF_ID: Record<string, [string, string]> = {
 // The system prompt's parts, by the page whose settings they carry (system.<part>).
 const PAGE_OF_SYSTEM: [RegExp, string][] = [
   [/^(skills_|site_skills)/, 'skill'], [/^mcp$/, 'mcp'], [/^history$/, 'history'], [/^memory/, 'memory'], [/^compaction$/, 'compaction'],
-  [/^widget$/, 'widget'], [/^agents?$/, 'agent'], [/^templates$/, 'template'],
+  [/^widget$/, 'widget'], [/^agents?$/, 'agent'], [/^templates$/, 'template'], [/^time$/, 'time'],
 ];
 // A settings page's title, by its hash (#<page>/…).
 const PAGE_TITLES: Record<string, string> = Object.fromEntries([...Object.values(PAGE_OF_PREFIX), ...Object.values(PAGE_OF_ID)]);

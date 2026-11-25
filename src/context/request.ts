@@ -14,6 +14,7 @@ import { EMPTY_AGENT_ID } from '../agents/registry';
 import { agentHasTool } from '../agents/profiles';
 import { historyOn, memoryOn, mentionsOn } from '../storage/settings-select';
 import { fillAboutUser } from './about-user';
+import { sendsDateTime } from './date-time';
 
 interface PromptSection {
   label: string;
@@ -51,6 +52,7 @@ export function systemPromptParts({ settings, skills, templates, agent, asksAgen
     { label: 'Agent', origin: 'Settings → Agents', text: agent || instructions ? text('system.agent', { name: own.name, instructions }).trim() : '', off: 'the chat is with Browser, which has no instructions' },
     { label: 'Page instructions', origin: 'built-in', text: pageTools ? text('system.page') : '', off: 'the agent has no browser tools' },
     { label: 'MCP servers', origin: 'enabled MCP servers', text: settings.mcpServers?.some((s) => s.enabled) ? text('system.mcp') : '', off: 'no MCP server is on' },
+    { label: 'Date and time', origin: 'Settings → About you', text: sendsDateTime(settings.dateTime) ? text('system.time') : '', off: 'Date & time sends nothing' },
     { label: 'Other agents', origin: 'Settings → Agents', text: asksAgents ? text('system.agents') : '', off: 'it may not ask other agents' },
     { label: 'Plan', origin: 'Settings → Tools', text: offers(settings, 'user.plan') && (!agent?.tools || agentHasTool({ tools: agent.tools }, 'user.plan')) ? text('system.plan') : '', off: 'user.plan is not offered' },
     { label: 'Saved conversations', origin: 'Settings → History', text: readsHistory(settings) ? text('system.history') : '', off: 'the history is off, or nothing reads it' },

@@ -40,6 +40,7 @@ function userTemplateParts(): { label: string; hash?: string; kind: 'skill' | 't
     { label: 'Site skill values', id: 'skill.values', hash: 'skills', kind: 'page', text: values },
     { label: 'Site template', id: 'template.note', hash: 'site-templates', kind: 'page', text: template },
     { label: 'Page block', id: 'page.block', kind: 'page', text: page },
+    { label: 'Message time', id: 'time.stamp', hash: 'about-you', kind: 'tool', text: text('time.stamp', { message_time: '{message_time}' }) },
   ];
 }
 
@@ -102,13 +103,13 @@ export const WHEN_FILTERS: [WhenFilter, string][] = [['all', 'All'], ['always', 
 
 // Each part's settings page, which gives it its color, icon and link; the parts set elsewhere, their own color.
 const PART_PAGES: Record<string, string> = {
-  Agent: 'agents', 'MCP servers': 'mcp', 'Other agents': 'agents', 'Saved conversations': 'history', Skills: 'skills', 'Site templates': 'site-templates', Memory: 'memory',
+  Agent: 'agents', 'Date and time': 'about-you', 'MCP servers': 'mcp', 'Other agents': 'agents', 'Saved conversations': 'history', Skills: 'skills', 'Site templates': 'site-templates', Memory: 'memory',
 };
 const PART_COLORS: Record<string, string> = { 'Your system prompt': 'var(--c-you)', 'Page instructions': 'var(--c-page)' };
 
 // The text that says when each part of the system message is sent (none: always).
 const SYSTEM_PART_TEXTS: Record<string, TextId> = {
-  Agent: 'system.agent', 'Page instructions': 'system.page', 'MCP servers': 'system.mcp', 'Other agents': 'system.agents', Plan: 'system.plan',
+  Agent: 'system.agent', 'Page instructions': 'system.page', 'MCP servers': 'system.mcp', 'Other agents': 'system.agents', 'Date and time': 'system.time', Plan: 'system.plan',
   'Saved conversations': 'system.history', Skills: 'system.skills_header', 'Site templates': 'system.templates', Memory: 'system.memory',
 };
 
@@ -136,7 +137,7 @@ export function messageParts(message: Message): AsSentPart[] {
 }
 const PIECE_PAGES: [RegExp, string][] = [
   [/^(Site skill|Skill mention)/, 'skills'], [/^Tool mention/, 'tools'], [/^Agent mention/, 'agents'], [/^Saved conversation/, 'history'], [/^(Site template|Mention ::)/, 'site-templates'],
-  [/^Memory/, 'memory'], [/^Summary of the earlier turns/, 'compaction'],
+  [/^Memory/, 'memory'], [/^Summary of the earlier turns/, 'compaction'], [/^Message time/, 'about-you'],
 ];
 const pieceHash = (label: string) => PIECE_PAGES.find(([re]) => re.test(label))?.[1];
 

@@ -13,6 +13,7 @@ const initialMock = () => ({
   replies: 0, // message-actions: numbers each reply, so a regenerated one differs
   refused: 0, // context-retry: every other request is refused as too long
   firstSystem: undefined, // memory-stable: the system prompt of the first turn
+  firstUser: undefined, // date-time: the first user message as the first turn sent it
   transcriptions: [], // the chunks dictated (POST /audio/transcriptions): { model, prompt } each
   chatRequests: 0, // requests to /chat/completions
   speech: [], // the pieces asked to be read aloud (POST /audio/speech): its JSON body, and whether it was cut off (aborted)

@@ -409,6 +409,19 @@ export function respond(body, res) {
       if (users.length < 2) return say(res, missing.length ? `MEMORY MISSING: ${missing.join(', ')}` : 'FIRST');
       return say(res, missing.length ? `MEMORY MISSING: ${missing.join(', ')}` : 'MEMORY OK');
     }
+    case 'date-time': { // Settings → About you → Date & time: each message ends with when it was written, sent the same later
+      const system = contentOf(messages[0]);
+      const line = system.includes('Each user message ends with <message_time>');
+      const stamp = /\n<message_time>\w+day, \d{1,2} \w+ \d{4}, \d{2}:\d{2} \([^,()]+, UTC[+-]\d{2}:\d{2}\)<\/message_time>$/;
+      if (users.length < 2) {
+        mock.firstUser = users[0];
+        const missing = [!line && 'the system line', !stamp.test(lastUser) && 'the stamp at the end', lastUser.split('<message_time>').length !== 2 && 'one stamp'].filter(Boolean);
+        return say(res, missing.length ? `TIME MISSING: ${missing.join(', ')} / ${lastUser.slice(-160)}` : 'TIME FIRST');
+      }
+      // Everything switched off between the turns: the first message as it went, the new one without.
+      const missing = [users[0] !== mock.firstUser && 'the first message the same', lastUser.includes('<message_time>') && 'no stamp now', line && 'no system line now'].filter(Boolean);
+      return say(res, missing.length ? `TIME MISSING: ${missing.join(', ')}` : 'TIME OK');
+    }
     case 'memory-stable': { // memory changed between the turns: the same system prompt, the changes with the message
       const system = contentOf(messages[0]);
       if (users.length < 2) {
@@ -933,7 +946,9 @@ export function respond(body, res) {
       if (!toolMsg) {
         const first = contentOf(messages[1]);
         const tools = (body.tools ?? []).map((t) => t.function.name).join();
-        if (messages.length !== 2 || first !== `The agent "jira" asks you: Find the buy button${BRIEF_ANSWER}` || tools !== 'browser__find,tools__read_more') return say(res, `MM SEES: ${messages.length} ${first} | ${tools}`);
+        // The task, then when it was asked (Settings → About you → Date & time).
+        const [task, stamp = ''] = first.split('\n<message_time>');
+        if (messages.length !== 2 || task !== `The agent "jira" asks you: Find the buy button${BRIEF_ANSWER}` || !/^\w+day, .+<\/message_time>$/.test(stamp) || tools !== 'browser__find,tools__read_more') return say(res, `MM SEES: ${messages.length} ${first} | ${tools}`);
         return callTool(res, 'browser__find', { query: 'Buy' });
       }
       return say(res, contentOf(toolMsg).includes('[ref_') ? 'MM FOUND the button' : `MM FIND: ${contentOf(toolMsg).slice(0, 200)}`);

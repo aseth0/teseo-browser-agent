@@ -247,6 +247,17 @@ export interface DedupeSettings {
   attachments?: boolean; // files and recordings you attach, and your images
 }
 
+// Settings → About you → Date & time (context/date-time): what the model is told of when each of your
+// messages was written. Each part on unless false; timeZone: an IANA zone picked from the list (none:
+// the browser's, read when the message is sent).
+export interface DateTimeSettings {
+  weekday?: boolean;
+  date?: boolean;
+  time?: boolean;
+  zone?: boolean;
+  timeZone?: string;
+}
+
 export interface Settings {
   providers: ProviderConfig[];
   activeProviderId?: string;
@@ -260,6 +271,7 @@ export interface Settings {
   browserAgent?: { icon?: string; description?: string; instructions?: string; memory?: 'internal'; canBeAsked?: boolean; voiceProfileId?: string; canSpeak?: boolean }; // voiceProfileId, canSpeak: as an agent's (agents/profiles)
   systemPrompt: string;
   aboutUser?: string; // Settings → About you, put where {{about_user}} is (context/about-user)
+  dateTime?: DateTimeSettings; // Settings → About you → Date & time: the stamp on each of your messages (context/date-time)
   includePage?: boolean; // attach the active page's context (default on)
   panelFollows?: boolean; // the chat's pin: on (default), the window's side panel follows you from tab to tab; off, one per tab (core/side-panel)
   chatRender?: ChatRender; // how the chat is shown (default: markdown)
