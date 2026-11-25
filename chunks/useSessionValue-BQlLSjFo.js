@@ -1,0 +1,1 @@
+import{Kt as e,Wt as t,Yn as n}from"./useSettings-Cq9dFY_W.js";function r(r){return t(()=>e(`session`,r),e=>n(`session`,r,t=>e(t.newValue)),void 0,`[${r}]`,r)}export{r as t};

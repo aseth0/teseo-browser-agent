@@ -1,1 +1,0 @@
-import{Gt as e,Jn as t,Ut as n}from"./useSettings-BmsSGS30.js";function r(r){return n(()=>e(`session`,r),e=>t(`session`,r,t=>e(t.newValue)),void 0,`[${r}]`,r)}export{r as t};
