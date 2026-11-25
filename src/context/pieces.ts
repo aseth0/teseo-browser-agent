@@ -16,6 +16,7 @@ import {
   memoryIndexOf,
   MENTION_FAILED_SOURCE,
   MENTION_SOURCE,
+  MESSAGE_TIME_SOURCE,
   NO_PAGE_SOURCE,
   USER_ELSEWHERE_SOURCE,
   PAGE_SOURCE,
@@ -67,6 +68,7 @@ export function pieceLabel(p: TextPart): string {
   if (file !== undefined) return `File "${file}"`;
   const recorded = recordingOf(s);
   if (recorded) return `Recording of ${recorded.site} · ${callCount(recorded.calls)}`;
+  if (s === MESSAGE_TIME_SOURCE) return 'Message time';
   if (s === COMPACTION_PLAN_SOURCE) return 'The plan, kept through compaction';
   if (p.context === 'summary') return 'Summary of the earlier turns';
   if (s === PAGE_SOURCE) return 'Page block';

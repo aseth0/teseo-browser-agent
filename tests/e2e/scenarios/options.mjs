@@ -1,7 +1,7 @@
 // The options page: the skill and template editors, settings kept in sync.
 import { HOST, PORT, QUIET_MS, T, stored, waitFor } from '../lib.mjs';
 import { recordClipboard, toolCount, unfoldPreview } from './helpers.mjs';
-import { RUN } from './tables.mjs';
+import { BETWEEN, REJECT, RUN } from './tables.mjs';
 
 RUN['skill-editor'] = async ({ page, errors, ctx, extId, shop, action, model }) => {
   // Create a general skill from the options page; the model must see it in the catalog.
@@ -269,6 +269,32 @@ RUN['about-user'] = async ({ errors, ctx, extId }) => {
   if (await unused.count()) errors.push('about you: the hint stays once Browser uses it');
   await options.close();
 };
+
+// Settings → About you → Date & time: the first turn goes with the default (every part, the browser's
+// zone; the mock checks the stamp), then every part is switched off here, the example says nothing goes,
+// and the second turn goes without a stamp while the first message is sent as it was.
+BETWEEN['date-time'] = async (page) => {
+  const options = await page.context().newPage();
+  try {
+    await options.goto(page.url().replace(/sidepanel\.html.*$/, 'options.html#about-you'));
+    await options.getByRole('tab', { name: 'Date & time' }).click();
+    const example = options.getByLabel('Example');
+    await example.waitFor({ timeout: T.short });
+    const shown = await example.innerText();
+    if (!/^<message_time>\w+day, .+ \(.+, UTC[+-]\d{2}:\d{2}\)<\/message_time>$/.test(shown)) throw new Error(`example: ${shown}`);
+    for (const name of ['Day of the week', 'Date', 'Time', 'Time zone']) {
+      const sw = options.getByRole('switch', { name, exact: true });
+      await sw.click();
+      if (!(await waitFor(async () => !(await sw.isChecked()), T.short))) throw new Error(`${name}: still on`);
+    }
+    await options.getByText('Nothing: with every part off').waitFor({ timeout: T.short });
+    if (!(await waitFor(async () => (await stored(page, 'settings'))?.dateTime?.zone === false, T.short))) throw new Error('not saved');
+  } finally {
+    await options.close();
+  }
+};
+// The stamp is never shown in the chat.
+REJECT['date-time'] = /message_time/;
 
 // Settings → Skills: a skill imported from a URL (through its preview, off), then only it exported,
 // chosen with Select.

@@ -49,7 +49,7 @@ const { blacklistGate } = await import('../src/word-blacklist/gate');
 
 const caller = { cfg: { id: 'main', name: 'Main', baseURL: 'https://llm.test/v1', apiKey: '', defaultModel: 'big' }, model: 'big' };
 const own = { id: 'own', name: 'Own', baseURL: 'https://other.test/v1', apiKey: '', defaultModel: 'small' };
-const settings = { providers: [caller.cfg, own], systemPrompt: '' };
+const settings: { providers: unknown[]; systemPrompt: string; dateTime?: object } = { providers: [caller.cfg, own], systemPrompt: '' };
 // What the user is asked, and answers: no (as when nobody answers) unless a test says.
 const asks: unknown[] = [];
 let reply: (q: unknown) => boolean = () => false;
@@ -96,6 +96,23 @@ describe('an agent asked by another', () => {
     ]);
     expect(said(1, 0)).toBe('(It made 1 tool call; 0 failed.)');
     expect(said(3, 2)).toBe('(It made 3 tool calls; 2 failed.)');
+  });
+
+  it('gets its task with when it was asked at its end (Settings → About you → Date & time), not shown as the task', async () => {
+    script = answer('Found it');
+    const r = await ask();
+    const task = r.type === 'text' ? r.trace?.messages[0] : undefined;
+    const last = task?.parts.at(-1);
+    expect(last).toMatchObject({ type: 'text', context: 'tool', source: 'message-time' });
+    expect(last?.type === 'text' && last.text).toMatch(/^<message_time>\w+day, \d{1,2} \w+ \d{4}, \d{2}:\d{2} \(.+, UTC[+-]\d{2}:\d{2}\)<\/message_time>$/);
+    // All off: the task alone.
+    settings.dateTime = { weekday: false, date: false, time: false, zone: false };
+    try {
+      const off = await ask();
+      expect(off.type === 'text' && off.trace?.messages[0]!.parts.map((p) => p.type === 'text' && p.source)).toEqual([undefined]);
+    } finally {
+      delete settings.dateTime;
+    }
   });
 
   it('says it could not run without access to its provider', async () => {

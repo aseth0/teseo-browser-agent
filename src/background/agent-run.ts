@@ -11,6 +11,7 @@ import { stepPlanReminder } from '../context/plan-reminder';
 import { withPlansDismissed } from '../tools/user/shapes';
 import { stepAttachItems } from '../context/step-attach';
 import { turnContext } from '../context/turn';
+import { hasMessageTime, messageTimeItem } from '../context/date-time';
 import { runAgentLoop } from '../core/agent-loop';
 import { toWireName } from '../core/tool-registry';
 import { keep } from '../core/kept-results';
@@ -162,7 +163,9 @@ export async function runAgent(msg: RunMessage, { toolsFor, signal, send, questi
     // What changed in memory since the kept one, first.
     const changes = main.kept && main.memoryOpts ? memoryChanges(memory, main.kept, main.memoryOpts, seenWhole(history)) : [];
     if (changes.length) phases.under(preparing.id).add({ kind: 'context', label: 'Memory changed since', detail: `${changes.length} attached`, ms: 0 });
-    const items = [...changes, ...turn.items, ...(tools.item ? [tools.item] : [])];
+    // Last, when you wrote it (Settings → About you → Date & time): when the panel sent it, written once.
+    const stamp = hasMessageTime(last) ? undefined : messageTimeItem(typeof msg.sentAt === 'number' ? msg.sentAt : Date.now(), seen.dateTime);
+    const items = [...changes, ...turn.items, ...(tools.item ? [tools.item] : []), ...(stamp ? [stamp] : [])];
     preparing.note(items.length ? `${items.length} attached` : 'nothing attached');
     if (items.length) {
       history = appendContext(history, items);

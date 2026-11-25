@@ -489,6 +489,14 @@ export const USER_TEXTS = {
     note: 'Attached to your message. A mentioned tool is offered for that message even if it is off.',
     text: 'The user asks you to use {tool_names} for this message.',
   },
+  'time.stamp': {
+    group: 'user',
+    label: 'Message time',
+    when: 'Settings → About you → Date & time sends something',
+    note: '{message_time}: when the message was written, with the parts chosen there, e.g. "Wednesday, 25 November 2026, 10:42 (Europe/Madrid, UTC+01:00)". Written once, at the end of each of your messages (and of a task for another agent), and sent the same from then on.',
+    warning: 'The system prompt\'s Date and time part names this tag: if you rename it, update that text too.',
+    text: '<message_time>{message_time}</message_time>',
+  },
   'agent.mention': {
     group: 'user',
     label: 'Agent mention',

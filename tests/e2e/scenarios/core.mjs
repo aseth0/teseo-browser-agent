@@ -80,6 +80,7 @@ EXPECT['skill-catalog'] = 'SKILL OK';
 EXPECT['site-skill'] = ['SITE OK', 'test-site'];
 EXPECT['skill-editor'] = 'EDITOR OK';
 EXPECT['about-user'] = 'ABOUT OK';
+EXPECT['date-time'] = 'TIME OK';
 EXPECT['memory-prompt'] = ['MEMORY OK']; // and the pill under the message the site's memory went with (AFTER)
 EXPECT['memory-settings'] = 'MEMSET OK';
 // Memory items present in storage for a scenario (memory/store).

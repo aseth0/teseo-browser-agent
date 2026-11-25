@@ -5,7 +5,7 @@ import { ACTIONS, AFTER, AGENT_PROFILES, BEFORE, CARD, EXPECT, MESSAGES, REJECT,
 
 // Site policies a scenario starts with (none: every site asks).
 Object.assign(SITE_POLICIES, { 'web-search': { localhost: 'auto' }, 'web-read': { localhost: 'auto' }, 'web-sign-in': { localhost: 'auto' }, 'custom-tool': { localhost: 'auto' } });
-Object.assign(TURNS, { compaction: 3, 'context-persist': 2, 'context-unchanged': 2, 'site-skill': 2, 'message-actions': 2, 'memory-prompt': 2, 'memory-stable': 2, 'mention-open': 2, 'compaction-trim': 2, 'compaction-tool': 3, 'repetition-loop': 2 });
+Object.assign(TURNS, { compaction: 3, 'context-persist': 2, 'context-unchanged': 2, 'site-skill': 2, 'message-actions': 2, 'memory-prompt': 2, 'memory-stable': 2, 'mention-open': 2, 'compaction-trim': 2, 'compaction-tool': 3, 'repetition-loop': 2, 'date-time': 2 });
 // Action scenarios: model script + how the test answers the confirmation card.
 Object.assign(ACTIONS, {
   'click-deny': { model: 'act-click', answer: 'Deny', expect: 'DENIED OK' },

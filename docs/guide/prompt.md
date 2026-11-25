@@ -33,3 +33,27 @@ where `{{about_user}}` appears: in your system prompt (every agent gets it) or i
 The button next to `{{about_user}}` copies it, to paste where you want it. The count shows its length against the
 limit, 4,000 characters by default (**Settings → Limits**); past it, the end is cut when sent. If no prompt uses
 `{{about_user}}` yet, the page says so: the model does not get the text.
+
+### Date & time
+
+The **Date & time** tab of **Settings → About you** decides what the model is told of when you write. Each message
+you send ends with a line the chat does not show, for example:
+
+```
+<message_time>Wednesday, 25 November 2026, 10:42 (Europe/Madrid, UTC+01:00)</message_time>
+```
+
+and the system message says once what the tag is. With it the model knows today's date and the time, and how
+long ago your earlier messages were.
+
+- Each part has its own switch: **Day of the week**, **Date**, **Time** (24-hour) and **Time zone** (its name and
+  offset from UTC). All four are on by default. With all of them off, nothing is sent: no line, no tag.
+- **In the time zone**: **Browser** (the default) uses the browser's zone, read each time a message goes; or
+  pick one from the list to keep the date and time in that zone wherever you are.
+- The tab shows the line as the model would get it now.
+- The line is written once, when the message goes, and sent the same in every later request: the provider's
+  prompt cache keeps working. A change here applies to the messages you send after it; earlier ones keep theirs.
+  **Regenerate** sends a message again, so it gets the time it is sent again.
+- A task one agent gives another (agents.ask) ends with the same line, with when it was asked. EmptyAgent gets
+  neither. Compaction never drops the line of your latest messages.
+- The two texts (the line and what the system message says of it) are edited in this tab or in Prompt preview.

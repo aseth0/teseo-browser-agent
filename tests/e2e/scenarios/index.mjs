@@ -27,7 +27,7 @@ export const ALL = [
   'user-ask', 'user-plan', 'user-pick', 'inline-mentions', 'limit-cut', 'message-actions', 'tool-groups',
   'view-grouped-steps', 'view-turn-diagrams', 'view-compact-tools', 'view-hidden-reasoning', 'mention-open', 'mention-background',
   'mention-failed', 'step-limit', 'page-template', 'agent-site', 'recording', 'recording-tool', 'recording-background', 'template-editor', 'skill-values', 'long-reply',
-  'thinking', 'thinking-rejected', 'repetition-loop', 'chat-view', 'skill-catalog', 'site-skill', 'skill-editor', 'options-sync', 'about-user', 'collections-io',
+  'thinking', 'thinking-rejected', 'repetition-loop', 'chat-view', 'skill-catalog', 'site-skill', 'skill-editor', 'options-sync', 'about-user', 'date-time', 'collections-io',
   'markdown', 'fold-headings', 'context-usage', 'context-learned', 'context-retry', 'compaction', 'compaction-trim', 'compaction-tool', 'image-upload', 'pdf-attach', 'model-picker',
   'tools-offered', 'basic', 'error500', 'reasoning-field', 'page-context', 'context-persist', 'context-unchanged', 'tool-find',
   'tool-text', 'tool-structured', 'selection-chip', 'selection-skip', 'web-read', 'web-sign-in',

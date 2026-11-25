@@ -7,7 +7,7 @@ Settings page lists them:
 |---|---|---|
 | **Prompt preview** | Your system prompt; every fixed text sent to the model, editable; previews of a request, as any agent | [Your prompt](prompt.md#prompt-preview) |
 | ***What the model gets*** | | |
-| About you | A text about you, inserted where `{{about_user}}` appears | [About you](prompt.md#about-you) |
+| About you | A text about you, inserted where `{{about_user}}` appears; what the model is told of the date and time of each message | [About you](prompt.md#about-you), [Date & time](prompt.md#date--time) |
 | Agents | Agent profiles; Builder; who can ask whom | [Agents](agents.md) |
 | Compaction | When and how conversations are shortened; what is not sent again | [Compaction](compaction.md#settings--compaction) |
 | Limits | Every size and time limit | [Limits](limits.md) |
@@ -95,7 +95,7 @@ texts as in Prompt preview. Those of `tools.load`, in Settings → Tools, are li
   copies it.
 - **Never in the file**: API keys, the values of headers (their names stay, so you know what to fill in), MCP
   sign-ins, the values of `{{secret:…}}`, and website access. Providers come with their address, models and
-  options; the build's own provider stays out. **Settings** takes About you, the system prompt, the model texts,
+  options; the build's own provider stays out. **Settings** takes About you (and its Date & time), the system prompt, the model texts,
   which tools are on, limits, compaction, appearance, the chat window, auto-inject, history, voice, web search,
   recording presets and logs, but nothing of this browser: the active provider, model and agent, the bookmark
   folder, the microphone.

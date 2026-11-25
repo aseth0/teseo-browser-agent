@@ -3,8 +3,10 @@
 // goes; the caller gets only its final answer, and the whole run is kept with the call for the user (trace).
 import { lastAnswer } from '../agents/ask';
 import { agentLabel, agentOffers } from '../agents/profiles';
-import { browserWith, DEFAULT_AGENT_ID, DEFAULT_AGENT_NAME } from '../agents/builtins';
+import { browserWith, DEFAULT_AGENT_ID, DEFAULT_AGENT_NAME, isEmptyAgent } from '../agents/builtins';
 import { excludedTools } from '../context/request';
+import { messageTimeItem } from '../context/date-time';
+import { appendContext } from '../core/messages';
 import { runAgentLoop } from '../core/agent-loop';
 import { withOnDemand } from '../tools/load';
 import { markValue, text } from '../core/model-texts';
@@ -46,7 +48,11 @@ export async function runSubAgent(run: RunScope, { asked, caller, task, callId, 
   const parent = callId === undefined ? undefined : callPhaseId(callId);
   const phases = run.phases.under(parent);
   const setup = prepareAgent(run, sub, depth, target);
-  const task0: Message = { role: 'user', parts: [{ type: 'text', text: text('agent.task', { caller: caller?.name ?? DEFAULT_AGENT_NAME, task }) }] };
+  // The task ends with when it was asked (Settings → About you → Date & time), as your messages do; not
+  // for EmptyAgent, which gets the task alone.
+  const given: Message = { role: 'user', parts: [{ type: 'text', text: text('agent.task', { caller: caller?.name ?? DEFAULT_AGENT_NAME, task }) }] };
+  const stamp = isEmptyAgent(sub) ? undefined : messageTimeItem(Date.now(), setup.seen.dateTime);
+  const task0 = stamp ? appendContext([given], [stamp])[0]! : given;
   const messages: Message[] = [];
   let stepped: number | false = false; // the steps it stopped at, out of them
   let failed: string | undefined;

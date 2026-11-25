@@ -3,6 +3,16 @@
 What changed in each version of Teseo. Versions before 0.61.0 are not listed here; see
 the git tags and their commits.
 
+## 0.80.0
+
+### Added
+- The model knows the date and time: each message you send ends with when you wrote it (day of the week, date,
+  time and time zone), which the chat does not show, and the system message says what it is. It is written once,
+  so later requests send it the same and the provider's prompt cache keeps working; the model can also tell how
+  much time passed between your messages. A task one agent gives another ends with it too. Choose what is sent,
+  and the time zone (the browser's or one from the list), in the new **Date & time** tab of Settings → About you;
+  everything off sends nothing.
+
 ## 0.79.1
 
 ### Fixed

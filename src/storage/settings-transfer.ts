@@ -13,6 +13,7 @@ type Kind = 'string' | 'boolean' | 'object' | 'list';
 // The settings that travel: their kind, and their name on the import's preview.
 const SETTINGS: Partial<Record<keyof Settings, [Kind, string]>> = {
   aboutUser: ['string', 'About you'],
+  dateTime: ['object', 'Date & time'],
   systemPrompt: ['string', 'System prompt'],
   promptTexts: ['object', 'Model texts'],
   browserAgent: ['object', 'Browser agent'],
